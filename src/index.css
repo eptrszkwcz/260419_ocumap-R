@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --color-page: #f4f4f3;
+  --color-panel: #ffffff;
+  --color-stroke: #acb0ca;
+  --color-fg: #131c5b;
+  --color-fg-muted: #7278a2;
+  --color-fg-disabled: #acb0ca;
+  --color-fg-highlight: #3a4abf;
+  --color-area-highlight: #f3f3fa;
+
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-title: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+
+  --text-standard: 0.75rem;
+  --text-standard--line-height: 1rem;
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.5rem;
+
+  --radius-panel: 4px;
+
+  --spacing-page: 32px;
+  --spacing-panel: 16px;
+
+  --height-header: 64px;
+  --height-tab-row: 32px;
+  --height-button: 32px;
+  --height-badge: 20px;
+  --size-icon-button: 32px;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-page font-sans text-standard text-fg antialiased;
+  }
+}
