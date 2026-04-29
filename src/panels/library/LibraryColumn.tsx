@@ -1,34 +1,35 @@
 import { useState } from 'react'
 
-import { Panel } from '@/components/Panel'
 import { PanelTabRow, type TabItem } from '@/components/PanelTabRow'
+import { TabPanelBody } from '@/components/TabPanelBody'
 
 import { LibraryContent } from '@/panels/library/LibraryContent'
 import { LibraryHeader } from '@/panels/library/LibraryHeader'
 
 const libraryTabs: TabItem[] = [
-  { id: 'all', label: 'All' },
-  { id: 'images', label: 'Images' },
-  { id: 'video', label: 'Video' },
-  { id: 'panorama', label: '360°' },
+  { id: 'project-details', label: 'Project Details' },
+  { id: 'feature-library', label: 'Feature Library' },
+  { id: 'log-book', label: 'Log Book' },
 ]
 
 export function LibraryColumn() {
-  const [tab, setTab] = useState(libraryTabs[0]!.id)
+  const [tab, setTab] = useState('feature-library')
 
   return (
     <div className="flex min-h-0 min-w-0 flex-col">
       <LibraryHeader />
       <div className="h-4 shrink-0" aria-hidden />
-      <Panel className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
+      <div className="flex min-h-0 flex-1 flex-col">
         <PanelTabRow
           tabs={libraryTabs}
           activeId={tab}
           onSelect={setTab}
           aria-label="Library sections"
         />
-        <LibraryContent activeTabId={tab} />
-      </Panel>
+        <TabPanelBody>
+          <LibraryContent activeTabId={tab} />
+        </TabPanelBody>
+      </div>
     </div>
   )
 }

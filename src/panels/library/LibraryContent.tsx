@@ -1,24 +1,35 @@
-import { sampleAssets, type AssetKind } from '@/data/sampleAssets'
-
-const libraryTabFilters: Record<string, (k: AssetKind) => boolean> = {
-  all: () => true,
-  images: (k) => k === 'image',
-  video: (k) => k === 'video',
-  panorama: (k) => k === 'panorama',
-}
+import { sampleAssets } from '@/data/sampleAssets'
 
 type LibraryContentProps = {
   activeTabId: string
 }
 
 export function LibraryContent({ activeTabId }: LibraryContentProps) {
-  const filter = libraryTabFilters[activeTabId] ?? libraryTabFilters.all
-  const rows = sampleAssets.filter((a) => filter(a.kind))
+  if (activeTabId === 'project-details') {
+    return (
+      <div className="min-h-0 flex-1 overflow-auto p-panel-padding">
+        <p className="font-sans text-standard text-fg-muted">
+          Project metadata and settings will appear here.
+        </p>
+      </div>
+    )
+  }
 
+  if (activeTabId === 'log-book') {
+    return (
+      <div className="min-h-0 flex-1 overflow-auto p-panel-padding">
+        <p className="font-sans text-standard text-fg-muted">
+          Activity and audit log entries will appear here.
+        </p>
+      </div>
+    )
+  }
+
+  /* feature-library */
   return (
-    <div className="min-h-0 flex-1 overflow-auto p-3">
+    <div className="min-h-0 flex-1 overflow-auto p-panel-padding">
       <ul className="flex flex-col gap-2">
-        {rows.map((asset) => (
+        {sampleAssets.map((asset) => (
           <li
             key={asset.id}
             className="flex items-center gap-3 rounded-panel border border-stroke bg-panel p-2"
@@ -39,9 +50,6 @@ export function LibraryContent({ activeTabId }: LibraryContentProps) {
           </li>
         ))}
       </ul>
-      {rows.length === 0 ? (
-        <p className="font-sans text-standard text-fg-muted">No assets in this tab.</p>
-      ) : null}
     </div>
   )
 }

@@ -1,32 +1,34 @@
 import { useState } from 'react'
 
-import { Panel } from '@/components/Panel'
 import { PanelTabRow, type TabItem } from '@/components/PanelTabRow'
+import { TabPanelBody } from '@/components/TabPanelBody'
 
 import { MapContent } from '@/panels/map/MapContent'
 import { MapHeader } from '@/panels/map/MapHeader'
 
 const mapTabs: TabItem[] = [
-  { id: 'floor-1', label: 'Floor 1' },
-  { id: 'floor-2', label: 'Floor 2' },
+  { id: '2d', label: '2D' },
+  { id: '3d', label: '3D' },
 ]
 
 export function MapColumn() {
-  const [tab, setTab] = useState(mapTabs[0]!.id)
+  const [tab, setTab] = useState('2d')
 
   return (
     <div className="flex min-h-0 min-w-0 flex-col">
       <MapHeader />
       <div className="h-4 shrink-0" aria-hidden />
-      <Panel className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
+      <div className="flex min-h-0 flex-1 flex-col">
         <PanelTabRow
           tabs={mapTabs}
           activeId={tab}
           onSelect={setTab}
-          aria-label="Map floors"
+          aria-label="Map view mode"
         />
-        <MapContent activeTabId={tab} />
-      </Panel>
+        <TabPanelBody>
+          <MapContent activeTabId={tab} />
+        </TabPanelBody>
+      </div>
     </div>
   )
 }

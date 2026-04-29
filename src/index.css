@@ -22,12 +22,42 @@
 
   --spacing-page: 32px;
   --spacing-panel: 16px;
+  --spacing-panel-padding: 24px;
 
   --height-header: 64px;
-  --height-tab-row: 32px;
+  --height-tab-row: 36px;
   --height-button: 32px;
   --height-badge: 20px;
   --size-icon-button: 32px;
+}
+
+@layer components {
+  /** Full 4px rounding for header cards and similar surfaces */
+  .ocu-panel-surface {
+    border-radius: var(--radius-panel);
+  }
+
+  /** Main body under folder tabs: full 4px rounding (top + bottom corners) */
+  .ocu-tab-panel-body {
+    border-radius: var(--radius-panel);
+  }
+
+  /** Selected tab: rounded top only; bottom edge stays square where it meets the panel */
+  .ocu-tab-active-surface {
+    border-top-left-radius: var(--radius-panel);
+    border-top-right-radius: var(--radius-panel);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  /**
+   * Pull the panel up and extend the tab downward so panel `border-top` is covered
+   * by tab background (no visible seam between tab and body).
+   */
+  .ocu-tab-active-overlap {
+    height: calc(var(--height-tab-row) + 2px);
+    margin-bottom: -2px;
+  }
 }
 
 @layer base {

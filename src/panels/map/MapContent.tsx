@@ -6,14 +6,12 @@ type MapContentProps = {
 
 export function MapContent({ activeTabId }: MapContentProps) {
   return (
-    <div className="relative min-h-0 flex-1 overflow-hidden bg-area-highlight">
-      <div
-        className="absolute inset-3 rounded-panel border border-dashed border-stroke bg-panel"
-        aria-hidden
-      />
-      <div className="relative h-full min-h-[200px] p-4">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-area-highlight p-panel-padding">
+      <div className="relative flex min-h-[200px] flex-1 flex-col rounded-panel border border-dashed border-stroke bg-panel/40">
         <p className="font-sans text-standard text-fg-muted">
-          Floor plan placeholder · {activeTabId}
+          {activeTabId === '3d'
+            ? '3D map placeholder · orbit / spatial view'
+            : '2D map placeholder · floor plan view'}
         </p>
         <div className="relative mt-4 h-[min(360px,55vh)] w-full">
           {sampleAssets.map((asset) => (
