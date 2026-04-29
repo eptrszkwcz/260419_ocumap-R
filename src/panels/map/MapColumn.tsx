@@ -26,7 +26,7 @@ export function MapColumn() {
           aria-label="Map view mode"
         />
         <TabPanelBody>
-          <MapContent activeTabId={tab} />
+          <MapContent activeTab={tab} />
         </TabPanelBody>
       </div>
     </div>

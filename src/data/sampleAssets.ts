@@ -1,6 +1,9 @@
 /**
  * Placeholder spatial assets for the prototype. Large binaries live under
  * `public/samples/` and are referenced by URL (e.g. `/samples/...`).
+ *
+ * Mock layout: `feature-viewer/spherical-pano/` (360_*), `map-viewer/floor-plans/`
+ * (SOM_*). Add new kinds as sibling folders under the viewer that consumes them.
  */
 
 export type AssetKind = 'image' | 'video' | 'panorama'

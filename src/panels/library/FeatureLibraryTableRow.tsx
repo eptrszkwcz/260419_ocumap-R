@@ -24,7 +24,7 @@ export type FeatureLibraryTableRowProps = {
 /** One 40px data row: name, date, type, actions. Use one instance per asset inside `<tbody>`. */
 export function FeatureLibraryTableRow({ asset }: FeatureLibraryTableRowProps) {
   return (
-    <tr className="group h-10 border-b-[0.5px] border-solid border-stroke transition-colors hover:bg-area-highlight">
+    <tr className="group h-10 border-b-[0.5px] border-solid border-stroke font-normal transition-colors hover:bg-area-highlight hover:font-semibold">
       <td className="min-w-0 pl-panel-padding pr-4 align-middle text-fg-muted group-hover:text-fg-highlight">
         <span className="block truncate">{asset.title}</span>
       </td>

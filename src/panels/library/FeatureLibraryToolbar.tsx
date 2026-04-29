@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-function SplitPaneIcon({ className = '' }: { className?: string }) {
+import { PRIMARY_BUTTON_CLASS } from '@/lib/primaryButtonClass'
+
+/** 2×2 grid — thumbnail / gallery view. */
+function ThumbnailGridIcon({ className = '' }: { className?: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -11,8 +14,28 @@ function SplitPaneIcon({ className = '' }: { className?: string }) {
       className={className}
       aria-hidden
     >
-      <rect x="2" y="2" width="5" height="12" rx="1" stroke="currentColor" strokeWidth="1.25" />
-      <rect x="9" y="2" width="5" height="12" rx="1" stroke="currentColor" strokeWidth="1.25" />
+      <rect x="2.5" y="2.5" width="5" height="5" rx="0.5" stroke="currentColor" strokeWidth="1" />
+      <rect x="8.5" y="2.5" width="5" height="5" rx="0.5" stroke="currentColor" strokeWidth="1" />
+      <rect x="2.5" y="8.5" width="5" height="5" rx="0.5" stroke="currentColor" strokeWidth="1" />
+      <rect x="8.5" y="8.5" width="5" height="5" rx="0.5" stroke="currentColor" strokeWidth="1" />
+    </svg>
+  )
+}
+
+/** Two side-by-side column panes — same stroke, rx, and 16×16 layout bounds as the thumbnail grid. */
+function ColumnsIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      className={className}
+      aria-hidden
+    >
+      <rect x="2.5" y="2.5" width="5" height="11" rx="0.5" stroke="currentColor" strokeWidth="1" />
+      <rect x="8.5" y="2.5" width="5" height="11" rx="0.5" stroke="currentColor" strokeWidth="1" />
     </svg>
   )
 }
@@ -31,7 +54,7 @@ function FunnelIcon({ className = '' }: { className?: string }) {
       <path
         d="M2.5 3h11l-4.25 5v4.5L7 12.5V8L2.5 3Z"
         stroke="currentColor"
-        strokeWidth="1.25"
+        strokeWidth="1"
         strokeLinejoin="round"
       />
     </svg>
@@ -49,11 +72,11 @@ function SearchIcon({ className = '' }: { className?: string }) {
       className={className}
       aria-hidden
     >
-      <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.25" />
+      <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1" />
       <path
         d="M10 10l3.5 3.5"
         stroke="currentColor"
-        strokeWidth="1.25"
+        strokeWidth="1"
         strokeLinecap="round"
       />
     </svg>
@@ -82,10 +105,106 @@ function PlusIcon({ className = '' }: { className?: string }) {
 }
 
 const secondaryConfig = [
-  { id: 'view' as const, label: 'View', Icon: SplitPaneIcon },
-  { id: 'columns' as const, label: 'Columns', Icon: SplitPaneIcon },
+  { id: 'view' as const, label: 'View', Icon: ThumbnailGridIcon },
+  { id: 'columns' as const, label: 'Columns', Icon: ColumnsIcon },
   { id: 'filters' as const, label: 'Filters', Icon: FunnelIcon },
 ]
+
+const ADD_FEATURE_REVEAL_MS = 500
+/** After pointer leaves, stay fully extended for this long, then start the label shrink. */
+const ADD_FEATURE_HIDE_DELAY_MS = 500
+/** Keep in sync with the label `duration-[600ms]`. */
+const ADD_FEATURE_ROLL_MS = 600
+
+function AddFeatureButton() {
+  const [labelVisible, setLabelVisible] = useState(false)
+  /** `w-auto` + padding: stays true for ADD_FEATURE_ROLL_MS after `labelVisible` goes false so the button outline eases with the text, not on the same frame. */
+  const [frameExpanded, setFrameExpanded] = useState(false)
+  const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (labelVisible) {
+      setFrameExpanded(true)
+      return
+    }
+    const t = window.setTimeout(() => {
+      setFrameExpanded(false)
+    }, ADD_FEATURE_ROLL_MS)
+    return () => {
+      clearTimeout(t)
+    }
+  }, [labelVisible])
+
+  useEffect(() => {
+    return () => {
+      if (showTimerRef.current != null) {
+        clearTimeout(showTimerRef.current)
+      }
+      if (hideTimerRef.current != null) {
+        clearTimeout(hideTimerRef.current)
+      }
+    }
+  }, [])
+
+  const clearShowTimer = () => {
+    if (showTimerRef.current != null) {
+      clearTimeout(showTimerRef.current)
+      showTimerRef.current = null
+    }
+  }
+
+  const clearHideTimer = () => {
+    if (hideTimerRef.current != null) {
+      clearTimeout(hideTimerRef.current)
+      hideTimerRef.current = null
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onPointerEnter={() => {
+        clearShowTimer()
+        clearHideTimer()
+        showTimerRef.current = setTimeout(() => {
+          setLabelVisible(true)
+          showTimerRef.current = null
+        }, ADD_FEATURE_REVEAL_MS)
+      }}
+      onPointerLeave={() => {
+        clearShowTimer()
+        clearHideTimer()
+        hideTimerRef.current = setTimeout(() => {
+          setLabelVisible(false)
+          hideTimerRef.current = null
+        }, ADD_FEATURE_HIDE_DELAY_MS)
+      }}
+      className={
+        PRIMARY_BUTTON_CLASS +
+        ' flex h-8 min-h-8 shrink-0 items-center rounded-panel ' +
+        (frameExpanded
+          ? 'w-auto min-w-0 justify-start gap-1.5 pl-1.5 pr-2.5'
+          : 'w-8 min-w-8 justify-center p-0')
+      }
+      aria-label="Add feature"
+    >
+      <span className="shrink-0" aria-hidden>
+        <PlusIcon />
+      </span>
+      <span
+        className={
+          'block min-w-0 overflow-hidden text-left text-standard leading-none ' +
+          'transition-[max-width] duration-[600ms] ease-out ' +
+          (labelVisible ? 'max-w-[6.75rem]' : 'max-w-0')
+        }
+        aria-hidden={!labelVisible}
+      >
+        <span className="inline-block whitespace-nowrap pr-0.5">Add Feature</span>
+      </span>
+    </button>
+  )
+}
 
 export function FeatureLibraryToolbar() {
   const [activeId, setActiveId] = useState<(typeof secondaryConfig)[number]['id'] | null>(null)
@@ -127,13 +246,7 @@ export function FeatureLibraryToolbar() {
         />
       </div>
 
-      <button
-        type="button"
-        className="bg-fg-highlight flex h-8 w-8 shrink-0 items-center justify-center rounded-panel text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-fg-highlight/50 focus-visible:outline-none"
-        aria-label="Add"
-      >
-        <PlusIcon />
-      </button>
+      <AddFeatureButton />
     </div>
   )
 }

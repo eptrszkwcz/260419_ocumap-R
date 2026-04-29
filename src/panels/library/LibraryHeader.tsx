@@ -30,7 +30,7 @@ export function LibraryHeader() {
       >
         <HamburgerIcon />
       </button>
-      <h1 className="min-w-0 truncate font-title text-title font-bold text-fg">123 Main St.</h1>
+      <h1 className="min-w-0 truncate font-title text-title font-bold text-fg">1603 Jefferson St</h1>
     </Panel>
   )
 }
