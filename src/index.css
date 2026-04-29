@@ -11,12 +11,15 @@
   --color-area-highlight: #f3f3fa;
 
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  /* --font-title: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif; */
   --font-title: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
 
-  --text-standard: 0.75rem;
+  --text-standard: 0.88rem;
   --text-standard--line-height: 1rem;
   --text-title: 1.25rem;
   --text-title--line-height: 1.5rem;
+  --text-badge: 0.75rem;
+  --text-badge--line-height: 0.75rem;
 
   --radius-panel: 4px;
 

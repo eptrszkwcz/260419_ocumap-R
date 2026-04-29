@@ -1,4 +1,10 @@
+import { useState } from 'react'
+
 import { sampleAssets } from '@/data/sampleAssets'
+import { type ActiveFilter } from '@/panels/library/FeatureLibraryBadges'
+import { FeatureLibraryFilterRow } from '@/panels/library/FeatureLibraryFilterRow'
+import { FeatureLibraryTable } from '@/panels/library/FeatureLibraryTable'
+import { FeatureLibraryToolbar } from '@/panels/library/FeatureLibraryToolbar'
 
 type LibraryContentProps = {
   activeTabId: string
@@ -25,31 +31,27 @@ export function LibraryContent({ activeTabId }: LibraryContentProps) {
     )
   }
 
-  /* feature-library */
+  return <FeatureLibraryView />
+}
+
+function FeatureLibraryView() {
+  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
+
+  // When search/filters are applied, replace with the visible slice only.
+  const visibleAssets = sampleAssets
+  const visibleCount = visibleAssets.length
+
   return (
-    <div className="min-h-0 flex-1 overflow-auto p-panel-padding">
-      <ul className="flex flex-col gap-2">
-        {sampleAssets.map((asset) => (
-          <li
-            key={asset.id}
-            className="flex items-center gap-3 rounded-panel border border-stroke bg-panel p-2"
-          >
-            <img
-              src={asset.fileUrl}
-              alt=""
-              className="h-14 w-24 shrink-0 rounded-panel border border-stroke object-cover"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-sans text-standard font-bold text-fg">
-                {asset.title}
-              </p>
-              <p className="font-sans text-standard text-fg-muted">
-                {asset.kind} · map ({asset.mapPosition.x}%, {asset.mapPosition.y}%)
-              </p>
-            </div>
-          </li>
-        ))}
-      </ul>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <FeatureLibraryToolbar />
+      <FeatureLibraryFilterRow
+        featureCount={visibleCount}
+        activeFilters={activeFilters}
+        onRemoveFilter={(id) => setActiveFilters((prev) => prev.filter((f) => f.id !== id))}
+      />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <FeatureLibraryTable assets={visibleAssets} />
+      </div>
     </div>
   )
 }
