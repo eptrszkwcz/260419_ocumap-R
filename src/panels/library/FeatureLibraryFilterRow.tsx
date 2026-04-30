@@ -20,6 +20,7 @@ export function FeatureLibraryFilterRow({
 }: FeatureLibraryFilterRowProps) {
   return (
     <div
+      id="badge-container-feature-lib"
       className="flex h-14 w-full shrink-0 items-center gap-2 px-panel-padding"
       aria-label="Feature summary and active filters"
     >

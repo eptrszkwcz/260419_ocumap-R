@@ -15,11 +15,25 @@ export type SpatialAsset = {
   kind: AssetKind
   /** Display name in the feature list */
   title: string
-  /** e.g. "July 22, 2025" for the table */
+  /** When the feature was added to the project (table: "Date Uploaded") */
   dateUploaded: string
-  /** Public URL path under the dev server root */
+  /** When the source media was captured, if known (long form like `dateUploaded`) */
+  dateCaptured?: string
+  /** Public URL path, blob URL for local uploads, or path under the dev server root */
   fileUrl: string
   mapPosition: MapPosition
+  fileSizeBytes?: number
+  mimeType?: string
+  width?: number
+  height?: number
+}
+
+/** Best-effort kind for an uploaded `File` (user can override in the add form). */
+export function inferKindFromFile(file: File): AssetKind {
+  const t = file.type
+  if (t.startsWith('video/')) return 'video'
+  if (t.startsWith('image/')) return 'image'
+  return 'image'
 }
 
 export function getAssetTypeLabel(kind: AssetKind): string {
