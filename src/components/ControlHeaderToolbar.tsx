@@ -114,7 +114,7 @@ const ADD_PRIMARY_REVEAL_MS = 500
 const ADD_PRIMARY_HIDE_DELAY_MS = 100
 const ADD_PRIMARY_ROLL_MS = 600
 
-function PrimaryAddButton({
+export function PrimaryAddButton({
   onAddClick,
   visibleLabel,
   ariaLabel,
@@ -217,6 +217,8 @@ function PrimaryAddButton({
 export type ControlHeaderToolbarProps = {
   id: string
   toolbarAriaLabel: string
+  /** When false, hide View / Columns / Filters (search + primary only). */
+  showSecondaryActions?: boolean
   searchPlaceholder?: string
   /** Shown when the primary button label expands on hover (e.g. "Add Feature"). */
   addButtonVisibleLabel?: string
@@ -235,6 +237,7 @@ const defaultSearchPlaceholder = 'Search here...'
 export function ControlHeaderToolbar({
   id,
   toolbarAriaLabel,
+  showSecondaryActions = true,
   searchPlaceholder = defaultSearchPlaceholder,
   addButtonVisibleLabel = 'Add Feature',
   addButtonAriaLabel = 'Add feature',
@@ -250,25 +253,27 @@ export function ControlHeaderToolbar({
       role="toolbar"
       aria-label={toolbarAriaLabel}
     >
-      <div className="flex shrink-0 items-center gap-1">
-        {secondaryConfig.map(({ id: btnId, label, Icon }) => {
-          const isActive = activeId === btnId
-          return (
-            <button
-              key={btnId}
-              type="button"
-              onClick={() => setActiveId((prev) => (prev === btnId ? null : btnId))}
-              className={`text-fg flex h-8 max-h-8 min-h-8 items-center gap-1 rounded-panel px-3 text-standard leading-none transition-colors hover:bg-area-highlight focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none ${isActive ? 'bg-area-highlight' : ''}`}
-              aria-pressed={isActive}
-            >
-              <span className="text-fg-muted shrink-0" aria-hidden>
-                <Icon />
-              </span>
-              {label}
-            </button>
-          )
-        })}
-      </div>
+      {showSecondaryActions ? (
+        <div className="flex shrink-0 items-center gap-1">
+          {secondaryConfig.map(({ id: btnId, label, Icon }) => {
+            const isActive = activeId === btnId
+            return (
+              <button
+                key={btnId}
+                type="button"
+                onClick={() => setActiveId((prev) => (prev === btnId ? null : btnId))}
+                className={`text-fg flex h-8 max-h-8 min-h-8 items-center gap-1 rounded-panel px-3 text-standard leading-none transition-colors hover:bg-area-highlight focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none ${isActive ? 'bg-area-highlight' : ''}`}
+                aria-pressed={isActive}
+              >
+                <span className="text-fg-muted shrink-0" aria-hidden>
+                  <Icon />
+                </span>
+                {label}
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
 
       <div className="relative min-w-0 flex-1">
         <div className="text-fg-muted pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2">

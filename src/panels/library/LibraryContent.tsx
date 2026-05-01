@@ -4,6 +4,7 @@ import { sampleAssets, type SpatialAsset } from '@/data/sampleAssets'
 import { AddFeatureFlow } from '@/panels/library/AddFeatureFlow'
 import { type ActiveFilter } from '@/panels/library/FeatureLibraryBadges'
 import { FeatureLibraryFilterRow } from '@/panels/library/FeatureLibraryFilterRow'
+import { FeatureLibraryMediaViewer } from '@/panels/library/FeatureLibraryMediaViewer'
 import { FeatureLibraryTable } from '@/panels/library/FeatureLibraryTable'
 import { FeatureLibraryToolbar } from '@/panels/library/FeatureLibraryToolbar'
 
@@ -39,29 +40,49 @@ function FeatureLibraryView() {
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
   const [assets, setAssets] = useState<SpatialAsset[]>(() => [...sampleAssets])
   const [viewMode, setViewMode] = useState<'browse' | 'add'>('browse')
+  const [openedAsset, setOpenedAsset] = useState<SpatialAsset | null>(null)
 
   // When search/filters are applied, replace with the visible slice only.
   const visibleAssets = assets
   const visibleCount = visibleAssets.length
 
+  const viewerAsset = viewMode === 'browse' ? openedAsset : null
+
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <FeatureLibraryToolbar onAddFeatureClick={() => setViewMode('add')} />
+      <FeatureLibraryToolbar
+        onAddFeatureClick={() => {
+          setOpenedAsset(null)
+          setViewMode('add')
+        }}
+        viewerAsset={viewerAsset}
+        onCloseViewer={() => setOpenedAsset(null)}
+      />
       <div
         className="flex min-h-0 min-w-0 flex-1 flex-col"
         id="feature-library-contents"
       >
         {viewMode === 'browse' ? (
-          <>
-            <FeatureLibraryFilterRow
-              featureCount={visibleCount}
-              activeFilters={activeFilters}
-              onRemoveFilter={(id) => setActiveFilters((prev) => prev.filter((f) => f.id !== id))}
-            />
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-              <FeatureLibraryTable assets={visibleAssets} />
+          viewerAsset != null ? (
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col p-2">
+              <FeatureLibraryMediaViewer
+                asset={viewerAsset}
+                libraryAssets={visibleAssets}
+                onAssetChange={setOpenedAsset}
+              />
             </div>
-          </>
+          ) : (
+            <>
+              <FeatureLibraryFilterRow
+                featureCount={visibleCount}
+                activeFilters={activeFilters}
+                onRemoveFilter={(id) => setActiveFilters((prev) => prev.filter((f) => f.id !== id))}
+              />
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                <FeatureLibraryTable assets={visibleAssets} onOpenAsset={setOpenedAsset} />
+              </div>
+            </>
+          )
         ) : (
           <AddFeatureFlow
             onCancel={() => setViewMode('browse')}

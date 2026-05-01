@@ -2,8 +2,8 @@
  * Placeholder spatial assets for the prototype. Large binaries live under
  * `public/samples/` and are referenced by URL (e.g. `/samples/...`).
  *
- * Mock layout: `feature-viewer/spherical-pano/` (360_*), `map-viewer/floor-plans/`
- * (SOM_*). Add new kinds as sibling folders under the viewer that consumes them.
+ * Mock media: `feature-viewer/spherical-pano/` (360-img-*). Floor plans:
+ * `map-viewer/floor-plans/` (SOM_*).
  */
 
 export type AssetKind = 'image' | 'video' | 'panorama'
@@ -44,27 +44,27 @@ export function getAssetTypeLabel(kind: AssetKind): string {
 
 export const sampleAssets: SpatialAsset[] = [
   {
-    id: 'a-1',
-    kind: 'image',
-    title: 'THP_BR011',
+    id: 'fv-360-1',
+    kind: 'panorama',
+    title: '360-img-1',
     dateUploaded: 'July 22, 2025',
-    fileUrl: '/samples/placeholder.svg',
+    fileUrl: '/samples/feature-viewer/spherical-pano/360-img-1.png',
     mapPosition: { x: 22, y: 38 },
   },
   {
-    id: 'a-2',
+    id: 'fv-360-2',
     kind: 'panorama',
-    title: 'THP_BR012',
+    title: '360-img-2',
     dateUploaded: 'July 21, 2025',
-    fileUrl: '/samples/placeholder.svg',
+    fileUrl: '/samples/feature-viewer/spherical-pano/360-img-2.png',
     mapPosition: { x: 58, y: 52 },
   },
   {
-    id: 'a-3',
-    kind: 'video',
-    title: 'THP_EX901',
+    id: 'fv-360-3',
+    kind: 'panorama',
+    title: '360-img-3',
     dateUploaded: 'July 20, 2025',
-    fileUrl: '/samples/placeholder.svg',
+    fileUrl: '/samples/feature-viewer/spherical-pano/360-img-3.png',
     mapPosition: { x: 40, y: 72 },
   },
 ]
