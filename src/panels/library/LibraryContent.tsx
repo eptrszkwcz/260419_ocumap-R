@@ -1,4 +1,12 @@
-import { sampleAssets } from '@/data/sampleAssets'
+import { useState } from 'react'
+
+import { sampleAssets, type SpatialAsset } from '@/data/sampleAssets'
+import { AddFeatureFlow } from '@/panels/library/AddFeatureFlow'
+import { type ActiveFilter } from '@/panels/library/FeatureLibraryBadges'
+import { FeatureLibraryFilterRow } from '@/panels/library/FeatureLibraryFilterRow'
+import { FeatureLibraryMediaViewer } from '@/panels/library/FeatureLibraryMediaViewer'
+import { FeatureLibraryTable } from '@/panels/library/FeatureLibraryTable'
+import { FeatureLibraryToolbar } from '@/panels/library/FeatureLibraryToolbar'
 
 type LibraryContentProps = {
   activeTabId: string
@@ -25,31 +33,66 @@ export function LibraryContent({ activeTabId }: LibraryContentProps) {
     )
   }
 
-  /* feature-library */
+  return <FeatureLibraryView />
+}
+
+function FeatureLibraryView() {
+  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
+  const [assets, setAssets] = useState<SpatialAsset[]>(() => [...sampleAssets])
+  const [viewMode, setViewMode] = useState<'browse' | 'add'>('browse')
+  const [openedAsset, setOpenedAsset] = useState<SpatialAsset | null>(null)
+
+  // When search/filters are applied, replace with the visible slice only.
+  const visibleAssets = assets
+  const visibleCount = visibleAssets.length
+
+  const viewerAsset = viewMode === 'browse' ? openedAsset : null
+
   return (
-    <div className="min-h-0 flex-1 overflow-auto p-panel-padding">
-      <ul className="flex flex-col gap-2">
-        {sampleAssets.map((asset) => (
-          <li
-            key={asset.id}
-            className="flex items-center gap-3 rounded-panel border border-stroke bg-panel p-2"
-          >
-            <img
-              src={asset.fileUrl}
-              alt=""
-              className="h-14 w-24 shrink-0 rounded-panel border border-stroke object-cover"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-sans text-standard font-bold text-fg">
-                {asset.title}
-              </p>
-              <p className="font-sans text-standard text-fg-muted">
-                {asset.kind} · map ({asset.mapPosition.x}%, {asset.mapPosition.y}%)
-              </p>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <FeatureLibraryToolbar
+        onAddFeatureClick={() => {
+          setOpenedAsset(null)
+          setViewMode('add')
+        }}
+        viewerAsset={viewerAsset}
+        onCloseViewer={() => setOpenedAsset(null)}
+      />
+      <div
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
+        id="feature-library-contents"
+      >
+        {viewMode === 'browse' ? (
+          viewerAsset != null ? (
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col p-2">
+              <FeatureLibraryMediaViewer
+                asset={viewerAsset}
+                libraryAssets={visibleAssets}
+                onAssetChange={setOpenedAsset}
+              />
             </div>
-          </li>
-        ))}
-      </ul>
+          ) : (
+            <>
+              <FeatureLibraryFilterRow
+                featureCount={visibleCount}
+                activeFilters={activeFilters}
+                onRemoveFilter={(id) => setActiveFilters((prev) => prev.filter((f) => f.id !== id))}
+              />
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                <FeatureLibraryTable assets={visibleAssets} onOpenAsset={setOpenedAsset} />
+              </div>
+            </>
+          )
+        ) : (
+          <AddFeatureFlow
+            onCancel={() => setViewMode('browse')}
+            onSave={(newItems) => {
+              setAssets((a) => [...a, ...newItems])
+              setViewMode('browse')
+            }}
+          />
+        )}
+      </div>
     </div>
   )
 }

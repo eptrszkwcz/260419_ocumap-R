@@ -16,7 +16,7 @@ export function LibraryColumn() {
   const [tab, setTab] = useState('feature-library')
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-col">
+    <div className="flex h-full min-h-[680px] min-w-0 flex-col">
       <LibraryHeader />
       <div className="h-4 shrink-0" aria-hidden />
       <div className="flex min-h-0 flex-1 flex-col">

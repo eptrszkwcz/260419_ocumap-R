@@ -1,4 +1,5 @@
 import { Panel } from '@/components/Panel'
+import { useProjectsDrawer } from '@/context/ProjectsDrawerContext'
 
 function HamburgerIcon() {
   return (
@@ -21,16 +22,19 @@ function HamburgerIcon() {
 }
 
 export function LibraryHeader() {
+  const { toggle } = useProjectsDrawer()
+
   return (
     <Panel className="flex h-header shrink-0 items-center gap-3 border-0 px-panel-padding">
       <button
         type="button"
+        onClick={toggle}
         className="text-fg hover:bg-area-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35 flex size-icon-button shrink-0 items-center justify-center rounded-panel border border-transparent transition-colors"
         aria-label="Menu"
       >
         <HamburgerIcon />
       </button>
-      <h1 className="min-w-0 truncate font-title text-title font-bold text-fg">123 Main St.</h1>
+      <h1 className="min-w-0 truncate font-title text-title font-bold text-fg">1603 Jefferson St</h1>
     </Panel>
   )
 }
