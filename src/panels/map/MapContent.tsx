@@ -170,7 +170,7 @@ function MapFloorPlanViewer({
         (isDragging ? 'cursor-grabbing' : 'cursor-grab')
       }
       role="region"
-      aria-label="2D map"
+      aria-label="Floor plan"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
@@ -211,7 +211,7 @@ function MapFloorPlanViewer({
 export function MapContent({ activeTab, floorPlanSrc, floorPlanLabel }: MapContentProps) {
   if (activeTab !== '2d') {
     return (
-      <div className="min-h-0 min-w-0 flex-1 overflow-hidden bg-panel" role="region" aria-label="3D map" />
+      <div className="min-h-0 min-w-0 flex-1 overflow-hidden bg-panel" role="region" aria-label="3D point cloud" />
     )
   }
 

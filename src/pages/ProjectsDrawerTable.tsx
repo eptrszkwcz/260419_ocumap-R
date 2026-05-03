@@ -1,4 +1,10 @@
-import { DEMO_OPENS_LIBRARY_PROJECT_ID, type ProjectRecord } from '@/data/sampleProjects'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+
+import {
+  DEMO_OPENS_LIBRARY_PROJECT_ID,
+  getProjectById,
+  type ProjectRecord,
+} from '@/data/sampleProjects'
 
 function MoreVerticalIcon({ className = '' }: { className?: string }) {
   return (
@@ -20,35 +26,40 @@ function MoreVerticalIcon({ className = '' }: { className?: string }) {
 function DrawerProjectRow({
   project,
   onCloseDrawer,
+  activeProjectId,
 }: {
   project: ProjectRecord
   onCloseDrawer: () => void
+  activeProjectId: string
 }) {
-  const isCurrent = project.id === DEMO_OPENS_LIBRARY_PROJECT_ID
+  const navigate = useNavigate()
+  const isCurrent = project.id === activeProjectId
 
   const onRowActivate = () => {
-    if (isCurrent) onCloseDrawer()
+    if (isCurrent) {
+      onCloseDrawer()
+      return
+    }
+    navigate(`/library?project=${encodeURIComponent(project.id)}`)
+    onCloseDrawer()
   }
 
   return (
     <tr
       className={
-        'group h-10 border-b-[0.5px] border-solid border-stroke font-normal transition-colors hover:bg-area-highlight hover:font-semibold ' +
-        (isCurrent ? 'cursor-pointer' : '')
+        'group h-10 cursor-pointer border-b-[0.5px] border-solid border-stroke font-normal transition-colors hover:bg-area-highlight hover:font-semibold '
       }
-      onClick={isCurrent ? onRowActivate : undefined}
-      onKeyDown={
-        isCurrent
-          ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                onRowActivate()
-              }
-            }
-          : undefined
+      onClick={onRowActivate}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onRowActivate()
+        }
+      }}
+      tabIndex={0}
+      aria-label={
+        isCurrent ? `Current project ${project.name}, close list` : `Open ${project.name} in library`
       }
-      tabIndex={isCurrent ? 0 : undefined}
-      aria-label={isCurrent ? `Current project ${project.name}, close list` : undefined}
     >
       <td className="min-w-0 pl-panel-padding pr-4 align-middle text-fg-muted group-hover:text-fg-highlight">
         <span className="block truncate">{project.name}</span>
@@ -74,6 +85,11 @@ type ProjectsDrawerTableProps = {
 
 /** Narrow projects list: project name + kebab (library slide-out drawer). */
 export function ProjectsDrawerTable({ projects, onCloseDrawer }: ProjectsDrawerTableProps) {
+  const [searchParams] = useSearchParams()
+  const paramId = searchParams.get('project')?.trim()
+  const fromQuery = paramId != null && paramId !== '' ? getProjectById(paramId) : undefined
+  const activeProjectId = fromQuery?.id ?? DEMO_OPENS_LIBRARY_PROJECT_ID
+
   return (
     <div className="min-h-0 w-full min-w-0 flex-1 overflow-auto px-0">
       <table className="w-full min-w-0 table-fixed border-collapse text-left font-sans text-standard">
@@ -101,6 +117,7 @@ export function ProjectsDrawerTable({ projects, onCloseDrawer }: ProjectsDrawerT
               key={project.id}
               project={project}
               onCloseDrawer={onCloseDrawer}
+              activeProjectId={activeProjectId}
             />
           ))}
         </tbody>

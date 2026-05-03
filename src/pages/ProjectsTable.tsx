@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 
-import { DEMO_OPENS_LIBRARY_PROJECT_ID, type ProjectRecord } from '@/data/sampleProjects'
+import { type ProjectRecord } from '@/data/sampleProjects'
 
 function MoreVerticalIcon({ className = '' }: { className?: string }) {
   return (
@@ -21,31 +21,25 @@ function MoreVerticalIcon({ className = '' }: { className?: string }) {
 
 function ProjectTableRow({ project }: { project: ProjectRecord }) {
   const navigate = useNavigate()
-  const opensLibrary = project.id === DEMO_OPENS_LIBRARY_PROJECT_ID
 
   const openInLibrary = () => {
-    if (opensLibrary) navigate('/library')
+    navigate(`/library?project=${encodeURIComponent(project.id)}`)
   }
 
   return (
     <tr
       className={
-        'group h-10 border-b-[0.5px] border-solid border-stroke font-normal transition-colors hover:bg-area-highlight hover:font-semibold ' +
-        (opensLibrary ? 'cursor-pointer' : '')
+        'group h-10 cursor-pointer border-b-[0.5px] border-solid border-stroke font-normal transition-colors hover:bg-area-highlight hover:font-semibold '
       }
-      onClick={opensLibrary ? openInLibrary : undefined}
-      onKeyDown={
-        opensLibrary
-          ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                openInLibrary()
-              }
-            }
-          : undefined
-      }
-      tabIndex={opensLibrary ? 0 : undefined}
-      aria-label={opensLibrary ? `Open ${project.name} in library` : undefined}
+      onClick={openInLibrary}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          openInLibrary()
+        }
+      }}
+      tabIndex={0}
+      aria-label={`Open ${project.name} in library`}
     >
       <td className="min-w-0 pl-panel-padding pr-4 align-middle text-fg-muted group-hover:text-fg-highlight">
         <span className="block truncate">{project.name}</span>
