@@ -23,7 +23,7 @@ export function ProjectsPage() {
         </div>
         <UserAccountDisplay />
       </header>
-      <Panel className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col p-0">
+      <Panel className="!border-0 !bg-transparent mx-auto mt-6 flex min-h-0 min-w-0 w-full max-w-[1200px] flex-1 flex-col p-0 shadow-none">
         <ControlHeaderToolbar
           id="control-header-projects"
           toolbarAriaLabel="Projects list actions"

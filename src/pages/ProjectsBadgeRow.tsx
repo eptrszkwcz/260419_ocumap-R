@@ -13,7 +13,7 @@ export function ProjectsBadgeRow({ projectCount }: ProjectsBadgeRowProps) {
   return (
     <div
       id="badge-container-projects"
-      className="flex h-14 w-full shrink-0 items-center gap-2 px-panel-padding"
+      className="flex h-14 w-full shrink-0 items-center gap-2 bg-transparent px-panel-padding"
       aria-label="Project summary"
     >
       <div className={countBadgeClassName} role="status" aria-live="polite">
