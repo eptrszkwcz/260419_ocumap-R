@@ -141,7 +141,7 @@ export function ProjectsDrawerFromLibrary() {
               <ChevronRightIcon />
             </button>
           </header>
-          <Panel className="!border-0 !bg-transparent mt-6 flex min-h-0 min-w-0 flex-1 flex-col p-0 shadow-none">
+          <Panel className="!border-0 !bg-transparent mt-[52px] flex min-h-0 min-w-0 flex-1 flex-col p-0 shadow-none">
             <ControlHeaderToolbar
               id="control-header-projects"
               toolbarAriaLabel="Projects list actions"

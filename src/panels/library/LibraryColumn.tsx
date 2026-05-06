@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { useActiveProject } from '@/context/ActiveProjectContext'
 import { PanelTabRow, type TabItem } from '@/components/PanelTabRow'
 import { TabPanelBody } from '@/components/TabPanelBody'
 
@@ -13,6 +14,7 @@ const libraryTabs: TabItem[] = [
 ]
 
 export function LibraryColumn() {
+  const { projectId } = useActiveProject()
   const [tab, setTab] = useState('feature-library')
 
   return (
@@ -27,7 +29,7 @@ export function LibraryColumn() {
           aria-label="Library sections"
         />
         <TabPanelBody>
-          <LibraryContent activeTabId={tab} />
+          <LibraryContent key={projectId} activeTabId={tab} />
         </TabPanelBody>
       </div>
     </div>

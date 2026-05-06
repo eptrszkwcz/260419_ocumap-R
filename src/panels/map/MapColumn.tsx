@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { PanelTabRow, type TabItem } from '@/components/PanelTabRow'
 import { TabPanelBody } from '@/components/TabPanelBody'
 import { useActiveProject } from '@/context/ActiveProjectContext'
+import { useMapCaptureMarkers } from '@/context/MapCaptureMarkersContext'
 
 import { InfrastructureMapView } from '@/panels/map/InfrastructureMapView'
 import { MapContent } from '@/panels/map/MapContent'
@@ -26,6 +27,7 @@ type MapColumnProps = {
 
 export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
   const { project } = useActiveProject()
+  const { captureMarkers } = useMapCaptureMarkers()
   const [buildingTab, setBuildingTab] = useState('2d')
   const [floorPlanId, setFloorPlanId] = useState<FloorPlanId>('SOM-5')
 
@@ -41,7 +43,11 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
           <TabPanelBody>
             <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
               {styleUrl != null ? (
-                <InfrastructureMapView styleUrl={styleUrl} splitCommitToken={splitCommitToken} />
+                <InfrastructureMapView
+                  styleUrl={styleUrl}
+                  splitCommitToken={splitCommitToken}
+                  captureMarkers={captureMarkers}
+                />
               ) : (
                 <div
                   className="flex min-h-0 flex-1 items-center justify-center bg-panel p-panel-padding font-sans text-standard text-fg-muted"
