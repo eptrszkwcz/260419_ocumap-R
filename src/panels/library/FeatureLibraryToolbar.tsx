@@ -1,3 +1,5 @@
+import { InformationCircleIcon, PhotoIcon } from '@heroicons/react/24/outline'
+
 import { ControlHeaderToolbar } from '@/components/ControlHeaderToolbar'
 
 import { getAssetTypeLabel, type SpatialAsset } from '@/data/sampleAssets'
@@ -35,16 +37,28 @@ function CloseIcon() {
 const mediaBadgeClass =
   'text-fg-highlight inline-flex h-badge min-h-badge max-h-badge min-w-0 shrink-0 items-center justify-center rounded-panel bg-fg-highlight/12 px-2 text-badge font-bold leading-none'
 
+type ViewerPanelMode = 'media' | 'metadata'
+
 type FeatureLibraryToolbarProps = {
   onAddFeatureClick?: () => void
   /** When set (browse tab + not in add flow), header shows asset title and badges instead of search tools. */
   viewerAsset?: SpatialAsset | null
+  /** Browse vs metadata when `viewerAsset` is open. Ignored when `viewerAsset` is null. */
+  viewerPanel?: ViewerPanelMode
+  onOpenMetadata?: () => void
+  onOpenMedia?: () => void
   onCloseViewer?: () => void
 }
+
+const iconBtnClass =
+  'text-fg-muted hover:text-fg-highlight flex size-8 shrink-0 items-center justify-center rounded-panel transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
 
 export function FeatureLibraryToolbar({
   onAddFeatureClick,
   viewerAsset,
+  viewerPanel = 'media',
+  onOpenMetadata,
+  onOpenMedia,
   onCloseViewer,
 }: FeatureLibraryToolbarProps) {
   if (viewerAsset != null) {
@@ -55,7 +69,28 @@ export function FeatureLibraryToolbar({
         role="toolbar"
         aria-label="Feature media"
       >
-        <h2 className="min-w-0 flex-1 truncate font-title text-title font-bold text-fg">{viewerAsset.title}</h2>
+        <div className="flex min-w-0 flex-1 items-center gap-1">
+          <h2 className="min-w-0 flex-1 truncate font-title text-title font-bold text-fg">{viewerAsset.title}</h2>
+          {viewerPanel === 'media' ? (
+            <button
+              type="button"
+              className={iconBtnClass}
+              aria-label="Feature information and metadata"
+              onClick={() => onOpenMetadata?.()}
+            >
+              <InformationCircleIcon className="size-5" aria-hidden />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={iconBtnClass}
+              aria-label="Back to media"
+              onClick={() => onOpenMedia?.()}
+            >
+              <PhotoIcon className="size-5" aria-hidden />
+            </button>
+          )}
+        </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className={mediaBadgeClass}>{getAssetTypeLabel(viewerAsset.kind)}</span>
           <span className={mediaBadgeClass}>{viewerAsset.dateUploaded}</span>
@@ -63,7 +98,7 @@ export function FeatureLibraryToolbar({
         <div className="flex shrink-0 items-center gap-1">
           <button
             type="button"
-            className="text-fg-muted hover:text-fg-highlight flex size-8 items-center justify-center rounded-panel transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none"
+            className={iconBtnClass}
             aria-label="More options"
           >
             <MoreVerticalIcon />
@@ -71,7 +106,7 @@ export function FeatureLibraryToolbar({
           <button
             type="button"
             onClick={() => onCloseViewer?.()}
-            className="text-fg-muted hover:text-fg-highlight flex size-8 items-center justify-center rounded-panel transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none"
+            className={iconBtnClass}
             aria-label="Close viewer"
           >
             <CloseIcon />

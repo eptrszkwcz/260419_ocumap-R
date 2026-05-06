@@ -1,3 +1,6 @@
+import { ActiveProjectProvider } from '@/context/ActiveProjectContext'
+import { MapCaptureMarkersProvider } from '@/context/MapCaptureMarkersContext'
+import { MapLocationPickProvider } from '@/context/MapLocationPickContext'
 import { ProjectsDrawerProvider } from '@/context/ProjectsDrawerContext'
 import { DashboardLayout } from '@/layout/DashboardLayout'
 import { ProjectsDrawerFromLibrary } from '@/panels/library/ProjectsDrawerFromLibrary'
@@ -5,10 +8,16 @@ import { ProjectsDrawerFromLibrary } from '@/panels/library/ProjectsDrawerFromLi
 export function LibraryPage() {
   return (
     <ProjectsDrawerProvider>
-      <div className="h-full min-h-0">
-        <DashboardLayout />
-      </div>
-      <ProjectsDrawerFromLibrary />
+      <ActiveProjectProvider>
+        <MapLocationPickProvider>
+          <MapCaptureMarkersProvider>
+            <div className="h-full min-h-0">
+              <DashboardLayout />
+            </div>
+            <ProjectsDrawerFromLibrary />
+          </MapCaptureMarkersProvider>
+        </MapLocationPickProvider>
+      </ActiveProjectProvider>
     </ProjectsDrawerProvider>
   )
 }

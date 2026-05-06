@@ -245,11 +245,15 @@ export function ControlHeaderToolbar({
   onAddClick,
 }: ControlHeaderToolbarProps) {
   const [activeId, setActiveId] = useState<(typeof secondaryConfig)[number]['id'] | null>(null)
+  const projectsChrome = id === 'control-header-projects'
 
   return (
     <div
       id={id}
-      className="flex h-16 w-full shrink-0 items-center gap-3 border-b border-stroke px-panel-padding"
+      className={
+        'flex h-16 w-full shrink-0 items-center gap-3 px-panel-padding ' +
+        (projectsChrome ? 'border-b-0 bg-transparent' : 'border-b border-stroke')
+      }
       role="toolbar"
       aria-label={toolbarAriaLabel}
     >
