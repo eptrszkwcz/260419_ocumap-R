@@ -79,7 +79,7 @@ export const sampleAssetsJefferson: SpatialAsset[] = [
     title: '360-img-2',
     dateUploaded: 'July 21, 2025',
     fileUrl: `${sphericalPanoBase}/360-img-2.png`,
-    floorPlanPosition: { floorPlanId: 'SOM-5', x: 0.62, y: 0.27 },
+    floorPlanPosition: { floorPlanId: 'SOM-2', x: 0.62, y: 0.27 },
   },
   {
     id: 'fv-360-3',
@@ -87,7 +87,7 @@ export const sampleAssetsJefferson: SpatialAsset[] = [
     title: '360-img-3',
     dateUploaded: 'July 20, 2025',
     fileUrl: `${sphericalPanoBase}/360-img-3.png`,
-    floorPlanPosition: { floorPlanId: 'SOM-2', x: 0.48, y: 0.58 },
+    floorPlanPosition: { floorPlanId: 'SOM-5', x: 0.48, y: 0.58 },
   },
 ]
 

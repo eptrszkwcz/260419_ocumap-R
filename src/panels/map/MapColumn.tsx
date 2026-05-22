@@ -30,17 +30,19 @@ type MapColumnProps = {
 export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
   const { project } = useActiveProject()
   const { captureMarkers, floorPlanMarkers } = useMapCaptureMarkers()
-  const { openedFeatureId } = useFeatureMapHover()
+  const { openedFeatureId, linkedFeatureId } = useFeatureMapHover()
   const [buildingTab, setBuildingTab] = useState('2d')
   const [floorPlanId, setFloorPlanId] = useState<FloorPlanId>(DEFAULT_FLOOR_PLAN_ID)
 
   useEffect(() => {
-    if (openedFeatureId == null) return
-    const marker = floorPlanMarkers.find((m) => m.id === openedFeatureId)
-    if (marker != null && marker.floorPlanId !== floorPlanId) {
-      setFloorPlanId(marker.floorPlanId)
-    }
-  }, [openedFeatureId, floorPlanMarkers, floorPlanId])
+    const targetFeatureId = openedFeatureId ?? linkedFeatureId
+    if (targetFeatureId == null) return
+    const marker = floorPlanMarkers.find((m) => m.id === targetFeatureId)
+    if (marker == null) return
+    setFloorPlanId((current) =>
+      marker.floorPlanId !== current ? marker.floorPlanId : current,
+    )
+  }, [openedFeatureId, linkedFeatureId, floorPlanMarkers])
 
   if (project.projectType === 'Infrastructure') {
     const styleUrl = project.mapboxStyleUrl
