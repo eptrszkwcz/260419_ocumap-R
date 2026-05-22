@@ -4,12 +4,18 @@ import { FeatureLibraryTableRow } from '@/panels/library/FeatureLibraryTableRow'
 type FeatureLibraryTableProps = {
   assets: SpatialAsset[]
   onOpenAsset?: (asset: SpatialAsset) => void
+  /** Building projects: show floor plan name in a Location column. */
+  showLocationColumn?: boolean
 }
 
 /**
- * Full-width list: Name, Date, Type, actions. Rows 40px; hover fills area highlight and uses highlight text on cells + action icon.
+ * Full-width list: Name, Date, Type, [Location], actions. Rows 40px; hover fills area highlight and uses highlight text on cells + action icon.
  */
-export function FeatureLibraryTable({ assets, onOpenAsset }: FeatureLibraryTableProps) {
+export function FeatureLibraryTable({
+  assets,
+  onOpenAsset,
+  showLocationColumn = false,
+}: FeatureLibraryTableProps) {
   return (
     <div className="min-h-0 w-full min-w-0 flex-1 overflow-auto px-0">
       <table className="w-full min-w-0 table-fixed border-collapse text-left font-sans text-standard">
@@ -17,6 +23,7 @@ export function FeatureLibraryTable({ assets, onOpenAsset }: FeatureLibraryTable
           <col />
           <col style={{ width: '10rem' }} />
           <col style={{ width: '8.5rem' }} />
+          {showLocationColumn ? <col style={{ width: '7rem' }} /> : null}
           <col style={{ width: '2.25rem' }} />
         </colgroup>
         <thead>
@@ -30,6 +37,11 @@ export function FeatureLibraryTable({ assets, onOpenAsset }: FeatureLibraryTable
             <th className="pl-0 pr-4 font-bold text-fg" scope="col">
               Type
             </th>
+            {showLocationColumn ? (
+              <th className="pl-0 pr-4 font-bold text-fg" scope="col">
+                Location
+              </th>
+            ) : null}
             <th
               className="pr-panel-padding pl-0 text-right font-bold"
               scope="col"
@@ -44,6 +56,7 @@ export function FeatureLibraryTable({ assets, onOpenAsset }: FeatureLibraryTable
             <FeatureLibraryTableRow
               key={asset.id}
               asset={asset}
+              showLocationColumn={showLocationColumn}
               onOpen={onOpenAsset != null ? () => onOpenAsset(asset) : undefined}
             />
           ))}

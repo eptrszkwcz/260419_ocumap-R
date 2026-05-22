@@ -1,7 +1,9 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 
 import { useActiveProject } from '@/context/ActiveProjectContext'
-import { useMapCaptureMarkers, type MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
+import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
+import { useMapCaptureMarkers, type FloorPlanMarker, type MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
+import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { getSampleAssetsForProject, type SpatialAsset } from '@/data/sampleAssets'
 import { AddFeatureFlow } from '@/panels/library/AddFeatureFlow'
@@ -29,17 +31,41 @@ function assetsToCaptureMarkers(assets: SpatialAsset[]): MapCaptureMarker[] {
     .map((a) => ({ id: a.id, lng: a.captureLng as number, lat: a.captureLat as number }))
 }
 
+function assetsToFloorPlanMarkers(assets: SpatialAsset[]): FloorPlanMarker[] {
+  return assets
+    .filter((a) => {
+      const p = a.floorPlanPosition
+      if (p == null) return false
+      return (
+        Number.isFinite(p.x) &&
+        Number.isFinite(p.y) &&
+        p.x >= 0 &&
+        p.x <= 1 &&
+        p.y >= 0 &&
+        p.y <= 1
+      )
+    })
+    .map((a) => ({
+      id: a.id,
+      floorPlanId: a.floorPlanPosition!.floorPlanId,
+      x: a.floorPlanPosition!.x,
+      y: a.floorPlanPosition!.y,
+    }))
+}
+
 export function LibraryContent({ activeTabId }: LibraryContentProps) {
   const { projectId } = useActiveProject()
-  const { setCaptureMarkers } = useMapCaptureMarkers()
+  const { setCaptureMarkers, setFloorPlanMarkers } = useMapCaptureMarkers()
   const [assets, setAssets] = useState<SpatialAsset[]>(() => getSampleAssetsForProject(projectId))
 
   useEffect(() => {
     setCaptureMarkers(assetsToCaptureMarkers(assets))
+    setFloorPlanMarkers(assetsToFloorPlanMarkers(assets))
     return () => {
       setCaptureMarkers([])
+      setFloorPlanMarkers([])
     }
-  }, [assets, setCaptureMarkers])
+  }, [assets, setCaptureMarkers, setFloorPlanMarkers])
 
   if (activeTabId === 'project-details') {
     return <ProjectDetailsPanel assets={assets} />
@@ -69,7 +95,10 @@ type FeatureLibraryViewProps = {
 }
 
 function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
-  const { cancelLocationPick } = useMapLocationPick()
+  const { project } = useActiveProject()
+  const { cancelLocationPick, clearLocationPickPreview } = useMapLocationPick()
+  const { cancelFloorPlanLocationPick, clearFloorPlanLocationPickPreview } = useFloorPlanLocationPick()
+  const { setOpenedFeatureId, setMapFeatureClickHandler } = useFeatureMapHover()
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
   const [viewMode, setViewMode] = useState<'browse' | 'add'>('browse')
   const [openedAsset, setOpenedAsset] = useState<SpatialAsset | null>(null)
@@ -83,7 +112,24 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   const openAsset = (asset: SpatialAsset) => {
     setViewerPanel('media')
     setOpenedAsset(asset)
+    setOpenedFeatureId(asset.id)
   }
+
+  useEffect(() => {
+    setOpenedFeatureId(viewerAsset?.id ?? null)
+  }, [viewerAsset?.id, setOpenedFeatureId])
+
+  useEffect(() => {
+    setMapFeatureClickHandler((id) => {
+      const asset = assets.find((a) => a.id === id)
+      if (asset != null) {
+        setViewerPanel('media')
+        setOpenedAsset(asset)
+        setOpenedFeatureId(asset.id)
+      }
+    })
+    return () => setMapFeatureClickHandler(null)
+  }, [assets, setMapFeatureClickHandler, setOpenedFeatureId])
 
   const replaceOpenedAsset = (asset: SpatialAsset) => {
     setOpenedAsset(asset)
@@ -91,8 +137,13 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   }
 
   const updateAssetInLibrary = (updated: SpatialAsset) => {
+    cancelLocationPick()
+    cancelFloorPlanLocationPick()
+    clearLocationPickPreview()
+    clearFloorPlanLocationPickPreview()
     setAssets((list) => list.map((a) => (a.id === updated.id ? updated : a)))
     setOpenedAsset(updated)
+    setViewerPanel('media')
   }
 
   return (
@@ -100,7 +151,9 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
       <FeatureLibraryToolbar
         onAddFeatureClick={() => {
           cancelLocationPick()
+          cancelFloorPlanLocationPick()
           setOpenedAsset(null)
+          setOpenedFeatureId(null)
           setViewMode('add')
         }}
         viewerAsset={viewerAsset}
@@ -108,11 +161,14 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
         onOpenMetadata={() => setViewerPanel('metadata')}
         onOpenMedia={() => {
           cancelLocationPick()
+          cancelFloorPlanLocationPick()
           setViewerPanel('media')
         }}
         onCloseViewer={() => {
           cancelLocationPick()
+          cancelFloorPlanLocationPick()
           setOpenedAsset(null)
+          setOpenedFeatureId(null)
           setViewerPanel('media')
         }}
       />
@@ -133,6 +189,9 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
                     viewerAsset.dateCaptured ?? '',
                     viewerAsset.captureLng ?? '',
                     viewerAsset.captureLat ?? '',
+                    viewerAsset.floorPlanPosition?.floorPlanId ?? '',
+                    viewerAsset.floorPlanPosition?.x ?? '',
+                    viewerAsset.floorPlanPosition?.y ?? '',
                     viewerAsset.fileSizeBytes ?? '',
                     viewerAsset.mimeType ?? '',
                     viewerAsset.width ?? '',
@@ -157,7 +216,11 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
                 onRemoveFilter={(id) => setActiveFilters((prev) => prev.filter((f) => f.id !== id))}
               />
               <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                <FeatureLibraryTable assets={visibleAssets} onOpenAsset={openAsset} />
+                <FeatureLibraryTable
+                  assets={visibleAssets}
+                  onOpenAsset={openAsset}
+                  showLocationColumn={project.projectType === 'Building'}
+                />
               </div>
             </>
           )

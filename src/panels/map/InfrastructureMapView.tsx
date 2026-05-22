@@ -3,6 +3,7 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 
 import type { MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
+import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
 
 const CAPTURE_SOURCE_ID = 'ocumap-capture-markers'
@@ -19,7 +20,107 @@ function captureMarkersFeatureCollection(markers: MapCaptureMarker[]) {
   }
 }
 
-function syncCaptureMarkersLayer(map: mapboxgl.Map, markers: MapCaptureMarker[]) {
+const DEFAULT_FILL_OPACITY = 0.32
+const DIM_OPACITY = 0.15
+const HIGHLIGHT_FILL_OPACITY = 1
+const NON_HOVERED_STROKE_OPACITY = 0.6
+const FEATURE_FOCUS_MAX_ZOOM = 16
+const FIT_ALL_MARKERS_PADDING = 56
+const FLY_DURATION_MS = 700
+
+function captureMarkerIdFromFeature(feature: mapboxgl.MapboxGeoJSONFeature | undefined): string | null {
+  if (feature == null) return null
+  const raw = feature.properties?.id ?? feature.id
+  if (raw == null) return null
+  return String(raw)
+}
+
+function zoomToOpenedFeature(map: mapboxgl.Map, markers: MapCaptureMarker[], featureId: string) {
+  const marker = markers.find((m) => m.id === featureId)
+  if (marker == null) return
+  if (map.getMaxZoom() < FEATURE_FOCUS_MAX_ZOOM) {
+    map.setMaxZoom(FEATURE_FOCUS_MAX_ZOOM)
+  }
+  map.flyTo({
+    center: [marker.lng, marker.lat],
+    zoom: FEATURE_FOCUS_MAX_ZOOM,
+    duration: FLY_DURATION_MS,
+    essential: true,
+  })
+}
+
+function fitAllCaptureMarkers(map: mapboxgl.Map, markers: MapCaptureMarker[]) {
+  if (markers.length === 0) return
+  if (markers.length === 1) {
+    const m = markers[0]
+    map.flyTo({
+      center: [m.lng, m.lat],
+      zoom: Math.min(13, map.getMaxZoom()),
+      duration: FLY_DURATION_MS,
+    })
+    return
+  }
+  const bounds = markers.reduce(
+    (b, m) => b.extend([m.lng, m.lat]),
+    new mapboxgl.LngLatBounds([markers[0].lng, markers[0].lat], [markers[0].lng, markers[0].lat]),
+  )
+  map.fitBounds(bounds, {
+    padding: FIT_ALL_MARKERS_PADDING,
+    maxZoom: FEATURE_FOCUS_MAX_ZOOM,
+    duration: FLY_DURATION_MS,
+  })
+}
+
+function applyCaptureMarkerPaint(
+  map: mapboxgl.Map,
+  linkedFeatureId: string | null,
+  openedFeatureId: string | null,
+) {
+  if (!map.getLayer(CAPTURE_LAYER_ID)) return
+  try {
+    if (openedFeatureId) {
+      map.setPaintProperty(CAPTURE_LAYER_ID, 'circle-opacity', [
+        'case',
+        ['==', ['get', 'id'], openedFeatureId],
+        HIGHLIGHT_FILL_OPACITY,
+        DIM_OPACITY,
+      ])
+      map.setPaintProperty(CAPTURE_LAYER_ID, 'circle-stroke-opacity', [
+        'case',
+        ['==', ['get', 'id'], openedFeatureId],
+        1,
+        DIM_OPACITY,
+      ])
+    } else {
+      const linkedId = linkedFeatureId ?? ''
+      map.setPaintProperty(CAPTURE_LAYER_ID, 'circle-opacity', [
+        'case',
+        ['==', ['get', 'id'], linkedId],
+        HIGHLIGHT_FILL_OPACITY,
+        DEFAULT_FILL_OPACITY,
+      ])
+      if (linkedFeatureId) {
+        map.setPaintProperty(CAPTURE_LAYER_ID, 'circle-stroke-opacity', [
+          'case',
+          ['==', ['get', 'id'], linkedId],
+          1,
+          NON_HOVERED_STROKE_OPACITY,
+        ])
+      } else {
+        map.setPaintProperty(CAPTURE_LAYER_ID, 'circle-stroke-opacity', 1)
+      }
+    }
+  } catch {
+    /* rare: style does not accept paint updates */
+  }
+}
+
+function syncCaptureMarkersLayer(
+  map: mapboxgl.Map,
+  markers: MapCaptureMarker[],
+  linkedFeatureId: string | null,
+  openedFeatureId: string | null,
+) {
   if (!map.isStyleLoaded()) return
   const data = captureMarkersFeatureCollection(markers)
   try {
@@ -30,16 +131,18 @@ function syncCaptureMarkersLayer(map: mapboxgl.Map, markers: MapCaptureMarker[])
         type: 'circle',
         source: CAPTURE_SOURCE_ID,
         paint: {
-          'circle-radius': 11,
+          'circle-radius': 6,
           'circle-color': '#2563eb',
           'circle-opacity': 0.32,
-          'circle-stroke-width': 2.5,
+          'circle-stroke-width': 2,
           'circle-stroke-color': '#1d4ed8',
         },
       })
+      applyCaptureMarkerPaint(map, linkedFeatureId, openedFeatureId)
     } else {
       const src = map.getSource(CAPTURE_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined
       src?.setData(data)
+      applyCaptureMarkerPaint(map, linkedFeatureId, openedFeatureId)
     }
   } catch {
     /* rare: style does not accept custom layers */
@@ -69,11 +172,31 @@ export function InfrastructureMapView({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const captureMarkersRef = useRef(captureMarkers)
+  const linkedFeatureIdRef = useRef<string | null>(null)
+  const openedFeatureIdRef = useRef<string | null>(null)
+  const prevOpenedFeatureIdRef = useRef<string | null | undefined>(undefined)
   const resizeRafRef = useRef<number>(0)
+
+  const {
+    linkedFeatureId,
+    openedFeatureId,
+    setMapHoveredFeatureId,
+    setOpenedFeatureId,
+    openFeatureFromMap,
+  } = useFeatureMapHover()
 
   useLayoutEffect(() => {
     captureMarkersRef.current = captureMarkers
   }, [captureMarkers])
+
+  useLayoutEffect(() => {
+    linkedFeatureIdRef.current = linkedFeatureId
+  }, [linkedFeatureId])
+
+  useLayoutEffect(() => {
+    openedFeatureIdRef.current = openedFeatureId
+  }, [openedFeatureId])
+
   const token = mapboxAccessToken()
   const { isPickingLocation, reportLocationPick, cancelLocationPick } = useMapLocationPick()
 
@@ -93,7 +216,12 @@ export function InfrastructureMapView({
     mapRef.current = map
 
     const onLoad = () => {
-      syncCaptureMarkersLayer(map, captureMarkersRef.current)
+      syncCaptureMarkersLayer(
+        map,
+        captureMarkersRef.current,
+        linkedFeatureIdRef.current,
+        openedFeatureIdRef.current,
+      )
     }
     map.on('load', onLoad)
 
@@ -123,8 +251,83 @@ export function InfrastructureMapView({
   useEffect(() => {
     const map = mapRef.current
     if (map == null) return
-    syncCaptureMarkersLayer(map, captureMarkers)
-  }, [captureMarkers])
+    syncCaptureMarkersLayer(map, captureMarkers, linkedFeatureId, openedFeatureId)
+  }, [captureMarkers, linkedFeatureId, openedFeatureId])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (map == null) return
+    applyCaptureMarkerPaint(map, linkedFeatureId, openedFeatureId)
+  }, [linkedFeatureId, openedFeatureId])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (map == null) return
+
+    const prevOpened = prevOpenedFeatureIdRef.current
+    prevOpenedFeatureIdRef.current = openedFeatureId
+
+    if (openedFeatureId != null) {
+      zoomToOpenedFeature(map, captureMarkersRef.current, openedFeatureId)
+      return
+    }
+
+    if (prevOpened === undefined) return
+    if (prevOpened != null) {
+      fitAllCaptureMarkers(map, captureMarkersRef.current)
+    }
+  }, [openedFeatureId, captureMarkers])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (map == null || isPickingLocation) return
+
+    const onClick = (e: mapboxgl.MapLayerMouseEvent) => {
+      const id = captureMarkerIdFromFeature(e.features?.[0])
+      if (id == null) return
+      setOpenedFeatureId(id)
+      zoomToOpenedFeature(map, captureMarkersRef.current, id)
+      openFeatureFromMap(id)
+    }
+
+    map.on('click', CAPTURE_LAYER_ID, onClick)
+
+    return () => {
+      map.off('click', CAPTURE_LAYER_ID, onClick)
+    }
+  }, [isPickingLocation, openFeatureFromMap, setOpenedFeatureId])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (map == null || isPickingLocation) return
+
+    const canvas = map.getCanvas()
+    let prevCursor = ''
+
+    const onMouseEnter = (e: mapboxgl.MapLayerMouseEvent) => {
+      const feature = e.features?.[0]
+      const id = feature?.properties?.id
+      if (typeof id !== 'string') return
+      setMapHoveredFeatureId(id)
+      prevCursor = canvas.style.cursor
+      canvas.style.cursor = 'pointer'
+    }
+
+    const onMouseLeave = () => {
+      setMapHoveredFeatureId(null)
+      canvas.style.cursor = prevCursor
+    }
+
+    map.on('mouseenter', CAPTURE_LAYER_ID, onMouseEnter)
+    map.on('mouseleave', CAPTURE_LAYER_ID, onMouseLeave)
+
+    return () => {
+      map.off('mouseenter', CAPTURE_LAYER_ID, onMouseEnter)
+      map.off('mouseleave', CAPTURE_LAYER_ID, onMouseLeave)
+      setMapHoveredFeatureId(null)
+      canvas.style.cursor = prevCursor
+    }
+  }, [isPickingLocation, setMapHoveredFeatureId])
 
   useEffect(() => {
     if (splitCommitToken === 0) return

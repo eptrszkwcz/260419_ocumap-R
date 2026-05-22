@@ -6,6 +6,9 @@ export const FLOOR_PLAN_OPTIONS: { id: FloorPlanId; label: string }[] = [
   { id: 'SOM-5', label: 'Floor 5' },
 ]
 
+/** Lowest floor in `FLOOR_PLAN_OPTIONS`; used as the initial building map view. */
+export const DEFAULT_FLOOR_PLAN_ID: FloorPlanId = FLOOR_PLAN_OPTIONS[0].id
+
 export function floorPlanDisplayLabel(id: FloorPlanId): string {
   return FLOOR_PLAN_OPTIONS.find((o) => o.id === id)?.label ?? id
 }

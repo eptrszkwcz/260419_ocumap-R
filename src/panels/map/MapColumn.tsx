@@ -1,19 +1,27 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { PanelTabRow, type TabItem } from '@/components/PanelTabRow'
 import { TabPanelBody } from '@/components/TabPanelBody'
 import { useActiveProject } from '@/context/ActiveProjectContext'
+import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
+import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapCaptureMarkers } from '@/context/MapCaptureMarkersContext'
+import { useMapLocationPick } from '@/context/MapLocationPickContext'
 
 import { InfrastructureMapView } from '@/panels/map/InfrastructureMapView'
 import { MapContent } from '@/panels/map/MapContent'
 import { MapControlHeader } from '@/panels/map/MapControlHeader'
 import { MapHeader } from '@/panels/map/MapHeader'
 import {
+  DEFAULT_FLOOR_PLAN_ID,
   type FloorPlanId,
   floorPlanDisplayLabel,
   floorPlanImageSrc,
 } from '@/panels/map/mapFloorPlans'
+import {
+  mergeCaptureMarkerPreview,
+  mergeFloorPlanMarkerPreview,
+} from '@/panels/map/mergeLocationPickPreviews'
 
 const buildingTabs: TabItem[] = [
   { id: '2d', label: 'Floor Plans' },
@@ -27,9 +35,39 @@ type MapColumnProps = {
 
 export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
   const { project } = useActiveProject()
-  const { captureMarkers } = useMapCaptureMarkers()
+  const { captureMarkers, floorPlanMarkers } = useMapCaptureMarkers()
+  const { locationPickPreview } = useMapLocationPick()
+  const { floorPlanPickPreview } = useFloorPlanLocationPick()
+  const { openedFeatureId, linkedFeatureId } = useFeatureMapHover()
   const [buildingTab, setBuildingTab] = useState('2d')
-  const [floorPlanId, setFloorPlanId] = useState<FloorPlanId>('SOM-5')
+  const [floorPlanId, setFloorPlanId] = useState<FloorPlanId>(DEFAULT_FLOOR_PLAN_ID)
+
+  const displayCaptureMarkers = useMemo(
+    () => mergeCaptureMarkerPreview(captureMarkers, locationPickPreview),
+    [captureMarkers, locationPickPreview],
+  )
+
+  const displayFloorPlanMarkers = useMemo(
+    () => mergeFloorPlanMarkerPreview(floorPlanMarkers, floorPlanPickPreview),
+    [floorPlanMarkers, floorPlanPickPreview],
+  )
+
+  useEffect(() => {
+    if (floorPlanPickPreview == null) return
+    setFloorPlanId((current) =>
+      floorPlanPickPreview.floorPlanId !== current ? floorPlanPickPreview.floorPlanId : current,
+    )
+  }, [floorPlanPickPreview])
+
+  useEffect(() => {
+    const targetFeatureId = openedFeatureId ?? linkedFeatureId
+    if (targetFeatureId == null) return
+    const marker = displayFloorPlanMarkers.find((m) => m.id === targetFeatureId)
+    if (marker == null) return
+    setFloorPlanId((current) =>
+      marker.floorPlanId !== current ? marker.floorPlanId : current,
+    )
+  }, [openedFeatureId, linkedFeatureId, displayFloorPlanMarkers])
 
   if (project.projectType === 'Infrastructure') {
     const styleUrl = project.mapboxStyleUrl
@@ -46,7 +84,7 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
                 <InfrastructureMapView
                   styleUrl={styleUrl}
                   splitCommitToken={splitCommitToken}
-                  captureMarkers={captureMarkers}
+                  captureMarkers={displayCaptureMarkers}
                 />
               ) : (
                 <div
@@ -85,8 +123,10 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
             ) : null}
             <MapContent
               activeTab={buildingTab}
+              floorPlanId={floorPlanId}
               floorPlanSrc={floorPlanImageSrc(floorPlanId)}
               floorPlanLabel={floorPlanDisplayLabel(floorPlanId)}
+              floorPlanMarkers={displayFloorPlanMarkers}
             />
           </div>
         </TabPanelBody>
