@@ -1,6 +1,7 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 
 import { useActiveProject } from '@/context/ActiveProjectContext'
+import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useMapCaptureMarkers, type MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { getSampleAssetsForProject, type SpatialAsset } from '@/data/sampleAssets'
@@ -70,6 +71,7 @@ type FeatureLibraryViewProps = {
 
 function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   const { cancelLocationPick } = useMapLocationPick()
+  const { setOpenedFeatureId, setMapFeatureClickHandler } = useFeatureMapHover()
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
   const [viewMode, setViewMode] = useState<'browse' | 'add'>('browse')
   const [openedAsset, setOpenedAsset] = useState<SpatialAsset | null>(null)
@@ -83,7 +85,24 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   const openAsset = (asset: SpatialAsset) => {
     setViewerPanel('media')
     setOpenedAsset(asset)
+    setOpenedFeatureId(asset.id)
   }
+
+  useEffect(() => {
+    setOpenedFeatureId(viewerAsset?.id ?? null)
+  }, [viewerAsset?.id, setOpenedFeatureId])
+
+  useEffect(() => {
+    setMapFeatureClickHandler((id) => {
+      const asset = assets.find((a) => a.id === id)
+      if (asset != null) {
+        setViewerPanel('media')
+        setOpenedAsset(asset)
+        setOpenedFeatureId(asset.id)
+      }
+    })
+    return () => setMapFeatureClickHandler(null)
+  }, [assets, setMapFeatureClickHandler, setOpenedFeatureId])
 
   const replaceOpenedAsset = (asset: SpatialAsset) => {
     setOpenedAsset(asset)
@@ -101,6 +120,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
         onAddFeatureClick={() => {
           cancelLocationPick()
           setOpenedAsset(null)
+          setOpenedFeatureId(null)
           setViewMode('add')
         }}
         viewerAsset={viewerAsset}
@@ -113,6 +133,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
         onCloseViewer={() => {
           cancelLocationPick()
           setOpenedAsset(null)
+          setOpenedFeatureId(null)
           setViewerPanel('media')
         }}
       />

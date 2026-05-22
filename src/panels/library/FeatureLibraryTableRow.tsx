@@ -1,3 +1,4 @@
+import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { getAssetTypeLabel, type SpatialAsset } from '@/data/sampleAssets'
 
 function MoreVerticalIcon({ className = '' }: { className?: string }) {
@@ -24,15 +25,27 @@ export type FeatureLibraryTableRowProps = {
 
 /** One 40px data row: name, date, type, actions. Use one instance per asset inside `<tbody>`. */
 export function FeatureLibraryTableRow({ asset, onOpen }: FeatureLibraryTableRowProps) {
+  const { linkedFeatureId, setTableHoveredFeatureId } = useFeatureMapHover()
+  const isLinked = linkedFeatureId === asset.id
+
+  const cellTextClass = isLinked
+    ? 'text-fg-highlight'
+    : 'text-fg-muted group-hover:text-fg-highlight'
+
   return (
     <tr
       className={
-        'group h-10 border-b-[0.5px] border-solid border-stroke font-normal transition-colors hover:bg-area-highlight hover:font-semibold ' +
+        'group h-10 border-b-[0.5px] border-solid border-stroke font-normal transition-colors ' +
+        (isLinked
+          ? 'bg-area-highlight font-semibold '
+          : 'hover:bg-area-highlight hover:font-semibold ') +
         (onOpen != null
           ? 'cursor-pointer focus-visible:bg-area-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:ring-inset'
           : '')
       }
       tabIndex={onOpen != null ? 0 : undefined}
+      onMouseEnter={() => setTableHoveredFeatureId(asset.id)}
+      onMouseLeave={() => setTableHoveredFeatureId(null)}
       onClick={onOpen != null ? onOpen : undefined}
       onKeyDown={
         onOpen != null
@@ -45,20 +58,23 @@ export function FeatureLibraryTableRow({ asset, onOpen }: FeatureLibraryTableRow
           : undefined
       }
     >
-      <td className="min-w-0 pl-panel-padding pr-4 align-middle text-fg-muted group-hover:text-fg-highlight">
+      <td className={`min-w-0 pl-panel-padding pr-4 align-middle ${cellTextClass}`}>
         <span className="block truncate">{asset.title}</span>
       </td>
-      <td className="pl-0 pr-4 align-middle text-fg-muted group-hover:text-fg-highlight whitespace-nowrap">
+      <td className={`pl-0 pr-4 align-middle whitespace-nowrap ${cellTextClass}`}>
         {asset.dateUploaded}
       </td>
-      <td className="pl-0 pr-4 align-middle text-fg-muted group-hover:text-fg-highlight whitespace-nowrap">
+      <td className={`pl-0 pr-4 align-middle whitespace-nowrap ${cellTextClass}`}>
         {getAssetTypeLabel(asset.kind)}
       </td>
       <td className="pl-0 pr-panel-padding text-right align-middle">
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className="text-fg-muted group-hover:text-fg-highlight inline-flex h-8 w-8 items-center justify-center rounded-panel align-middle transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/40 focus-visible:outline-none"
+          className={
+            (isLinked ? 'text-fg-highlight ' : 'text-fg-muted group-hover:text-fg-highlight ') +
+            'inline-flex h-8 w-8 items-center justify-center rounded-panel align-middle transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/40 focus-visible:outline-none'
+          }
           aria-label={`Actions for ${asset.title}`}
         >
           <MoreVerticalIcon />

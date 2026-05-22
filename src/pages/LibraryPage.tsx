@@ -1,4 +1,5 @@
 import { ActiveProjectProvider } from '@/context/ActiveProjectContext'
+import { FeatureMapHoverProvider } from '@/context/FeatureMapHoverContext'
 import { MapCaptureMarkersProvider } from '@/context/MapCaptureMarkersContext'
 import { MapLocationPickProvider } from '@/context/MapLocationPickContext'
 import { ProjectsDrawerProvider } from '@/context/ProjectsDrawerContext'
@@ -11,10 +12,12 @@ export function LibraryPage() {
       <ActiveProjectProvider>
         <MapLocationPickProvider>
           <MapCaptureMarkersProvider>
-            <div className="h-full min-h-0">
-              <DashboardLayout />
-            </div>
-            <ProjectsDrawerFromLibrary />
+            <FeatureMapHoverProvider>
+              <div className="h-full min-h-0">
+                <DashboardLayout />
+              </div>
+              <ProjectsDrawerFromLibrary />
+            </FeatureMapHoverProvider>
           </MapCaptureMarkersProvider>
         </MapLocationPickProvider>
       </ActiveProjectProvider>
