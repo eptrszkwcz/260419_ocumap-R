@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import type { FloorPlanMarker } from '@/context/MapCaptureMarkersContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
+import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
+import type { FloorPlanId } from '@/panels/map/mapFloorPlans'
 
 const MIN_SCALE = 0.25
 const MAX_SCALE = 8
@@ -71,6 +73,7 @@ type FloorPlanCaptureMarkerProps = {
   marker: FloorPlanMarker
   linkedFeatureId: string | null
   openedFeatureId: string | null
+  locationPickActive: boolean
   onEnter: (id: string) => void
   onLeave: () => void
   onSelect: (id: string) => void
@@ -80,6 +83,7 @@ function FloorPlanCaptureMarker({
   marker,
   linkedFeatureId,
   openedFeatureId,
+  locationPickActive,
   onEnter,
   onLeave,
   onSelect,
@@ -113,7 +117,8 @@ function FloorPlanCaptureMarker({
         transform: 'translate(-50%, -50%)',
         borderColor: `rgba(29, 78, 216, ${strokeOpacity})`,
         backgroundColor: `rgba(37, 99, 235, ${fillOpacity})`,
-        cursor: 'pointer',
+        cursor: locationPickActive ? 'crosshair' : 'pointer',
+        pointerEvents: locationPickActive ? 'none' : 'auto',
       }}
       aria-label={`Feature capture point ${marker.id}`}
       onMouseEnter={() => onEnter(marker.id)}
@@ -130,10 +135,16 @@ function FloorPlanCaptureMarker({
 type MapFloorPlanViewerProps = {
   floorPlanSrc: string
   floorPlanLabel: string
+  floorPlanId: FloorPlanId
   floorMarkers: FloorPlanMarker[]
 }
 
-function MapFloorPlanViewer({ floorPlanSrc, floorPlanLabel, floorMarkers }: MapFloorPlanViewerProps) {
+function MapFloorPlanViewer({
+  floorPlanSrc,
+  floorPlanLabel,
+  floorPlanId,
+  floorMarkers,
+}: MapFloorPlanViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null)
   const [view, setView] = useState<ViewState>({ scale: 1, panX: 0, panY: 0 })
@@ -154,6 +165,12 @@ function MapFloorPlanViewer({ floorPlanSrc, floorPlanLabel, floorMarkers }: MapF
     setOpenedFeatureId,
     openFeatureFromMap,
   } = useFeatureMapHover()
+
+  const {
+    isPickingFloorPlanLocation,
+    reportFloorPlanLocationPick,
+    cancelFloorPlanLocationPick,
+  } = useFloorPlanLocationPick()
 
   const applyView = (next: ViewState) => {
     setView(next)
@@ -230,6 +247,20 @@ function MapFloorPlanViewer({ floorPlanSrc, floorPlanLabel, floorMarkers }: MapF
   }, [openedFeatureId, floorMarkers, naturalSize])
 
   useEffect(() => {
+    if (!isPickingFloorPlanLocation) return
+
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') {
+        ev.preventDefault()
+        cancelFloorPlanLocationPick()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isPickingFloorPlanLocation, cancelFloorPlanLocationPick])
+
+  useEffect(() => {
     const el = containerRef.current
     if (el == null) return
 
@@ -255,6 +286,7 @@ function MapFloorPlanViewer({ floorPlanSrc, floorPlanLabel, floorMarkers }: MapF
   }, [])
 
   const onPointerDown = (e: React.PointerEvent) => {
+    if (isPickingFloorPlanLocation) return
     if (e.button !== 0) return
     if ((e.target as HTMLElement).closest('[data-floor-marker]')) return
     e.preventDefault()
@@ -312,28 +344,47 @@ function MapFloorPlanViewer({ floorPlanSrc, floorPlanLabel, floorMarkers }: MapF
     applyView(focusViewOnMarker(size.w, size.h, naturalSize.w, naturalSize.h, marker, fit.scale))
   }
 
+  const onPlanClick = (e: React.MouseEvent) => {
+    if (!isPickingFloorPlanLocation || naturalSize == null) return
+    const el = containerRef.current
+    if (el == null) return
+    const rect = el.getBoundingClientRect()
+    const localX = e.clientX - rect.left
+    const localY = e.clientY - rect.top
+    const ix = (localX - view.panX) / view.scale
+    const iy = (localY - view.panY) / view.scale
+    if (ix < 0 || iy < 0 || ix > naturalSize.w || iy > naturalSize.h) return
+    reportFloorPlanLocationPick(floorPlanId, ix / naturalSize.w, iy / naturalSize.h)
+  }
+
   const { scale, panX, panY } = view
   const nw = naturalSize?.w
   const nh = naturalSize?.h
 
   return (
-    <div
-      ref={containerRef}
-      className={
-        'relative min-h-0 w-full min-w-0 flex-1 touch-none overflow-hidden bg-panel select-none ' +
-        (isDragging ? 'cursor-grabbing' : 'cursor-grab')
-      }
-      role="region"
-      aria-label="Floor plan"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
-      onLostPointerCapture={() => {
-        dragRef.current.active = false
-        setIsDragging(false)
-      }}
-    >
+    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+      <div
+        ref={containerRef}
+        className={
+          'relative min-h-0 w-full min-w-0 flex-1 touch-none overflow-hidden bg-panel select-none ' +
+          (isPickingFloorPlanLocation
+            ? 'cursor-crosshair'
+            : isDragging
+              ? 'cursor-grabbing'
+              : 'cursor-grab')
+        }
+        role="region"
+        aria-label="Floor plan"
+        onClick={onPlanClick}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onLostPointerCapture={() => {
+          dragRef.current.active = false
+          setIsDragging(false)
+        }}
+      >
       <div
         className="will-change-transform"
         style={{
@@ -365,6 +416,7 @@ function MapFloorPlanViewer({ floorPlanSrc, floorPlanLabel, floorMarkers }: MapF
                 marker={marker}
                 linkedFeatureId={linkedFeatureId}
                 openedFeatureId={openedFeatureId}
+                locationPickActive={isPickingFloorPlanLocation}
                 onEnter={setMapHoveredFeatureId}
                 onLeave={() => setMapHoveredFeatureId(null)}
                 onSelect={onMarkerSelect}
@@ -372,6 +424,18 @@ function MapFloorPlanViewer({ floorPlanSrc, floorPlanLabel, floorMarkers }: MapF
             ))
           : null}
       </div>
+      </div>
+      {isPickingFloorPlanLocation ? (
+        <div
+          className="pointer-events-none absolute inset-x-0 top-3 z-20 flex justify-center px-panel-padding"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="max-w-md rounded-panel border border-stroke bg-panel/95 px-3 py-2 text-center font-sans text-standard text-fg shadow-sm backdrop-blur-sm">
+            Click the floor plan to set where this photo was taken. Press Esc to cancel.
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -380,7 +444,7 @@ type MapContentProps = {
   activeTab: string
   floorPlanSrc: string
   floorPlanLabel: string
-  floorPlanId: string
+  floorPlanId: FloorPlanId
   floorPlanMarkers: FloorPlanMarker[]
 }
 
@@ -404,6 +468,7 @@ export function MapContent({
       <MapFloorPlanViewer
         floorPlanSrc={floorPlanSrc}
         floorPlanLabel={floorPlanLabel}
+        floorPlanId={floorPlanId}
         floorMarkers={floorMarkers}
       />
     </div>

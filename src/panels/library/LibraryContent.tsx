@@ -3,6 +3,7 @@ import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import { useActiveProject } from '@/context/ActiveProjectContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useMapCaptureMarkers, type FloorPlanMarker, type MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
+import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { getSampleAssetsForProject, type SpatialAsset } from '@/data/sampleAssets'
 import { AddFeatureFlow } from '@/panels/library/AddFeatureFlow'
@@ -94,7 +95,9 @@ type FeatureLibraryViewProps = {
 }
 
 function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
-  const { cancelLocationPick } = useMapLocationPick()
+  const { project } = useActiveProject()
+  const { cancelLocationPick, clearLocationPickPreview } = useMapLocationPick()
+  const { cancelFloorPlanLocationPick, clearFloorPlanLocationPickPreview } = useFloorPlanLocationPick()
   const { setOpenedFeatureId, setMapFeatureClickHandler } = useFeatureMapHover()
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
   const [viewMode, setViewMode] = useState<'browse' | 'add'>('browse')
@@ -134,8 +137,13 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   }
 
   const updateAssetInLibrary = (updated: SpatialAsset) => {
+    cancelLocationPick()
+    cancelFloorPlanLocationPick()
+    clearLocationPickPreview()
+    clearFloorPlanLocationPickPreview()
     setAssets((list) => list.map((a) => (a.id === updated.id ? updated : a)))
     setOpenedAsset(updated)
+    setViewerPanel('media')
   }
 
   return (
@@ -143,6 +151,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
       <FeatureLibraryToolbar
         onAddFeatureClick={() => {
           cancelLocationPick()
+          cancelFloorPlanLocationPick()
           setOpenedAsset(null)
           setOpenedFeatureId(null)
           setViewMode('add')
@@ -152,10 +161,12 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
         onOpenMetadata={() => setViewerPanel('metadata')}
         onOpenMedia={() => {
           cancelLocationPick()
+          cancelFloorPlanLocationPick()
           setViewerPanel('media')
         }}
         onCloseViewer={() => {
           cancelLocationPick()
+          cancelFloorPlanLocationPick()
           setOpenedAsset(null)
           setOpenedFeatureId(null)
           setViewerPanel('media')
@@ -205,7 +216,11 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
                 onRemoveFilter={(id) => setActiveFilters((prev) => prev.filter((f) => f.id !== id))}
               />
               <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                <FeatureLibraryTable assets={visibleAssets} onOpenAsset={openAsset} />
+                <FeatureLibraryTable
+                  assets={visibleAssets}
+                  onOpenAsset={openAsset}
+                  showLocationColumn={project.projectType === 'Building'}
+                />
               </div>
             </>
           )

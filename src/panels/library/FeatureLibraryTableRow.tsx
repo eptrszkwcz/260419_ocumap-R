@@ -1,5 +1,12 @@
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { getAssetTypeLabel, type SpatialAsset } from '@/data/sampleAssets'
+import { floorPlanDisplayLabel } from '@/panels/map/mapFloorPlans'
+
+function assetLocationLabel(asset: SpatialAsset): string {
+  const floorPlanId = asset.floorPlanPosition?.floorPlanId
+  if (floorPlanId == null) return '—'
+  return floorPlanDisplayLabel(floorPlanId)
+}
 
 function MoreVerticalIcon({ className = '' }: { className?: string }) {
   return (
@@ -20,11 +27,16 @@ function MoreVerticalIcon({ className = '' }: { className?: string }) {
 
 export type FeatureLibraryTableRowProps = {
   asset: SpatialAsset
+  showLocationColumn?: boolean
   onOpen?: () => void
 }
 
-/** One 40px data row: name, date, type, actions. Use one instance per asset inside `<tbody>`. */
-export function FeatureLibraryTableRow({ asset, onOpen }: FeatureLibraryTableRowProps) {
+/** One 40px data row: name, date, type, [location], actions. Use one instance per asset inside `<tbody>`. */
+export function FeatureLibraryTableRow({
+  asset,
+  showLocationColumn = false,
+  onOpen,
+}: FeatureLibraryTableRowProps) {
   const { linkedFeatureId, setTableHoveredFeatureId } = useFeatureMapHover()
   const isLinked = linkedFeatureId === asset.id
 
@@ -67,6 +79,11 @@ export function FeatureLibraryTableRow({ asset, onOpen }: FeatureLibraryTableRow
       <td className={`pl-0 pr-4 align-middle whitespace-nowrap ${cellTextClass}`}>
         {getAssetTypeLabel(asset.kind)}
       </td>
+      {showLocationColumn ? (
+        <td className={`pl-0 pr-4 align-middle whitespace-nowrap ${cellTextClass}`}>
+          {assetLocationLabel(asset)}
+        </td>
+      ) : null}
       <td className="pl-0 pr-panel-padding text-right align-middle">
         <button
           type="button"

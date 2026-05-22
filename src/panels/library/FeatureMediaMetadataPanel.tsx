@@ -1,8 +1,10 @@
 import { useCallback, useState } from 'react'
 
 import { useActiveProject } from '@/context/ActiveProjectContext'
+import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import type { AssetKind, SpatialAsset } from '@/data/sampleAssets'
+import { DEFAULT_FLOOR_PLAN_ID, floorPlanDisplayLabel, type FloorPlanId } from '@/panels/map/mapFloorPlans'
 import { formatBytes } from '@/lib/formatBytes'
 import { formatDisplayDateFromIsoDate, parseToIsoDate, todayIsoDate } from '@/lib/formatDisplayDateFromIsoDate'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/primaryButtonClass'
@@ -42,6 +44,7 @@ type MetadataDraft = {
   dateUploadedIso: string
   xStr: string
   yStr: string
+  floorPlanId: FloorPlanId | undefined
   latStr: string
   lngStr: string
 }
@@ -54,6 +57,7 @@ function draftFromAsset(asset: SpatialAsset, isBuildingProject: boolean): Metada
     dateUploadedIso: parseToIsoDate(asset.dateUploaded) || todayIsoDate(),
     xStr: isBuildingProject ? coordInputValue(asset.floorPlanPosition?.x) : '',
     yStr: isBuildingProject ? coordInputValue(asset.floorPlanPosition?.y) : '',
+    floorPlanId: isBuildingProject ? asset.floorPlanPosition?.floorPlanId : undefined,
     latStr: isBuildingProject ? '' : coordInputValue(asset.captureLat),
     lngStr: isBuildingProject ? '' : coordInputValue(asset.captureLng),
   }
@@ -68,7 +72,15 @@ export function FeatureMediaMetadataPanel({ asset, onSave }: FeatureMediaMetadat
   const { project } = useActiveProject()
   const isBuildingProject = project.projectType === 'Building'
   const { isPickingLocation, startLocationPick, cancelLocationPick } = useMapLocationPick()
+  const {
+    isPickingFloorPlanLocation,
+    startFloorPlanLocationPick,
+    cancelFloorPlanLocationPick,
+  } = useFloorPlanLocationPick()
   const [draft, setDraft] = useState(() => draftFromAsset(asset, isBuildingProject))
+
+  const floorPlanLabel =
+    draft.floorPlanId != null ? floorPlanDisplayLabel(draft.floorPlanId) : '—'
 
   const canPickOnMap = project.projectType === 'Infrastructure' && mapboxTokenPresent()
   const pickDisabledReason =
@@ -90,15 +102,16 @@ export function FeatureMediaMetadataPanel({ asset, onSave }: FeatureMediaMetadat
     if (isBuildingProject) {
       const xs = draft.xStr.trim()
       const ys = draft.yStr.trim()
+      const floorPlanId = draft.floorPlanId ?? asset.floorPlanPosition?.floorPlanId ?? DEFAULT_FLOOR_PLAN_ID
       let floorPlanPosition: SpatialAsset['floorPlanPosition']
       if (xs === '' && ys === '') {
         floorPlanPosition = undefined
-      } else if (xs !== '' && ys !== '' && asset.floorPlanPosition != null) {
+      } else if (xs !== '' && ys !== '') {
         const x = Number(xs)
         const y = Number(ys)
         if (Number.isFinite(x) && Number.isFinite(y) && x >= 0 && x <= 1 && y >= 0 && y <= 1) {
           floorPlanPosition = {
-            floorPlanId: asset.floorPlanPosition.floorPlanId,
+            floorPlanId,
             x,
             y,
           }
@@ -207,36 +220,82 @@ export function FeatureMediaMetadataPanel({ asset, onSave }: FeatureMediaMetadat
           </label>
 
           {isBuildingProject ? (
-            <div className="grid min-w-0 gap-2 sm:col-span-2 sm:grid-cols-2">
-              <label className="block min-w-0">
-                <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                  X
-                </span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  className={inputClassName}
-                  value={draft.xStr}
-                  onChange={(e) => setDraft((d) => ({ ...d, xStr: e.target.value }))}
-                  placeholder="e.g. 0.340000"
-                  aria-label="Floor plan X (normalized 0–1)"
-                />
-              </label>
-              <label className="block min-w-0">
-                <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                  Y
-                </span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  className={inputClassName}
-                  value={draft.yStr}
-                  onChange={(e) => setDraft((d) => ({ ...d, yStr: e.target.value }))}
-                  placeholder="e.g. 0.410000"
-                  aria-label="Floor plan Y (normalized 0–1)"
-                />
-              </label>
-            </div>
+            <>
+              <div className="grid min-w-0 gap-2 sm:col-span-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                <label className="block min-w-0">
+                  <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
+                    X
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    className={inputClassName}
+                    value={draft.xStr}
+                    onChange={(e) => setDraft((d) => ({ ...d, xStr: e.target.value }))}
+                    placeholder="e.g. 0.340000"
+                    aria-label="Floor plan X (normalized 0–1)"
+                  />
+                </label>
+                <label className="block min-w-0">
+                  <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
+                    Y
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    className={inputClassName}
+                    value={draft.yStr}
+                    onChange={(e) => setDraft((d) => ({ ...d, yStr: e.target.value }))}
+                    placeholder="e.g. 0.410000"
+                    aria-label="Floor plan Y (normalized 0–1)"
+                  />
+                </label>
+                <div className="flex min-w-0 flex-col justify-end gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={
+                        'text-standard shrink-0 whitespace-nowrap ' +
+                        (draft.floorPlanId != null ? 'text-fg' : 'text-fg-muted')
+                      }
+                      aria-label="Floor plan location"
+                    >
+                      {floorPlanLabel}
+                    </span>
+                    <button
+                      type="button"
+                      className={secondaryButtonClass + ' whitespace-nowrap'}
+                      disabled={isPickingFloorPlanLocation}
+                      onClick={() => {
+                        startFloorPlanLocationPick(asset.id, (floorPlanId, x, y) => {
+                          setDraft((d) => ({
+                            ...d,
+                            xStr: x.toFixed(6),
+                            yStr: y.toFixed(6),
+                            floorPlanId,
+                          }))
+                        })
+                      }}
+                    >
+                      {isPickingFloorPlanLocation ? 'Click plan…' : 'Set location on plan'}
+                    </button>
+                    {isPickingFloorPlanLocation ? (
+                      <button
+                        type="button"
+                        className="text-fg-muted text-standard hover:underline"
+                        onClick={cancelFloorPlanLocationPick}
+                      >
+                        Cancel pick
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+              {isPickingFloorPlanLocation ? (
+                <p className="text-fg-muted sm:col-span-2 text-standard">
+                  Click the floor plan on the right to place the capture point, or press Esc.
+                </p>
+              ) : null}
+            </>
           ) : (
             <>
               <div className="grid min-w-0 gap-2 sm:col-span-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
@@ -276,7 +335,7 @@ export function FeatureMediaMetadataPanel({ asset, onSave }: FeatureMediaMetadat
                       disabled={!canPickOnMap || isPickingLocation}
                       title={canPickOnMap ? undefined : pickDisabledReason}
                       onClick={() => {
-                        startLocationPick((lng, lat) => {
+                        startLocationPick(asset.id, (lng, lat) => {
                           setDraft((d) => ({
                             ...d,
                             lngStr: lng.toFixed(6),
