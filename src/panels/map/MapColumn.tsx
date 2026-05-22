@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { PanelTabRow, type TabItem } from '@/components/PanelTabRow'
 import { TabPanelBody } from '@/components/TabPanelBody'
 import { useActiveProject } from '@/context/ActiveProjectContext'
+import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useMapCaptureMarkers } from '@/context/MapCaptureMarkersContext'
 
 import { InfrastructureMapView } from '@/panels/map/InfrastructureMapView'
@@ -10,6 +11,7 @@ import { MapContent } from '@/panels/map/MapContent'
 import { MapControlHeader } from '@/panels/map/MapControlHeader'
 import { MapHeader } from '@/panels/map/MapHeader'
 import {
+  DEFAULT_FLOOR_PLAN_ID,
   type FloorPlanId,
   floorPlanDisplayLabel,
   floorPlanImageSrc,
@@ -27,9 +29,18 @@ type MapColumnProps = {
 
 export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
   const { project } = useActiveProject()
-  const { captureMarkers } = useMapCaptureMarkers()
+  const { captureMarkers, floorPlanMarkers } = useMapCaptureMarkers()
+  const { openedFeatureId } = useFeatureMapHover()
   const [buildingTab, setBuildingTab] = useState('2d')
-  const [floorPlanId, setFloorPlanId] = useState<FloorPlanId>('SOM-5')
+  const [floorPlanId, setFloorPlanId] = useState<FloorPlanId>(DEFAULT_FLOOR_PLAN_ID)
+
+  useEffect(() => {
+    if (openedFeatureId == null) return
+    const marker = floorPlanMarkers.find((m) => m.id === openedFeatureId)
+    if (marker != null && marker.floorPlanId !== floorPlanId) {
+      setFloorPlanId(marker.floorPlanId)
+    }
+  }, [openedFeatureId, floorPlanMarkers, floorPlanId])
 
   if (project.projectType === 'Infrastructure') {
     const styleUrl = project.mapboxStyleUrl
@@ -85,8 +96,10 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
             ) : null}
             <MapContent
               activeTab={buildingTab}
+              floorPlanId={floorPlanId}
               floorPlanSrc={floorPlanImageSrc(floorPlanId)}
               floorPlanLabel={floorPlanDisplayLabel(floorPlanId)}
+              floorPlanMarkers={floorPlanMarkers}
             />
           </div>
         </TabPanelBody>

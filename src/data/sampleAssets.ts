@@ -8,10 +8,19 @@
  */
 
 import { KATY_FREEWAY_PROJECT_ID } from '@/data/sampleProjects'
+import type { FloorPlanId } from '@/panels/map/mapFloorPlans'
 
 export type AssetKind = 'image' | 'video' | 'panorama'
 
+/** @deprecated Legacy 0–100 placement; prefer `floorPlanPosition` (normalized) for building projects. */
 export type MapPosition = { x: number; y: number }
+
+/** Normalized position on a specific floor plan drawing (0–1 in each axis). */
+export type FloorPlanPosition = {
+  floorPlanId: FloorPlanId
+  x: number
+  y: number
+}
 
 export type SpatialAsset = {
   id: string
@@ -24,7 +33,10 @@ export type SpatialAsset = {
   dateCaptured?: string
   /** Public URL path, blob URL for local uploads, or path under the dev server root */
   fileUrl: string
-  mapPosition: MapPosition
+  /** Building projects: position on a floor plan drawing. */
+  floorPlanPosition?: FloorPlanPosition
+  /** @deprecated Legacy demo field; use `floorPlanPosition` for building projects. */
+  mapPosition?: MapPosition
   /** WGS84 longitude where the media was captured (geographic map). */
   captureLng?: number
   /** WGS84 latitude where the media was captured (geographic map). */
@@ -51,7 +63,7 @@ export function getAssetTypeLabel(kind: AssetKind): string {
 
 const sphericalPanoBase = '/samples/feature-viewer/spherical-pano'
 
-/** Default building project (e.g. 1603 Jefferson): three 360-img panoramas. */
+/** Default building project (e.g. 1603 Jefferson): three 360-img panoramas, one per floor. */
 export const sampleAssetsJefferson: SpatialAsset[] = [
   {
     id: 'fv-360-1',
@@ -59,7 +71,7 @@ export const sampleAssetsJefferson: SpatialAsset[] = [
     title: '360-img-1',
     dateUploaded: 'July 22, 2025',
     fileUrl: `${sphericalPanoBase}/360-img-1.png`,
-    mapPosition: { x: 22, y: 38 },
+    floorPlanPosition: { floorPlanId: 'SOM-2', x: 0.34, y: 0.41 },
   },
   {
     id: 'fv-360-2',
@@ -67,7 +79,7 @@ export const sampleAssetsJefferson: SpatialAsset[] = [
     title: '360-img-2',
     dateUploaded: 'July 21, 2025',
     fileUrl: `${sphericalPanoBase}/360-img-2.png`,
-    mapPosition: { x: 58, y: 52 },
+    floorPlanPosition: { floorPlanId: 'SOM-5', x: 0.62, y: 0.27 },
   },
   {
     id: 'fv-360-3',
@@ -75,7 +87,7 @@ export const sampleAssetsJefferson: SpatialAsset[] = [
     title: '360-img-3',
     dateUploaded: 'July 20, 2025',
     fileUrl: `${sphericalPanoBase}/360-img-3.png`,
-    mapPosition: { x: 40, y: 72 },
+    floorPlanPosition: { floorPlanId: 'SOM-2', x: 0.48, y: 0.58 },
   },
 ]
 
@@ -87,7 +99,6 @@ export const sampleAssetsKaty: SpatialAsset[] = [
     title: 'katy-flyover',
     dateUploaded: 'May 1, 2026',
     fileUrl: `${sphericalPanoBase}/katy-flyover.png`,
-    mapPosition: { x: 30, y: 40 },
     captureLat: 29.785714,
     captureLng: -95.794082,
   },
@@ -97,7 +108,6 @@ export const sampleAssetsKaty: SpatialAsset[] = [
     title: 'katy-on-ramp',
     dateUploaded: 'April 30, 2026',
     fileUrl: `${sphericalPanoBase}/katy-on-ramp.png`,
-    mapPosition: { x: 55, y: 48 },
     captureLat: 29.777846,
     captureLng: -95.818816,
   },
@@ -107,7 +117,6 @@ export const sampleAssetsKaty: SpatialAsset[] = [
     title: 'katy-surface-road',
     dateUploaded: 'April 29, 2026',
     fileUrl: `${sphericalPanoBase}/katy-surface-road.png`,
-    mapPosition: { x: 42, y: 68 },
     captureLat: 29.77776,
     captureLng: -95.822758,
   },

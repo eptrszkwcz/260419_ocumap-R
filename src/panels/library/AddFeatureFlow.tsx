@@ -28,10 +28,6 @@ function fileBaseTitle(name: string): string {
   return (i > 0 ? name.slice(0, i) : name).trim() || name
 }
 
-function randomMapPosition() {
-  return { x: 12 + Math.random() * 76, y: 12 + Math.random() * 76 }
-}
-
 type AddFeatureFlowProps = {
   onCancel: () => void
   onSave: (assets: SpatialAsset[]) => void
@@ -245,7 +241,6 @@ export function AddFeatureFlow({ onCancel, onSave }: AddFeatureFlowProps) {
         dateUploaded: added,
         dateCaptured: cap || undefined,
         fileUrl: p.objectUrl,
-        mapPosition: { ...randomMapPosition() },
         fileSizeBytes: p.file.size,
         mimeType: p.file.type || undefined,
         width: p.width ?? undefined,

@@ -2,7 +2,7 @@ import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 
 import { useActiveProject } from '@/context/ActiveProjectContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
-import { useMapCaptureMarkers, type MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
+import { useMapCaptureMarkers, type FloorPlanMarker, type MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { getSampleAssetsForProject, type SpatialAsset } from '@/data/sampleAssets'
 import { AddFeatureFlow } from '@/panels/library/AddFeatureFlow'
@@ -30,17 +30,41 @@ function assetsToCaptureMarkers(assets: SpatialAsset[]): MapCaptureMarker[] {
     .map((a) => ({ id: a.id, lng: a.captureLng as number, lat: a.captureLat as number }))
 }
 
+function assetsToFloorPlanMarkers(assets: SpatialAsset[]): FloorPlanMarker[] {
+  return assets
+    .filter((a) => {
+      const p = a.floorPlanPosition
+      if (p == null) return false
+      return (
+        Number.isFinite(p.x) &&
+        Number.isFinite(p.y) &&
+        p.x >= 0 &&
+        p.x <= 1 &&
+        p.y >= 0 &&
+        p.y <= 1
+      )
+    })
+    .map((a) => ({
+      id: a.id,
+      floorPlanId: a.floorPlanPosition!.floorPlanId,
+      x: a.floorPlanPosition!.x,
+      y: a.floorPlanPosition!.y,
+    }))
+}
+
 export function LibraryContent({ activeTabId }: LibraryContentProps) {
   const { projectId } = useActiveProject()
-  const { setCaptureMarkers } = useMapCaptureMarkers()
+  const { setCaptureMarkers, setFloorPlanMarkers } = useMapCaptureMarkers()
   const [assets, setAssets] = useState<SpatialAsset[]>(() => getSampleAssetsForProject(projectId))
 
   useEffect(() => {
     setCaptureMarkers(assetsToCaptureMarkers(assets))
+    setFloorPlanMarkers(assetsToFloorPlanMarkers(assets))
     return () => {
       setCaptureMarkers([])
+      setFloorPlanMarkers([])
     }
-  }, [assets, setCaptureMarkers])
+  }, [assets, setCaptureMarkers, setFloorPlanMarkers])
 
   if (activeTabId === 'project-details') {
     return <ProjectDetailsPanel assets={assets} />
@@ -154,6 +178,9 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
                     viewerAsset.dateCaptured ?? '',
                     viewerAsset.captureLng ?? '',
                     viewerAsset.captureLat ?? '',
+                    viewerAsset.floorPlanPosition?.floorPlanId ?? '',
+                    viewerAsset.floorPlanPosition?.x ?? '',
+                    viewerAsset.floorPlanPosition?.y ?? '',
                     viewerAsset.fileSizeBytes ?? '',
                     viewerAsset.mimeType ?? '',
                     viewerAsset.width ?? '',

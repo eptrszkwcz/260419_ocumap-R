@@ -35,14 +35,27 @@ function fileLabelFromUrl(url: string): string {
   }
 }
 
-function draftFromAsset(asset: SpatialAsset) {
+type MetadataDraft = {
+  title: string
+  kind: AssetKind
+  dateCapturedIso: string
+  dateUploadedIso: string
+  xStr: string
+  yStr: string
+  latStr: string
+  lngStr: string
+}
+
+function draftFromAsset(asset: SpatialAsset, isBuildingProject: boolean): MetadataDraft {
   return {
     title: asset.title,
     kind: asset.kind,
     dateCapturedIso: asset.dateCaptured ? parseToIsoDate(asset.dateCaptured) : '',
     dateUploadedIso: parseToIsoDate(asset.dateUploaded) || todayIsoDate(),
-    lngStr: coordInputValue(asset.captureLng),
-    latStr: coordInputValue(asset.captureLat),
+    xStr: isBuildingProject ? coordInputValue(asset.floorPlanPosition?.x) : '',
+    yStr: isBuildingProject ? coordInputValue(asset.floorPlanPosition?.y) : '',
+    latStr: isBuildingProject ? '' : coordInputValue(asset.captureLat),
+    lngStr: isBuildingProject ? '' : coordInputValue(asset.captureLng),
   }
 }
 
@@ -53,8 +66,9 @@ type FeatureMediaMetadataPanelProps = {
 
 export function FeatureMediaMetadataPanel({ asset, onSave }: FeatureMediaMetadataPanelProps) {
   const { project } = useActiveProject()
+  const isBuildingProject = project.projectType === 'Building'
   const { isPickingLocation, startLocationPick, cancelLocationPick } = useMapLocationPick()
-  const [draft, setDraft] = useState(() => draftFromAsset(asset))
+  const [draft, setDraft] = useState(() => draftFromAsset(asset, isBuildingProject))
 
   const canPickOnMap = project.projectType === 'Infrastructure' && mapboxTokenPresent()
   const pickDisabledReason =
@@ -72,6 +86,40 @@ export function FeatureMediaMetadataPanel({ asset, onSave }: FeatureMediaMetadat
       draft.dateCapturedIso.trim() !== ''
         ? formatDisplayDateFromIsoDate(draft.dateCapturedIso) || undefined
         : undefined
+
+    if (isBuildingProject) {
+      const xs = draft.xStr.trim()
+      const ys = draft.yStr.trim()
+      let floorPlanPosition: SpatialAsset['floorPlanPosition']
+      if (xs === '' && ys === '') {
+        floorPlanPosition = undefined
+      } else if (xs !== '' && ys !== '' && asset.floorPlanPosition != null) {
+        const x = Number(xs)
+        const y = Number(ys)
+        if (Number.isFinite(x) && Number.isFinite(y) && x >= 0 && x <= 1 && y >= 0 && y <= 1) {
+          floorPlanPosition = {
+            floorPlanId: asset.floorPlanPosition.floorPlanId,
+            x,
+            y,
+          }
+        } else {
+          floorPlanPosition = asset.floorPlanPosition
+        }
+      } else {
+        floorPlanPosition = asset.floorPlanPosition
+      }
+
+      onSave({
+        ...asset,
+        title,
+        kind: draft.kind,
+        dateUploaded: uploaded,
+        dateCaptured: captured,
+        floorPlanPosition,
+      })
+      return
+    }
+
     const ls = draft.lngStr.trim()
     const bs = draft.latStr.trim()
     const geoPatch: Partial<Pick<SpatialAsset, 'captureLng' | 'captureLat'>> = {}
@@ -102,7 +150,7 @@ export function FeatureMediaMetadataPanel({ asset, onSave }: FeatureMediaMetadat
       dateCaptured: captured,
       ...geoPatch,
     })
-  }, [asset, draft, onSave])
+  }, [asset, draft, isBuildingProject, onSave])
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col" role="region" aria-label="Feature metadata">
@@ -158,67 +206,102 @@ export function FeatureMediaMetadataPanel({ asset, onSave }: FeatureMediaMetadat
             />
           </label>
 
-          <div className="grid min-w-0 gap-2 sm:col-span-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-            <label className="block min-w-0">
-              <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                Latitude
-              </span>
-              <input
-                type="text"
-                inputMode="decimal"
-                className={inputClassName}
-                value={draft.latStr}
-                onChange={(e) => setDraft((d) => ({ ...d, latStr: e.target.value }))}
-                placeholder="e.g. 29.783350"
-                aria-label="Capture latitude (WGS84)"
-              />
-            </label>
-            <label className="block min-w-0">
-              <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                Longitude
-              </span>
-              <input
-                type="text"
-                inputMode="decimal"
-                className={inputClassName}
-                value={draft.lngStr}
-                onChange={(e) => setDraft((d) => ({ ...d, lngStr: e.target.value }))}
-                placeholder="e.g. -95.809920"
-                aria-label="Capture longitude (WGS84)"
-              />
-            </label>
-            <div className="flex min-w-0 flex-col justify-end gap-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  className={secondaryButtonClass + ' whitespace-nowrap'}
-                  disabled={!canPickOnMap || isPickingLocation}
-                  title={canPickOnMap ? undefined : pickDisabledReason}
-                  onClick={() => {
-                    startLocationPick((lng, lat) => {
-                      setDraft((d) => ({
-                        ...d,
-                        lngStr: lng.toFixed(6),
-                        latStr: lat.toFixed(6),
-                      }))
-                    })
-                  }}
-                >
-                  {isPickingLocation ? 'Click map…' : 'Set location on map'}
-                </button>
-                {isPickingLocation ? (
-                  <button type="button" className="text-fg-muted text-standard hover:underline" onClick={cancelLocationPick}>
-                    Cancel pick
-                  </button>
-                ) : null}
-              </div>
+          {isBuildingProject ? (
+            <div className="grid min-w-0 gap-2 sm:col-span-2 sm:grid-cols-2">
+              <label className="block min-w-0">
+                <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
+                  X
+                </span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  className={inputClassName}
+                  value={draft.xStr}
+                  onChange={(e) => setDraft((d) => ({ ...d, xStr: e.target.value }))}
+                  placeholder="e.g. 0.340000"
+                  aria-label="Floor plan X (normalized 0–1)"
+                />
+              </label>
+              <label className="block min-w-0">
+                <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
+                  Y
+                </span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  className={inputClassName}
+                  value={draft.yStr}
+                  onChange={(e) => setDraft((d) => ({ ...d, yStr: e.target.value }))}
+                  placeholder="e.g. 0.410000"
+                  aria-label="Floor plan Y (normalized 0–1)"
+                />
+              </label>
             </div>
-          </div>
-          {isPickingLocation ? (
-            <p className="text-fg-muted sm:col-span-2 text-standard">
-              Click the map on the right to place the capture point, or press Esc.
-            </p>
-          ) : null}
+          ) : (
+            <>
+              <div className="grid min-w-0 gap-2 sm:col-span-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                <label className="block min-w-0">
+                  <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
+                    Latitude
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    className={inputClassName}
+                    value={draft.latStr}
+                    onChange={(e) => setDraft((d) => ({ ...d, latStr: e.target.value }))}
+                    placeholder="e.g. 29.783350"
+                    aria-label="Capture latitude (WGS84)"
+                  />
+                </label>
+                <label className="block min-w-0">
+                  <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
+                    Longitude
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    className={inputClassName}
+                    value={draft.lngStr}
+                    onChange={(e) => setDraft((d) => ({ ...d, lngStr: e.target.value }))}
+                    placeholder="e.g. -95.809920"
+                    aria-label="Capture longitude (WGS84)"
+                  />
+                </label>
+                <div className="flex min-w-0 flex-col justify-end gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      className={secondaryButtonClass + ' whitespace-nowrap'}
+                      disabled={!canPickOnMap || isPickingLocation}
+                      title={canPickOnMap ? undefined : pickDisabledReason}
+                      onClick={() => {
+                        startLocationPick((lng, lat) => {
+                          setDraft((d) => ({
+                            ...d,
+                            lngStr: lng.toFixed(6),
+                            latStr: lat.toFixed(6),
+                          }))
+                        })
+                      }}
+                    >
+                      {isPickingLocation ? 'Click map…' : 'Set location on map'}
+                    </button>
+                    {isPickingLocation ? (
+                      <button type="button" className="text-fg-muted text-standard hover:underline" onClick={cancelLocationPick}>
+                        Cancel pick
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+              {isPickingLocation ? (
+                <p className="text-fg-muted sm:col-span-2 text-standard">
+                  Click the map on the right to place the capture point, or press Esc.
+                </p>
+              ) : null}
+            </>
+          )}
 
           <div className="min-w-0 sm:col-span-2">
             <p className="text-fg-muted text-badge font-bold uppercase tracking-wide">File</p>
