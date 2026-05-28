@@ -119,19 +119,22 @@ export function PrimaryAddButton({
   visibleLabel,
   ariaLabel,
   labelMaxWidthClass,
+  alwaysExpanded = false,
 }: {
   onAddClick?: () => void
   visibleLabel: string
   ariaLabel: string
   labelMaxWidthClass: string
+  /** When true, show label and wide frame without hover (e.g. projects page). */
+  alwaysExpanded?: boolean
 }) {
-  const [labelVisible, setLabelVisible] = useState(false)
-  const [frameExpanded, setFrameExpanded] = useState(false)
+  const [labelVisible, setLabelVisible] = useState(alwaysExpanded)
+  const [frameExpanded, setFrameExpanded] = useState(alwaysExpanded)
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    if (labelVisible) {
+    if (alwaysExpanded || labelVisible) {
       setFrameExpanded(true)
       return
     }
@@ -141,7 +144,7 @@ export function PrimaryAddButton({
     return () => {
       clearTimeout(t)
     }
-  }, [labelVisible])
+  }, [labelVisible, alwaysExpanded])
 
   useEffect(() => {
     return () => {
@@ -172,22 +175,30 @@ export function PrimaryAddButton({
     <button
       type="button"
       onClick={() => onAddClick?.()}
-      onPointerEnter={() => {
-        clearShowTimer()
-        clearHideTimer()
-        showTimerRef.current = setTimeout(() => {
-          setLabelVisible(true)
-          showTimerRef.current = null
-        }, ADD_PRIMARY_REVEAL_MS)
-      }}
-      onPointerLeave={() => {
-        clearShowTimer()
-        clearHideTimer()
-        hideTimerRef.current = setTimeout(() => {
-          setLabelVisible(false)
-          hideTimerRef.current = null
-        }, ADD_PRIMARY_HIDE_DELAY_MS)
-      }}
+      onPointerEnter={
+        alwaysExpanded
+          ? undefined
+          : () => {
+              clearShowTimer()
+              clearHideTimer()
+              showTimerRef.current = setTimeout(() => {
+                setLabelVisible(true)
+                showTimerRef.current = null
+              }, ADD_PRIMARY_REVEAL_MS)
+            }
+      }
+      onPointerLeave={
+        alwaysExpanded
+          ? undefined
+          : () => {
+              clearShowTimer()
+              clearHideTimer()
+              hideTimerRef.current = setTimeout(() => {
+                setLabelVisible(false)
+                hideTimerRef.current = null
+              }, ADD_PRIMARY_HIDE_DELAY_MS)
+            }
+      }
       className={
         PRIMARY_BUTTON_CLASS +
         ' flex h-8 min-h-8 shrink-0 items-center rounded-panel ' +
@@ -204,9 +215,9 @@ export function PrimaryAddButton({
         className={
           'block min-w-0 overflow-hidden text-left text-standard leading-none ' +
           'transition-[max-width] duration-[600ms] ease-out ' +
-          (labelVisible ? labelMaxWidthClass : 'max-w-0')
+          (labelVisible || alwaysExpanded ? labelMaxWidthClass : 'max-w-0')
         }
-        aria-hidden={!labelVisible}
+        aria-hidden={!labelVisible && !alwaysExpanded}
       >
         <span className="inline-block whitespace-nowrap pr-0.5">{visibleLabel}</span>
       </span>
@@ -225,6 +236,8 @@ export type ControlHeaderToolbarProps = {
   addButtonAriaLabel?: string
   /** Tailwind max-width when label is visible; widen for longer copy. */
   addButtonLabelMaxWidthClass?: string
+  /** Keep primary add button fully expanded (no hover reveal). */
+  addButtonAlwaysExpanded?: boolean
   onAddClick?: () => void
 }
 
@@ -242,6 +255,7 @@ export function ControlHeaderToolbar({
   addButtonVisibleLabel = 'Add Feature',
   addButtonAriaLabel = 'Add feature',
   addButtonLabelMaxWidthClass = 'max-w-[6.75rem]',
+  addButtonAlwaysExpanded = false,
   onAddClick,
 }: ControlHeaderToolbarProps) {
   const [activeId, setActiveId] = useState<(typeof secondaryConfig)[number]['id'] | null>(null)
@@ -295,6 +309,7 @@ export function ControlHeaderToolbar({
         visibleLabel={addButtonVisibleLabel}
         ariaLabel={addButtonAriaLabel}
         labelMaxWidthClass={addButtonLabelMaxWidthClass}
+        alwaysExpanded={addButtonAlwaysExpanded}
       />
     </div>
   )

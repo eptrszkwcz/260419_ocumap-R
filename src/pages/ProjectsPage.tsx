@@ -30,6 +30,7 @@ export function ProjectsPage() {
           addButtonVisibleLabel="New Project"
           addButtonAriaLabel="New project"
           addButtonLabelMaxWidthClass="max-w-[7.5rem]"
+          addButtonAlwaysExpanded
         />
         <ProjectsBadgeRow projectCount={sampleProjects.length} />
         <ProjectsTable projects={sampleProjects} />
