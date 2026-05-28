@@ -14,14 +14,14 @@ function captureMarkersFeatureCollection(markers: MapCaptureMarker[]) {
     type: 'FeatureCollection' as const,
     features: markers.map((m) => ({
       type: 'Feature' as const,
-      properties: { id: m.id },
+      properties: { id: m.id, fillColor: m.color, strokeColor: m.strokeColor },
       geometry: { type: 'Point' as const, coordinates: [m.lng, m.lat] as [number, number] },
     })),
   }
 }
 
 const DEFAULT_FILL_OPACITY = 0.32
-const DIM_OPACITY = 0.15
+const DIM_OPACITY = 0.35
 const HIGHLIGHT_FILL_OPACITY = 1
 const NON_HOVERED_STROKE_OPACITY = 0.6
 const FEATURE_FOCUS_MAX_ZOOM = 16
@@ -132,16 +132,18 @@ function syncCaptureMarkersLayer(
         source: CAPTURE_SOURCE_ID,
         paint: {
           'circle-radius': 6,
-          'circle-color': '#2563eb',
+          'circle-color': ['get', 'fillColor'],
           'circle-opacity': 0.32,
           'circle-stroke-width': 2,
-          'circle-stroke-color': '#1d4ed8',
+          'circle-stroke-color': ['get', 'strokeColor'],
         },
       })
       applyCaptureMarkerPaint(map, linkedFeatureId, openedFeatureId)
     } else {
       const src = map.getSource(CAPTURE_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined
       src?.setData(data)
+      map.setPaintProperty(CAPTURE_LAYER_ID, 'circle-color', ['get', 'fillColor'])
+      map.setPaintProperty(CAPTURE_LAYER_ID, 'circle-stroke-color', ['get', 'strokeColor'])
       applyCaptureMarkerPaint(map, linkedFeatureId, openedFeatureId)
     }
   } catch {
@@ -394,7 +396,7 @@ export function InfrastructureMapView({
       />
       {isPickingLocation ? (
         <div
-          className="pointer-events-none absolute inset-x-0 top-3 z-20 flex justify-center px-panel-padding"
+          className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center px-panel-padding"
           role="status"
           aria-live="polite"
         >

@@ -51,7 +51,7 @@ type FeatureLibraryToolbarProps = {
 }
 
 const iconBtnClass =
-  'text-fg-muted hover:text-fg-highlight flex size-8 shrink-0 items-center justify-center rounded-panel transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
+  'text-fg-muted hover:text-fg-highlight flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-panel transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
 
 export function FeatureLibraryToolbar({
   onAddFeatureClick,

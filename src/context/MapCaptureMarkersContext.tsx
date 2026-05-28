@@ -6,6 +6,8 @@ export type MapCaptureMarker = {
   id: string
   lng: number
   lat: number
+  color: string
+  strokeColor: string
 }
 
 export type FloorPlanMarker = {
@@ -15,6 +17,8 @@ export type FloorPlanMarker = {
   x: number
   /** Normalized 0–1 vertical position on the floor plan drawing. */
   y: number
+  color: string
+  strokeColor: string
 }
 
 type MapCaptureMarkersContextValue = {

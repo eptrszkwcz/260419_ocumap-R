@@ -3,13 +3,18 @@
  */
 export type ProjectType = 'Building' | 'Infrastructure'
 
+export type ProjectStatus = 'Draft' | 'Published'
+
 export type ProjectRecord = {
   id: string
   name: string
+  status: ProjectStatus
   /** Organization shown in the projects list “Team” column. */
   team: string
   /** Display string for “Last modified” (e.g. “May 3, 2026”). */
   lastModified: string
+  /** Feature library file count shown in the projects list. */
+  featureFileCount: number
   /** Short relative label for “Created” (e.g. “3 days ago”). */
   createdRelative: string
   projectType: ProjectType
@@ -27,44 +32,57 @@ export const KATY_FREEWAY_MAPBOX_STYLE =
 
 const projectsById: Record<string, ProjectRecord> = {}
 
+/** Demo: two projects shown as published (stable “random” pair). */
+const publishedProjectIds = new Set(['p-2', KATY_FREEWAY_PROJECT_ID])
+
 export const sampleProjects: ProjectRecord[] = [
   {
     id: 'p-1',
     name: '1603 Jefferson St.',
+    status: publishedProjectIds.has('p-1') ? 'Published' : 'Draft',
     team: 'Smith Property Management',
     lastModified: 'May 3, 2026',
+    featureFileCount: 142,
     createdRelative: '3 days ago',
     projectType: 'Building',
   },
   {
     id: 'p-2',
     name: 'Harborview Medical Tower',
+    status: publishedProjectIds.has('p-2') ? 'Published' : 'Draft',
     team: 'Cypress Health Partners',
     lastModified: 'April 30, 2026',
+    featureFileCount: 87,
     createdRelative: '2 weeks ago',
     projectType: 'Building',
   },
   {
     id: 'p-4',
     name: 'Riverside School Modernization',
+    status: publishedProjectIds.has('p-4') ? 'Published' : 'Draft',
     team: 'Eastern Valley SD',
     lastModified: 'April 25, 2026',
+    featureFileCount: 23,
     createdRelative: '5 weeks ago',
     projectType: 'Building',
   },
   {
     id: 'p-7',
     name: 'City Hall North Wing',
+    status: publishedProjectIds.has('p-7') ? 'Published' : 'Draft',
     team: 'Lakeside Municipality',
     lastModified: 'April 12, 2026',
+    featureFileCount: 310,
     createdRelative: '3 months ago',
     projectType: 'Building',
   },
   {
     id: KATY_FREEWAY_PROJECT_ID,
     name: 'Katy Freeway Expansion',
+    status: publishedProjectIds.has(KATY_FREEWAY_PROJECT_ID) ? 'Published' : 'Draft',
     team: 'Build Co.',
     lastModified: 'May 2, 2026',
+    featureFileCount: 56,
     createdRelative: '4 weeks ago',
     projectType: 'Infrastructure',
     mapboxStyleUrl: KATY_FREEWAY_MAPBOX_STYLE,

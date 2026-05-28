@@ -3,25 +3,21 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useActiveProject } from '@/context/ActiveProjectContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
+import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import type { AssetKind, SpatialAsset } from '@/data/sampleAssets'
 import { inferKindFromFile } from '@/data/sampleAssets'
-import { formatBytes } from '@/lib/formatBytes'
 import { formatDisplayDateFromIsoDate, todayIsoDate } from '@/lib/formatDisplayDateFromIsoDate'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/primaryButtonClass'
-import { DEFAULT_FLOOR_PLAN_ID, floorPlanDisplayLabel, type FloorPlanId } from '@/panels/map/mapFloorPlans'
-
-const inputClassName =
-  'text-fg placeholder:text-fg-disabled h-8 w-full min-w-0 rounded-panel border border-stroke bg-panel px-2.5 text-standard leading-none focus-visible:border-fg-highlight focus-visible:ring-1 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
-
-const selectClassName = inputClassName + ' appearance-auto py-0'
-
-const secondaryButtonClass =
-  'text-fg font-sans shrink-0 rounded-panel border border-stroke bg-panel px-3 py-1.5 text-standard leading-none hover:bg-area-highlight focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45'
-
-function mapboxTokenPresent(): boolean {
-  const t = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
-  return typeof t === 'string' && t.trim() !== ''
-}
+import { DEFAULT_FLOOR_PLAN_ID, type FloorPlanId } from '@/panels/map/mapFloorPlans'
+import { normalizeMarkerColor } from '@/panels/map/markerColors'
+import { FeatureMetadataForm } from '@/panels/library/featureMetadata/FeatureMetadataForm'
+import {
+  extensionLabelFromMimeAndKind,
+  fileSizeLabel,
+  resolutionLabel,
+} from '@/panels/library/featureMetadata/fileInfo'
+import { mapboxTokenPresent } from '@/panels/library/featureMetadata/mapboxToken'
+import type { FeatureMetadataDraft } from '@/panels/library/featureMetadata/types'
 
 function parseGeoFields(
   lngStr: string,
@@ -74,7 +70,7 @@ type PendingItem = {
   objectUrl: string
   title: string
   dateCapturedIso: string
-  dateAddedIso: string
+  dateUploadedIso: string
   kind: AssetKind
   width: number | null
   height: number | null
@@ -83,11 +79,27 @@ type PendingItem = {
   xStr: string
   yStr: string
   floorPlanId: FloorPlanId | undefined
+  markerColor: string
 }
 
 function fileBaseTitle(name: string): string {
   const i = name.lastIndexOf('.')
   return (i > 0 ? name.slice(0, i) : name).trim() || name
+}
+
+function pendingToDraft(item: PendingItem): FeatureMetadataDraft {
+  return {
+    title: item.title,
+    kind: item.kind,
+    dateCapturedIso: item.dateCapturedIso,
+    dateUploadedIso: item.dateUploadedIso,
+    latStr: item.latStr,
+    lngStr: item.lngStr,
+    xStr: item.xStr,
+    yStr: item.yStr,
+    floorPlanId: item.floorPlanId,
+    markerColor: item.markerColor,
+  }
 }
 
 type AddFeatureFlowProps = {
@@ -97,6 +109,8 @@ type AddFeatureFlowProps = {
 
 type PendingFeatureCardProps = {
   item: PendingItem
+  fileIndex: number
+  fileTotal: number
   isBuildingProject: boolean
   canPickOnMap: boolean
   pickDisabledReason?: string
@@ -114,6 +128,8 @@ type PendingFeatureCardProps = {
 
 function PendingFeatureCard({
   item,
+  fileIndex,
+  fileTotal,
   isBuildingProject,
   canPickOnMap,
   pickDisabledReason,
@@ -129,255 +145,77 @@ function PendingFeatureCard({
   onCancelFloorPlanPick,
 }: PendingFeatureCardProps) {
   const { file, objectUrl } = item
+  const { setMarkerStylePreview, clearMarkerStylePreview } = useMarkerStylePreview()
   const isVideo = file.type.startsWith('video/')
-  const isImage = file.type.startsWith('image/')
-  const floorPlanLabel =
-    item.floorPlanId != null ? floorPlanDisplayLabel(item.floorPlanId) : '—'
+  const previewActive = isMapPickTarget || isFloorPlanPickTarget
+
+  useEffect(() => {
+    if (!previewActive) return
+    setMarkerStylePreview({ featureId: item.id, color: item.markerColor })
+    return () => clearMarkerStylePreview()
+  }, [
+    item.id,
+    item.markerColor,
+    previewActive,
+    setMarkerStylePreview,
+    clearMarkerStylePreview,
+  ])
 
   return (
-    <div className="border-b border-stroke p-panel-padding last:border-b-0">
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
-        <div className="relative shrink-0">
-          {isImage ? (
-            <img
-              src={objectUrl}
-              alt=""
-              className="bg-area-highlight h-20 w-28 max-w-full rounded-panel object-contain"
-              onLoad={(e) => {
-                const el = e.currentTarget
-                onChange(item.id, { width: el.naturalWidth, height: el.naturalHeight })
-              }}
-            />
-          ) : isVideo ? (
-            <video
-              src={objectUrl}
-              className="bg-area-highlight h-20 w-28 max-w-full rounded-panel object-cover"
-              muted
-              playsInline
-              preload="metadata"
-            />
-          ) : (
-            <div className="bg-area-highlight flex h-20 w-28 items-center justify-center rounded-panel text-badge text-fg-muted">
-              Preview
-            </div>
-          )}
-          <button
-            type="button"
-            className="text-fg-muted absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-panel border border-stroke bg-panel text-badge leading-none hover:text-fg focus-visible:ring-2 focus-visible:ring-fg-highlight/40 focus-visible:outline-none"
-            onClick={() => onRemove(item.id)}
-            aria-label={`Remove ${item.title || file.name}`}
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <label className="block min-w-0 sm:col-span-2">
-              <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                Name
-              </span>
-              <input
-                type="text"
-                className={inputClassName}
-                value={item.title}
-                onChange={(e) => onChange(item.id, { title: e.target.value })}
-                aria-label="Feature name"
-              />
-            </label>
-            <label className="block min-w-0">
-              <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                Type
-              </span>
-              <select
-                className={selectClassName}
-                value={item.kind}
-                onChange={(e) => onChange(item.id, { kind: e.target.value as AssetKind })}
-                aria-label="Feature type"
-              >
-                <option value="image">Image</option>
-                <option value="video">Video</option>
-                <option value="panorama">360 Photo</option>
-              </select>
-            </label>
-            <label className="block min-w-0">
-              <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                Date captured
-              </span>
-              <input
-                type="date"
-                className={inputClassName}
-                value={item.dateCapturedIso}
-                onChange={(e) => onChange(item.id, { dateCapturedIso: e.target.value })}
-              />
-            </label>
-            <label className="block min-w-0">
-              <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                Date added
-              </span>
-              <input
-                type="date"
-                className={inputClassName}
-                value={item.dateAddedIso}
-                onChange={(e) => onChange(item.id, { dateAddedIso: e.target.value })}
-              />
-            </label>
-
-            {isBuildingProject ? (
-              <>
-                <div className="grid min-w-0 gap-2 sm:col-span-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-                  <label className="block min-w-0">
-                    <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                      X
-                    </span>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      className={inputClassName}
-                      value={item.xStr}
-                      onChange={(e) => onChange(item.id, { xStr: e.target.value })}
-                      placeholder="e.g. 0.340000"
-                      aria-label="Floor plan X (normalized 0–1)"
-                    />
-                  </label>
-                  <label className="block min-w-0">
-                    <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                      Y
-                    </span>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      className={inputClassName}
-                      value={item.yStr}
-                      onChange={(e) => onChange(item.id, { yStr: e.target.value })}
-                      placeholder="e.g. 0.410000"
-                      aria-label="Floor plan Y (normalized 0–1)"
-                    />
-                  </label>
-                  <div className="flex min-w-0 flex-col justify-end gap-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={
-                          'text-standard shrink-0 whitespace-nowrap ' +
-                          (item.floorPlanId != null ? 'text-fg' : 'text-fg-muted')
-                        }
-                        aria-label="Floor plan location"
-                      >
-                        {floorPlanLabel}
-                      </span>
-                      <button
-                        type="button"
-                        className={secondaryButtonClass + ' whitespace-nowrap'}
-                        disabled={isPickingFloorPlanLocation}
-                        onClick={() => onStartFloorPlanPick(item.id)}
-                      >
-                        {isFloorPlanPickTarget ? 'Click plan…' : 'Set location on plan'}
-                      </button>
-                      {isFloorPlanPickTarget ? (
-                        <button
-                          type="button"
-                          className="text-fg-muted text-standard hover:underline"
-                          onClick={onCancelFloorPlanPick}
-                        >
-                          Cancel pick
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-                {isFloorPlanPickTarget ? (
-                  <p className="text-fg-muted sm:col-span-2 text-standard">
-                    Click the floor plan on the right to place the capture point, or press Esc.
-                  </p>
-                ) : null}
-              </>
-            ) : (
-              <>
-                <div className="grid min-w-0 gap-2 sm:col-span-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-                  <label className="block min-w-0">
-                    <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                      Latitude
-                    </span>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      className={inputClassName}
-                      value={item.latStr}
-                      onChange={(e) => onChange(item.id, { latStr: e.target.value })}
-                      placeholder="e.g. 29.783350"
-                      aria-label="Capture latitude (WGS84)"
-                    />
-                  </label>
-                  <label className="block min-w-0">
-                    <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                      Longitude
-                    </span>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      className={inputClassName}
-                      value={item.lngStr}
-                      onChange={(e) => onChange(item.id, { lngStr: e.target.value })}
-                      placeholder="e.g. -95.809920"
-                      aria-label="Capture longitude (WGS84)"
-                    />
-                  </label>
-                  <div className="flex min-w-0 flex-col justify-end gap-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        className={secondaryButtonClass + ' whitespace-nowrap'}
-                        disabled={!canPickOnMap || isPickingLocation}
-                        title={canPickOnMap ? undefined : pickDisabledReason}
-                        onClick={() => onStartMapPick(item.id)}
-                      >
-                        {isMapPickTarget ? 'Click map…' : 'Set location on map'}
-                      </button>
-                      {isMapPickTarget ? (
-                        <button
-                          type="button"
-                          className="text-fg-muted text-standard hover:underline"
-                          onClick={onCancelMapPick}
-                        >
-                          Cancel pick
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-                {isMapPickTarget ? (
-                  <p className="text-fg-muted sm:col-span-2 text-standard">
-                    Click the map on the right to place the capture point, or press Esc.
-                  </p>
-                ) : null}
-              </>
-            )}
-
-            <div className="min-w-0 sm:col-span-2">
-              <p className="text-fg-muted text-badge font-bold uppercase tracking-wide">File</p>
-              <p className="text-standard break-all text-fg">{file.name}</p>
-            </div>
-            <div className="min-w-0">
-              <p className="text-fg-muted text-badge font-bold uppercase tracking-wide">Size</p>
-              <p className="text-standard text-fg">{formatBytes(file.size)}</p>
-            </div>
-            <div className="min-w-0">
-              <p className="text-fg-muted text-badge font-bold uppercase tracking-wide">MIME</p>
-              <p className="text-standard break-all text-fg">
-                {file.type.trim() || '—'}
-              </p>
-            </div>
-            <div className="min-w-0 sm:col-span-2">
-              <p className="text-fg-muted text-badge font-bold uppercase tracking-wide">Dimensions</p>
-              <p className="text-standard text-fg">
-                {item.width != null && item.height != null
-                  ? `${item.width} × ${item.height}px`
-                  : '—'}
-              </p>
-            </div>
-          </div>
-        </div>
+    <div className="relative px-panel-padding py-[36px]">
+      <div className="absolute top-[36px] right-panel-padding flex flex-col items-end gap-1">
+        <p
+          className="text-fg text-standard font-bold"
+          aria-label={`File ${fileIndex} of ${fileTotal}`}
+        >
+          {fileIndex} of {fileTotal}
+        </p>
+        <button
+          type="button"
+          className="text-fg-muted text-standard cursor-pointer font-normal underline hover:text-fg focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none"
+          onClick={() => onRemove(item.id)}
+          aria-label={`Remove ${item.title || file.name} from upload`}
+        >
+          Remove from upload
+        </button>
       </div>
+      <FeatureMetadataForm
+        draft={pendingToDraft(item)}
+        onDraftChange={(patch) => onChange(item.id, patch)}
+        fileInfo={{
+          fileSizeLabel: fileSizeLabel(file.size),
+          resolutionLabel: resolutionLabel(item.width, item.height),
+          extensionLabel: extensionLabelFromMimeAndKind(file.type, item.kind, file.name),
+        }}
+        preview={{
+          url: objectUrl,
+          isVideo,
+          onImageLoad: (width, height) => onChange(item.id, { width, height }),
+        }}
+        isBuildingProject={isBuildingProject}
+        locationPick={{
+          canPickOnMap,
+          pickDisabledReason,
+          isMapPickInProgress: isPickingLocation,
+          isFloorPlanPickInProgress: isPickingFloorPlanLocation,
+          isThisFormMapPickTarget: isMapPickTarget,
+          isThisFormFloorPlanPickTarget: isFloorPlanPickTarget,
+          onMapPickClick: () => {
+            if (isMapPickTarget) {
+              onCancelMapPick()
+            } else {
+              onStartMapPick(item.id)
+            }
+          },
+          onFloorPlanPickClick: () => {
+            if (isFloorPlanPickTarget) {
+              onCancelFloorPlanPick()
+            } else {
+              onStartFloorPlanPick(item.id)
+            }
+          },
+        }}
+      />
     </div>
   )
 }
@@ -448,7 +286,7 @@ export function AddFeatureFlow({ onCancel, onSave }: AddFeatureFlowProps) {
           objectUrl: URL.createObjectURL(file),
           title: fileBaseTitle(file.name),
           dateCapturedIso: day,
-          dateAddedIso: day,
+          dateUploadedIso: day,
           kind: inferKindFromFile(file),
           width: null,
           height: null,
@@ -457,6 +295,7 @@ export function AddFeatureFlow({ onCancel, onSave }: AddFeatureFlowProps) {
           xStr: '',
           yStr: '',
           floorPlanId: undefined,
+          markerColor: normalizeMarkerColor(undefined),
         })
       }
       return next
@@ -533,7 +372,7 @@ export function AddFeatureFlow({ onCancel, onSave }: AddFeatureFlowProps) {
     for (const p of pending) {
       const cap = formatDisplayDateFromIsoDate(p.dateCapturedIso)
       const added =
-        formatDisplayDateFromIsoDate(p.dateAddedIso) ||
+        formatDisplayDateFromIsoDate(p.dateUploadedIso) ||
         formatDisplayDateFromIsoDate(todayIsoDate())
       if (!added) continue
       const geo = isBuildingProject ? {} : parseGeoFields(p.lngStr, p.latStr)
@@ -551,6 +390,7 @@ export function AddFeatureFlow({ onCancel, onSave }: AddFeatureFlowProps) {
         mimeType: p.file.type || undefined,
         width: p.width ?? undefined,
         height: p.height ?? undefined,
+        markerColor: normalizeMarkerColor(p.markerColor),
         ...geo,
         ...(floorPlanPosition != null ? { floorPlanPosition } : {}),
       })
@@ -612,11 +452,16 @@ export function AddFeatureFlow({ onCancel, onSave }: AddFeatureFlowProps) {
         </div>
 
         {pending.length > 0 ? (
-          <ul className="m-0 list-none p-0" aria-live="polite">
-            {pending.map((item) => (
+          <ul
+            className="m-0 list-none divide-y divide-stroke border-t border-stroke p-0"
+            aria-live="polite"
+          >
+            {pending.map((item, index) => (
               <li key={item.id}>
                 <PendingFeatureCard
                   item={item}
+                  fileIndex={index + 1}
+                  fileTotal={pending.length}
                   isBuildingProject={isBuildingProject}
                   canPickOnMap={canPickOnMap}
                   pickDisabledReason={pickDisabledReason}
@@ -642,7 +487,7 @@ export function AddFeatureFlow({ onCancel, onSave }: AddFeatureFlowProps) {
           <button
             type="button"
             onClick={handleCancel}
-            className="text-fg-muted text-standard rounded-panel px-3 py-1.5 hover:text-fg hover:underline focus-visible:ring-2 focus-visible:ring-fg-highlight/40 focus-visible:outline-none"
+            className="text-fg-muted text-standard cursor-pointer rounded-panel px-3 py-1.5 hover:text-fg hover:underline focus-visible:ring-2 focus-visible:ring-fg-highlight/40 focus-visible:outline-none"
           >
             Cancel
           </button>

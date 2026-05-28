@@ -7,6 +7,7 @@ import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapCaptureMarkers } from '@/context/MapCaptureMarkersContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
+import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 
 import { InfrastructureMapView } from '@/panels/map/InfrastructureMapView'
 import { MapContent } from '@/panels/map/MapContent'
@@ -20,7 +21,9 @@ import {
 } from '@/panels/map/mapFloorPlans'
 import {
   mergeCaptureMarkerPreview,
+  mergeCaptureMarkerStylePreview,
   mergeFloorPlanMarkerPreview,
+  mergeFloorPlanMarkerStylePreview,
 } from '@/panels/map/mergeLocationPickPreviews'
 
 const buildingTabs: TabItem[] = [
@@ -38,19 +41,20 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
   const { captureMarkers, floorPlanMarkers } = useMapCaptureMarkers()
   const { locationPickPreview } = useMapLocationPick()
   const { floorPlanPickPreview } = useFloorPlanLocationPick()
+  const { markerStylePreview } = useMarkerStylePreview()
   const { openedFeatureId, linkedFeatureId } = useFeatureMapHover()
   const [buildingTab, setBuildingTab] = useState('2d')
   const [floorPlanId, setFloorPlanId] = useState<FloorPlanId>(DEFAULT_FLOOR_PLAN_ID)
 
-  const displayCaptureMarkers = useMemo(
-    () => mergeCaptureMarkerPreview(captureMarkers, locationPickPreview),
-    [captureMarkers, locationPickPreview],
-  )
+  const displayCaptureMarkers = useMemo(() => {
+    const withLocation = mergeCaptureMarkerPreview(captureMarkers, locationPickPreview)
+    return mergeCaptureMarkerStylePreview(withLocation, markerStylePreview)
+  }, [captureMarkers, locationPickPreview, markerStylePreview])
 
-  const displayFloorPlanMarkers = useMemo(
-    () => mergeFloorPlanMarkerPreview(floorPlanMarkers, floorPlanPickPreview),
-    [floorPlanMarkers, floorPlanPickPreview],
-  )
+  const displayFloorPlanMarkers = useMemo(() => {
+    const withLocation = mergeFloorPlanMarkerPreview(floorPlanMarkers, floorPlanPickPreview)
+    return mergeFloorPlanMarkerStylePreview(withLocation, markerStylePreview)
+  }, [floorPlanMarkers, floorPlanPickPreview, markerStylePreview])
 
   useEffect(() => {
     if (floorPlanPickPreview == null) return

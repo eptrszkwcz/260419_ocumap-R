@@ -1,55 +1,29 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useActiveProject } from '@/context/ActiveProjectContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
-import type { AssetKind, SpatialAsset } from '@/data/sampleAssets'
-import { DEFAULT_FLOOR_PLAN_ID, floorPlanDisplayLabel, type FloorPlanId } from '@/panels/map/mapFloorPlans'
-import { formatBytes } from '@/lib/formatBytes'
+import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
+import type { SpatialAsset } from '@/data/sampleAssets'
 import { formatDisplayDateFromIsoDate, parseToIsoDate, todayIsoDate } from '@/lib/formatDisplayDateFromIsoDate'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/primaryButtonClass'
-
-const inputClassName =
-  'text-fg placeholder:text-fg-disabled h-8 w-full min-w-0 rounded-panel border border-stroke bg-panel px-2.5 text-standard leading-none focus-visible:border-fg-highlight focus-visible:ring-1 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
-
-const selectClassName = inputClassName + ' appearance-auto py-0'
-
-const secondaryButtonClass =
-  'text-fg font-sans shrink-0 rounded-panel border border-stroke bg-panel px-3 py-1.5 text-standard leading-none hover:bg-area-highlight focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45'
-
-function mapboxTokenPresent(): boolean {
-  const t = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
-  return typeof t === 'string' && t.trim() !== ''
-}
+import { DEFAULT_FLOOR_PLAN_ID } from '@/panels/map/mapFloorPlans'
+import { normalizeMarkerColor } from '@/panels/map/markerColors'
+import { FeatureMetadataForm } from '@/panels/library/featureMetadata/FeatureMetadataForm'
+import {
+  extensionLabelFromMimeAndKind,
+  fileSizeLabel,
+  resolutionLabel,
+} from '@/panels/library/featureMetadata/fileInfo'
+import { mapboxTokenPresent } from '@/panels/library/featureMetadata/mapboxToken'
+import type { FeatureMetadataDraft } from '@/panels/library/featureMetadata/types'
 
 function coordInputValue(n: number | undefined): string {
   if (n == null || !Number.isFinite(n)) return ''
   return n.toFixed(6)
 }
 
-function fileLabelFromUrl(url: string): string {
-  if (url.startsWith('blob:')) return 'Uploaded file'
-  try {
-    const path = url.split('?')[0]?.split('/').pop()
-    return path ? decodeURIComponent(path) : url
-  } catch {
-    return url
-  }
-}
-
-type MetadataDraft = {
-  title: string
-  kind: AssetKind
-  dateCapturedIso: string
-  dateUploadedIso: string
-  xStr: string
-  yStr: string
-  floorPlanId: FloorPlanId | undefined
-  latStr: string
-  lngStr: string
-}
-
-function draftFromAsset(asset: SpatialAsset, isBuildingProject: boolean): MetadataDraft {
+function draftFromAsset(asset: SpatialAsset, isBuildingProject: boolean): FeatureMetadataDraft {
   return {
     title: asset.title,
     kind: asset.kind,
@@ -60,15 +34,22 @@ function draftFromAsset(asset: SpatialAsset, isBuildingProject: boolean): Metada
     floorPlanId: isBuildingProject ? asset.floorPlanPosition?.floorPlanId : undefined,
     latStr: isBuildingProject ? '' : coordInputValue(asset.captureLat),
     lngStr: isBuildingProject ? '' : coordInputValue(asset.captureLng),
+    markerColor: normalizeMarkerColor(asset.markerColor),
   }
 }
 
 type FeatureMediaMetadataPanelProps = {
   asset: SpatialAsset
   onSave: (updated: SpatialAsset) => void
+  /** When true, starts map/plan location pick once after the panel opens. */
+  autoStartLocationPick?: boolean
 }
 
-export function FeatureMediaMetadataPanel({ asset, onSave }: FeatureMediaMetadataPanelProps) {
+export function FeatureMediaMetadataPanel({
+  asset,
+  onSave,
+  autoStartLocationPick = false,
+}: FeatureMediaMetadataPanelProps) {
   const { project } = useActiveProject()
   const isBuildingProject = project.projectType === 'Building'
   const { isPickingLocation, startLocationPick, cancelLocationPick } = useMapLocationPick()
@@ -77,10 +58,18 @@ export function FeatureMediaMetadataPanel({ asset, onSave }: FeatureMediaMetadat
     startFloorPlanLocationPick,
     cancelFloorPlanLocationPick,
   } = useFloorPlanLocationPick()
+  const { setMarkerStylePreview, clearMarkerStylePreview } = useMarkerStylePreview()
   const [draft, setDraft] = useState(() => draftFromAsset(asset, isBuildingProject))
+  const autoPickStartedRef = useRef(false)
 
-  const floorPlanLabel =
-    draft.floorPlanId != null ? floorPlanDisplayLabel(draft.floorPlanId) : '—'
+  useEffect(() => {
+    setMarkerStylePreview({ featureId: asset.id, color: draft.markerColor })
+    return () => clearMarkerStylePreview()
+  }, [asset.id, draft.markerColor, setMarkerStylePreview, clearMarkerStylePreview])
+
+  useEffect(() => {
+    autoPickStartedRef.current = false
+  }, [asset.id])
 
   const canPickOnMap = project.projectType === 'Infrastructure' && mapboxTokenPresent()
   const pickDisabledReason =
@@ -89,6 +78,38 @@ export function FeatureMediaMetadataPanel({ asset, onSave }: FeatureMediaMetadat
       : !mapboxTokenPresent()
         ? 'Add VITE_MAPBOX_ACCESS_TOKEN to your .env file to use map pick.'
         : undefined
+
+  useEffect(() => {
+    if (!autoStartLocationPick || autoPickStartedRef.current) return
+    autoPickStartedRef.current = true
+    if (isBuildingProject) {
+      startFloorPlanLocationPick(asset.id, (floorPlanId, x, y) => {
+        setDraft((d) => ({
+          ...d,
+          xStr: x.toFixed(6),
+          yStr: y.toFixed(6),
+          floorPlanId,
+        }))
+      })
+      return
+    }
+    if (canPickOnMap) {
+      startLocationPick(asset.id, (lng, lat) => {
+        setDraft((d) => ({
+          ...d,
+          lngStr: lng.toFixed(6),
+          latStr: lat.toFixed(6),
+        }))
+      })
+    }
+  }, [
+    asset.id,
+    autoStartLocationPick,
+    canPickOnMap,
+    isBuildingProject,
+    startFloorPlanLocationPick,
+    startLocationPick,
+  ])
 
   const handleSave = useCallback(() => {
     const title = draft.title.trim() || asset.title
@@ -129,6 +150,7 @@ export function FeatureMediaMetadataPanel({ asset, onSave }: FeatureMediaMetadat
         dateUploaded: uploaded,
         dateCaptured: captured,
         floorPlanPosition,
+        markerColor: normalizeMarkerColor(draft.markerColor),
       })
       return
     }
@@ -161,228 +183,66 @@ export function FeatureMediaMetadataPanel({ asset, onSave }: FeatureMediaMetadat
       kind: draft.kind,
       dateUploaded: uploaded,
       dateCaptured: captured,
+      markerColor: normalizeMarkerColor(draft.markerColor),
       ...geoPatch,
     })
   }, [asset, draft, isBuildingProject, onSave])
 
+  const isVideo =
+    asset.kind === 'video' || asset.mimeType?.startsWith('video/') === true
+
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col" role="region" aria-label="Feature metadata">
       <div className="min-h-0 min-w-0 flex-1 overflow-auto p-panel-padding">
-        <div className="grid gap-2 sm:grid-cols-2">
-          <label className="block min-w-0 sm:col-span-2">
-            <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-              Name
-            </span>
-            <input
-              type="text"
-              className={inputClassName}
-              value={draft.title}
-              onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-              aria-label="Feature name"
-            />
-          </label>
-          <label className="block min-w-0">
-            <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-              Type
-            </span>
-            <select
-              className={selectClassName}
-              value={draft.kind}
-              onChange={(e) => setDraft((d) => ({ ...d, kind: e.target.value as AssetKind }))}
-              aria-label="Feature type"
-            >
-              <option value="image">Image</option>
-              <option value="video">Video</option>
-              <option value="panorama">360 Photo</option>
-            </select>
-          </label>
-          <label className="block min-w-0">
-            <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-              Date captured
-            </span>
-            <input
-              type="date"
-              className={inputClassName}
-              value={draft.dateCapturedIso}
-              onChange={(e) => setDraft((d) => ({ ...d, dateCapturedIso: e.target.value }))}
-            />
-          </label>
-          <label className="block min-w-0 sm:col-span-2">
-            <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-              Date added
-            </span>
-            <input
-              type="date"
-              className={inputClassName}
-              value={draft.dateUploadedIso}
-              onChange={(e) => setDraft((d) => ({ ...d, dateUploadedIso: e.target.value }))}
-            />
-          </label>
-
-          {isBuildingProject ? (
-            <>
-              <div className="grid min-w-0 gap-2 sm:col-span-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-                <label className="block min-w-0">
-                  <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                    X
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    className={inputClassName}
-                    value={draft.xStr}
-                    onChange={(e) => setDraft((d) => ({ ...d, xStr: e.target.value }))}
-                    placeholder="e.g. 0.340000"
-                    aria-label="Floor plan X (normalized 0–1)"
-                  />
-                </label>
-                <label className="block min-w-0">
-                  <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                    Y
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    className={inputClassName}
-                    value={draft.yStr}
-                    onChange={(e) => setDraft((d) => ({ ...d, yStr: e.target.value }))}
-                    placeholder="e.g. 0.410000"
-                    aria-label="Floor plan Y (normalized 0–1)"
-                  />
-                </label>
-                <div className="flex min-w-0 flex-col justify-end gap-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={
-                        'text-standard shrink-0 whitespace-nowrap ' +
-                        (draft.floorPlanId != null ? 'text-fg' : 'text-fg-muted')
-                      }
-                      aria-label="Floor plan location"
-                    >
-                      {floorPlanLabel}
-                    </span>
-                    <button
-                      type="button"
-                      className={secondaryButtonClass + ' whitespace-nowrap'}
-                      disabled={isPickingFloorPlanLocation}
-                      onClick={() => {
-                        startFloorPlanLocationPick(asset.id, (floorPlanId, x, y) => {
-                          setDraft((d) => ({
-                            ...d,
-                            xStr: x.toFixed(6),
-                            yStr: y.toFixed(6),
-                            floorPlanId,
-                          }))
-                        })
-                      }}
-                    >
-                      {isPickingFloorPlanLocation ? 'Click plan…' : 'Set location on plan'}
-                    </button>
-                    {isPickingFloorPlanLocation ? (
-                      <button
-                        type="button"
-                        className="text-fg-muted text-standard hover:underline"
-                        onClick={cancelFloorPlanLocationPick}
-                      >
-                        Cancel pick
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-              {isPickingFloorPlanLocation ? (
-                <p className="text-fg-muted sm:col-span-2 text-standard">
-                  Click the floor plan on the right to place the capture point, or press Esc.
-                </p>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <div className="grid min-w-0 gap-2 sm:col-span-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-                <label className="block min-w-0">
-                  <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                    Latitude
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    className={inputClassName}
-                    value={draft.latStr}
-                    onChange={(e) => setDraft((d) => ({ ...d, latStr: e.target.value }))}
-                    placeholder="e.g. 29.783350"
-                    aria-label="Capture latitude (WGS84)"
-                  />
-                </label>
-                <label className="block min-w-0">
-                  <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                    Longitude
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    className={inputClassName}
-                    value={draft.lngStr}
-                    onChange={(e) => setDraft((d) => ({ ...d, lngStr: e.target.value }))}
-                    placeholder="e.g. -95.809920"
-                    aria-label="Capture longitude (WGS84)"
-                  />
-                </label>
-                <div className="flex min-w-0 flex-col justify-end gap-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      className={secondaryButtonClass + ' whitespace-nowrap'}
-                      disabled={!canPickOnMap || isPickingLocation}
-                      title={canPickOnMap ? undefined : pickDisabledReason}
-                      onClick={() => {
-                        startLocationPick(asset.id, (lng, lat) => {
-                          setDraft((d) => ({
-                            ...d,
-                            lngStr: lng.toFixed(6),
-                            latStr: lat.toFixed(6),
-                          }))
-                        })
-                      }}
-                    >
-                      {isPickingLocation ? 'Click map…' : 'Set location on map'}
-                    </button>
-                    {isPickingLocation ? (
-                      <button type="button" className="text-fg-muted text-standard hover:underline" onClick={cancelLocationPick}>
-                        Cancel pick
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-              {isPickingLocation ? (
-                <p className="text-fg-muted sm:col-span-2 text-standard">
-                  Click the map on the right to place the capture point, or press Esc.
-                </p>
-              ) : null}
-            </>
-          )}
-
-          <div className="min-w-0 sm:col-span-2">
-            <p className="text-fg-muted text-badge font-bold uppercase tracking-wide">File</p>
-            <p className="text-standard break-all text-fg">{fileLabelFromUrl(asset.fileUrl)}</p>
-          </div>
-          <div className="min-w-0">
-            <p className="text-fg-muted text-badge font-bold uppercase tracking-wide">Size</p>
-            <p className="text-standard text-fg">
-              {asset.fileSizeBytes != null ? formatBytes(asset.fileSizeBytes) : '—'}
-            </p>
-          </div>
-          <div className="min-w-0">
-            <p className="text-fg-muted text-badge font-bold uppercase tracking-wide">MIME</p>
-            <p className="text-standard break-all text-fg">{asset.mimeType?.trim() || '—'}</p>
-          </div>
-          <div className="min-w-0 sm:col-span-2">
-            <p className="text-fg-muted text-badge font-bold uppercase tracking-wide">Dimensions</p>
-            <p className="text-standard text-fg">
-              {asset.width != null && asset.height != null ? `${asset.width} × ${asset.height}px` : '—'}
-            </p>
-          </div>
-        </div>
+        <FeatureMetadataForm
+          draft={draft}
+          onDraftChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+          fileInfo={{
+            fileSizeLabel: fileSizeLabel(asset.fileSizeBytes) === '—' ? '24.6 MB' : fileSizeLabel(asset.fileSizeBytes),
+            resolutionLabel:
+              resolutionLabel(asset.width, asset.height) === '—'
+                ? '8192 × 4096'
+                : resolutionLabel(asset.width, asset.height),
+            extensionLabel: extensionLabelFromMimeAndKind(asset.mimeType, asset.kind, asset.fileUrl),
+          }}
+          preview={{ url: asset.fileUrl, isVideo }}
+          isBuildingProject={isBuildingProject}
+          locationPick={{
+            canPickOnMap,
+            pickDisabledReason,
+            isMapPickInProgress: isPickingLocation,
+            isFloorPlanPickInProgress: isPickingFloorPlanLocation,
+            isThisFormMapPickTarget: isPickingLocation,
+            isThisFormFloorPlanPickTarget: isPickingFloorPlanLocation,
+            onMapPickClick: () => {
+              if (isPickingLocation) {
+                cancelLocationPick()
+                return
+              }
+              startLocationPick(asset.id, (lng, lat) => {
+                setDraft((d) => ({
+                  ...d,
+                  lngStr: lng.toFixed(6),
+                  latStr: lat.toFixed(6),
+                }))
+              })
+            },
+            onFloorPlanPickClick: () => {
+              if (isPickingFloorPlanLocation) {
+                cancelFloorPlanLocationPick()
+                return
+              }
+              startFloorPlanLocationPick(asset.id, (floorPlanId, x, y) => {
+                setDraft((d) => ({
+                  ...d,
+                  xStr: x.toFixed(6),
+                  yStr: y.toFixed(6),
+                  floorPlanId,
+                }))
+              })
+            },
+          }}
+        />
       </div>
 
       <div className="border-t border-stroke bg-panel px-panel-padding py-3">
