@@ -5,7 +5,10 @@ import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useMapCaptureMarkers, type FloorPlanMarker, type MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
+import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import { getSampleAssetsForProject, type SpatialAsset } from '@/data/sampleAssets'
+import { downloadSpatialAsset } from '@/lib/downloadSpatialAsset'
+import { markerColorsFromAsset } from '@/panels/map/markerColors'
 import { AddFeatureFlow } from '@/panels/library/AddFeatureFlow'
 import { type ActiveFilter } from '@/panels/library/FeatureLibraryBadges'
 import { FeatureLibraryFilterRow } from '@/panels/library/FeatureLibraryFilterRow'
@@ -28,7 +31,16 @@ function assetsToCaptureMarkers(assets: SpatialAsset[]): MapCaptureMarker[] {
         Number.isFinite(a.captureLng) &&
         Number.isFinite(a.captureLat),
     )
-    .map((a) => ({ id: a.id, lng: a.captureLng as number, lat: a.captureLat as number }))
+    .map((a) => {
+      const { fill, stroke } = markerColorsFromAsset(a.markerColor)
+      return {
+        id: a.id,
+        lng: a.captureLng as number,
+        lat: a.captureLat as number,
+        color: fill,
+        strokeColor: stroke,
+      }
+    })
 }
 
 function assetsToFloorPlanMarkers(assets: SpatialAsset[]): FloorPlanMarker[] {
@@ -45,12 +57,17 @@ function assetsToFloorPlanMarkers(assets: SpatialAsset[]): FloorPlanMarker[] {
         p.y <= 1
       )
     })
-    .map((a) => ({
-      id: a.id,
-      floorPlanId: a.floorPlanPosition!.floorPlanId,
-      x: a.floorPlanPosition!.x,
-      y: a.floorPlanPosition!.y,
-    }))
+    .map((a) => {
+      const { fill, stroke } = markerColorsFromAsset(a.markerColor)
+      return {
+        id: a.id,
+        floorPlanId: a.floorPlanPosition!.floorPlanId,
+        x: a.floorPlanPosition!.x,
+        y: a.floorPlanPosition!.y,
+        color: fill,
+        strokeColor: stroke,
+      }
+    })
 }
 
 export function LibraryContent({ activeTabId }: LibraryContentProps) {
@@ -98,11 +115,13 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   const { project } = useActiveProject()
   const { cancelLocationPick, clearLocationPickPreview } = useMapLocationPick()
   const { cancelFloorPlanLocationPick, clearFloorPlanLocationPickPreview } = useFloorPlanLocationPick()
+  const { clearMarkerStylePreview } = useMarkerStylePreview()
   const { setOpenedFeatureId, setMapFeatureClickHandler } = useFeatureMapHover()
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
   const [viewMode, setViewMode] = useState<'browse' | 'add'>('browse')
   const [openedAsset, setOpenedAsset] = useState<SpatialAsset | null>(null)
   const [viewerPanel, setViewerPanel] = useState<'media' | 'metadata'>('media')
+  const [metadataAutoStartLocationPick, setMetadataAutoStartLocationPick] = useState(false)
 
   const visibleAssets = assets
   const visibleCount = visibleAssets.length
@@ -110,9 +129,43 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   const viewerAsset = viewMode === 'browse' ? openedAsset : null
 
   const openAsset = (asset: SpatialAsset) => {
+    setMetadataAutoStartLocationPick(false)
     setViewerPanel('media')
     setOpenedAsset(asset)
     setOpenedFeatureId(asset.id)
+  }
+
+  const openFeatureProperties = (asset: SpatialAsset) => {
+    cancelLocationPick()
+    cancelFloorPlanLocationPick()
+    setMetadataAutoStartLocationPick(false)
+    setOpenedAsset(asset)
+    setOpenedFeatureId(asset.id)
+    setViewerPanel('metadata')
+  }
+
+  const openSetLocation = (asset: SpatialAsset) => {
+    cancelLocationPick()
+    cancelFloorPlanLocationPick()
+    setMetadataAutoStartLocationPick(true)
+    setOpenedAsset(asset)
+    setOpenedFeatureId(asset.id)
+    setViewerPanel('metadata')
+  }
+
+  const deleteAsset = (asset: SpatialAsset) => {
+    if (openedAsset?.id === asset.id) {
+      cancelLocationPick()
+      cancelFloorPlanLocationPick()
+      clearLocationPickPreview()
+      clearFloorPlanLocationPickPreview()
+      clearMarkerStylePreview()
+      setOpenedAsset(null)
+      setOpenedFeatureId(null)
+      setViewerPanel('media')
+      setMetadataAutoStartLocationPick(false)
+    }
+    setAssets((list) => list.filter((a) => a.id !== asset.id))
   }
 
   useEffect(() => {
@@ -141,6 +194,8 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
     cancelFloorPlanLocationPick()
     clearLocationPickPreview()
     clearFloorPlanLocationPickPreview()
+    clearMarkerStylePreview()
+    setMetadataAutoStartLocationPick(false)
     setAssets((list) => list.map((a) => (a.id === updated.id ? updated : a)))
     setOpenedAsset(updated)
     setViewerPanel('media')
@@ -152,13 +207,17 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
         onAddFeatureClick={() => {
           cancelLocationPick()
           cancelFloorPlanLocationPick()
+          clearMarkerStylePreview()
           setOpenedAsset(null)
           setOpenedFeatureId(null)
           setViewMode('add')
         }}
         viewerAsset={viewerAsset}
         viewerPanel={viewerPanel}
-        onOpenMetadata={() => setViewerPanel('metadata')}
+        onOpenMetadata={() => {
+          setMetadataAutoStartLocationPick(false)
+          setViewerPanel('metadata')
+        }}
         onOpenMedia={() => {
           cancelLocationPick()
           cancelFloorPlanLocationPick()
@@ -167,6 +226,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
         onCloseViewer={() => {
           cancelLocationPick()
           cancelFloorPlanLocationPick()
+          clearMarkerStylePreview()
           setOpenedAsset(null)
           setOpenedFeatureId(null)
           setViewerPanel('media')
@@ -196,9 +256,11 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
                     viewerAsset.mimeType ?? '',
                     viewerAsset.width ?? '',
                     viewerAsset.height ?? '',
+                    viewerAsset.markerColor ?? '',
                   ].join('|')}
                   asset={viewerAsset}
                   onSave={updateAssetInLibrary}
+                  autoStartLocationPick={metadataAutoStartLocationPick}
                 />
               ) : (
                 <FeatureLibraryMediaViewer
@@ -219,6 +281,10 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
                 <FeatureLibraryTable
                   assets={visibleAssets}
                   onOpenAsset={openAsset}
+                  onSetLocation={openSetLocation}
+                  onDownloadAsset={downloadSpatialAsset}
+                  onDeleteAsset={deleteAsset}
+                  onFeatureProperties={openFeatureProperties}
                   showLocationColumn={project.projectType === 'Building'}
                 />
               </div>

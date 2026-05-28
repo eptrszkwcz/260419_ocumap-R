@@ -4,6 +4,7 @@ import type { FloorPlanMarker } from '@/context/MapCaptureMarkersContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import type { FloorPlanId } from '@/panels/map/mapFloorPlans'
+import { markerRgba } from '@/panels/map/markerColors'
 
 const MIN_SCALE = 0.25
 const MAX_SCALE = 8
@@ -12,7 +13,7 @@ const FOCUS_SCALE_MULTIPLIER = 2.8
 const VIEW_ANIMATION_MS = 700
 
 const DEFAULT_FILL_OPACITY = 0.32
-const DIM_OPACITY = 0.15
+const DIM_OPACITY = 0.35
 const HIGHLIGHT_FILL_OPACITY = 1
 const MARKER_DIAMETER_PX = 12
 
@@ -108,15 +109,15 @@ function FloorPlanCaptureMarker({
     <button
       type="button"
       data-floor-marker
-      className="absolute z-10 block rounded-full border-2 border-[#1d4ed8] bg-[#2563eb] p-0 transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/40"
+      className="absolute z-10 block rounded-full border-2 p-0 transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/40"
       style={{
         left: `${marker.x * 100}%`,
         top: `${marker.y * 100}%`,
         width: MARKER_DIAMETER_PX,
         height: MARKER_DIAMETER_PX,
         transform: 'translate(-50%, -50%)',
-        borderColor: `rgba(29, 78, 216, ${strokeOpacity})`,
-        backgroundColor: `rgba(37, 99, 235, ${fillOpacity})`,
+        borderColor: markerRgba(marker.strokeColor, strokeOpacity),
+        backgroundColor: markerRgba(marker.color, fillOpacity),
         cursor: locationPickActive ? 'crosshair' : 'pointer',
         pointerEvents: locationPickActive ? 'none' : 'auto',
       }}
@@ -427,7 +428,7 @@ function MapFloorPlanViewer({
       </div>
       {isPickingFloorPlanLocation ? (
         <div
-          className="pointer-events-none absolute inset-x-0 top-3 z-20 flex justify-center px-panel-padding"
+          className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center px-panel-padding"
           role="status"
           aria-live="polite"
         >

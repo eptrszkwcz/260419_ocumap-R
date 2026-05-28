@@ -1,5 +1,6 @@
 import { ActiveProjectProvider } from '@/context/ActiveProjectContext'
 import { FeatureMapHoverProvider } from '@/context/FeatureMapHoverContext'
+import { MarkerStylePreviewProvider } from '@/context/MarkerStylePreviewContext'
 import { MapCaptureMarkersProvider } from '@/context/MapCaptureMarkersContext'
 import { FloorPlanLocationPickProvider } from '@/context/FloorPlanLocationPickContext'
 import { MapLocationPickProvider } from '@/context/MapLocationPickContext'
@@ -13,14 +14,16 @@ export function LibraryPage() {
       <ActiveProjectProvider>
         <MapLocationPickProvider>
           <FloorPlanLocationPickProvider>
-            <MapCaptureMarkersProvider>
-              <FeatureMapHoverProvider>
-                <div className="h-full min-h-0">
-                  <DashboardLayout />
-                </div>
-                <ProjectsDrawerFromLibrary />
-              </FeatureMapHoverProvider>
-            </MapCaptureMarkersProvider>
+            <MarkerStylePreviewProvider>
+              <MapCaptureMarkersProvider>
+                <FeatureMapHoverProvider>
+                  <div className="h-full min-h-0">
+                    <DashboardLayout />
+                  </div>
+                  <ProjectsDrawerFromLibrary />
+                </FeatureMapHoverProvider>
+              </MapCaptureMarkersProvider>
+            </MarkerStylePreviewProvider>
           </FloorPlanLocationPickProvider>
         </MapLocationPickProvider>
       </ActiveProjectProvider>

@@ -4,6 +4,10 @@ import { FeatureLibraryTableRow } from '@/panels/library/FeatureLibraryTableRow'
 type FeatureLibraryTableProps = {
   assets: SpatialAsset[]
   onOpenAsset?: (asset: SpatialAsset) => void
+  onSetLocation?: (asset: SpatialAsset) => void
+  onDownloadAsset?: (asset: SpatialAsset) => void
+  onDeleteAsset?: (asset: SpatialAsset) => void
+  onFeatureProperties?: (asset: SpatialAsset) => void
   /** Building projects: show floor plan name in a Location column. */
   showLocationColumn?: boolean
 }
@@ -14,6 +18,10 @@ type FeatureLibraryTableProps = {
 export function FeatureLibraryTable({
   assets,
   onOpenAsset,
+  onSetLocation,
+  onDownloadAsset,
+  onDeleteAsset,
+  onFeatureProperties,
   showLocationColumn = false,
 }: FeatureLibraryTableProps) {
   return (
@@ -58,6 +66,12 @@ export function FeatureLibraryTable({
               asset={asset}
               showLocationColumn={showLocationColumn}
               onOpen={onOpenAsset != null ? () => onOpenAsset(asset) : undefined}
+              onSetLocation={onSetLocation != null ? () => onSetLocation(asset) : undefined}
+              onDownload={onDownloadAsset != null ? () => onDownloadAsset(asset) : undefined}
+              onDelete={onDeleteAsset != null ? () => onDeleteAsset(asset) : undefined}
+              onFeatureProperties={
+                onFeatureProperties != null ? () => onFeatureProperties(asset) : undefined
+              }
             />
           ))}
         </tbody>

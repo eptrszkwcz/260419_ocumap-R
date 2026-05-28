@@ -1,12 +1,33 @@
-import { useId } from 'react'
-
 import { PrimaryAddButton } from '@/components/ControlHeaderToolbar'
+import { DropdownMenu } from '@/components/DropdownMenu'
 
 import type { FloorPlanId } from '@/panels/map/mapFloorPlans'
-import { FLOOR_PLAN_OPTIONS } from '@/panels/map/mapFloorPlans'
+import { FLOOR_PLAN_OPTIONS, floorPlanDisplayLabel } from '@/panels/map/mapFloorPlans'
 
-const floorSelectClassName =
-  'text-fg h-8 min-w-[7.5rem] max-w-full rounded-panel border border-stroke bg-panel/95 px-2.5 pr-8 text-standard leading-none shadow-sm backdrop-blur-[2px] focus-visible:border-fg-highlight focus-visible:ring-1 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
+const floorTriggerClassName =
+  'text-fg-muted hover:text-fg-highlight inline-flex h-8 min-w-[7.5rem] max-w-full cursor-pointer items-center justify-between gap-2 rounded-panel border border-stroke bg-panel/95 px-2.5 font-sans text-standard font-normal leading-none shadow-sm backdrop-blur-[2px] focus-visible:border-fg-highlight focus-visible:ring-1 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
+
+function ChevronDownIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      className={'shrink-0 ' + className}
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      <path
+        d="M3 4.5 6 7.5 9 4.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
 
 type MapControlHeaderProps = {
   selectedFloorId: FloorPlanId
@@ -22,7 +43,7 @@ export function MapControlHeader({
   onFloorChange,
   onAddFloorPlan,
 }: MapControlHeaderProps) {
-  const selectId = useId()
+  const selectedLabel = floorPlanDisplayLabel(selectedFloorId)
 
   return (
     <div
@@ -32,22 +53,31 @@ export function MapControlHeader({
       aria-label="Map floor plan"
     >
       <div className="pointer-events-auto min-w-0">
-        <label htmlFor={selectId} className="sr-only">
-          Floor plan
-        </label>
-        <select
-          id={selectId}
-          value={selectedFloorId}
-          onChange={(e) => onFloorChange(e.target.value as FloorPlanId)}
-          className={floorSelectClassName}
-          aria-label="Floor plan"
-        >
-          {FLOOR_PLAN_OPTIONS.map((opt) => (
-            <option key={opt.id} value={opt.id}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <DropdownMenu
+          menuAriaLabel="Floor plan"
+          align="left"
+          panelWidth="7.5rem"
+          items={FLOOR_PLAN_OPTIONS.map((opt) => ({
+            id: opt.id,
+            label: opt.label,
+            selected: opt.id === selectedFloorId,
+            onSelect: () => onFloorChange(opt.id),
+          }))}
+          renderTrigger={({ open, menuId, onToggle }) => (
+            <button
+              type="button"
+              onClick={onToggle}
+              className={floorTriggerClassName}
+              aria-expanded={open}
+              aria-haspopup="menu"
+              aria-controls={menuId}
+              aria-label={`Floor plan: ${selectedLabel}`}
+            >
+              <span className="truncate">{selectedLabel}</span>
+              <ChevronDownIcon />
+            </button>
+          )}
+        />
       </div>
       <div className="pointer-events-auto shrink-0">
         <PrimaryAddButton

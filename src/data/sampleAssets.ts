@@ -45,6 +45,8 @@ export type SpatialAsset = {
   mimeType?: string
   width?: number
   height?: number
+  /** Hex fill color for the capture point on the map or floor plan (e.g. `#2563eb`). */
+  markerColor?: string
 }
 
 /** Best-effort kind for an uploaded `File` (user can override in the add form). */

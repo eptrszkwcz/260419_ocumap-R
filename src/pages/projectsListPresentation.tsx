@@ -1,6 +1,34 @@
 import { BuildingOfficeIcon, TruckIcon } from '@heroicons/react/24/outline'
 
-import { type ProjectRecord, type ProjectType } from '@/data/sampleProjects'
+import { type ProjectRecord, type ProjectStatus, type ProjectType } from '@/data/sampleProjects'
+
+const projectStatusBadgeBaseClass =
+  'inline-flex h-badge min-h-badge max-h-badge shrink-0 items-center justify-center rounded-panel px-2 text-badge font-bold leading-none'
+
+function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
+  if (status === 'Published') {
+    return (
+      <span
+        className={
+          projectStatusBadgeBaseClass +
+          ' bg-[#FFAA1D]/20 text-[#B87A12] group-hover:bg-[#FFAA1D]/28'
+        }
+      >
+        Published
+      </span>
+    )
+  }
+  return (
+    <span
+      className={
+        projectStatusBadgeBaseClass +
+        ' text-fg-highlight bg-fg-highlight/12 group-hover:bg-fg-highlight/18'
+      }
+    >
+      Draft
+    </span>
+  )
+}
 
 export type ProjectsListLayout = 'full' | 'drawer'
 
@@ -41,9 +69,22 @@ function ProjectTypeIcon({ type }: { type: ProjectType }) {
   )
 }
 
-/** Full page: name, team, last modified, created, type icon, actions */
+/** Full page: name (+ team subtitle), status, last modified, files, created, type icon, actions */
 export const projectsGridClass =
-  'grid w-full min-w-0 grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,7.5rem)_minmax(0,5.5rem)_2.5rem_2.25rem] items-center gap-x-3'
+  'grid w-full min-w-0 grid-cols-[minmax(0,1.4fr)_minmax(0,5.75rem)_minmax(0,7.5rem)_minmax(0,3.25rem)_minmax(0,5.5rem)_2.5rem_2.25rem] items-center gap-x-3'
+
+function ProjectNameCell({ name, team }: { name: string; team: string }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5 py-0.5">
+      <span className="truncate text-[16px] leading-[1.2] font-bold text-fg group-hover:text-fg-highlight">
+        {name}
+      </span>
+      <span className="truncate text-[12px] leading-[1.2] text-fg-muted group-hover:text-fg-highlight">
+        {team}
+      </span>
+    </div>
+  )
+}
 
 /** Drawer: name + kebab only */
 export const projectsGridDrawerClass =
@@ -70,8 +111,9 @@ export function ProjectsListHeader({ layout = 'full' }: { layout?: ProjectsListL
       className={`${grid} shrink-0 px-panel-padding pb-2 pt-1 font-sans text-standard font-bold text-fg-muted`}
     >
       <div className="min-w-0">Name</div>
-      <div className="min-w-0">Team</div>
+      <div className="min-w-0">Status</div>
       <div className="whitespace-nowrap">Last Modified</div>
+      <div className="whitespace-nowrap">Files</div>
       <div className="whitespace-nowrap">Created</div>
       <div className="sr-only">Type</div>
       <div className="sr-only text-right">Actions</div>
@@ -101,7 +143,7 @@ export function ProjectCardRow({
       role="button"
       tabIndex={0}
       className={
-        'group box-border flex h-16 min-h-16 cursor-pointer items-center rounded-panel bg-panel font-sans text-standard font-normal transition-colors hover:bg-area-highlight hover:font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/40 ' +
+        'group box-border flex min-h-[72px] cursor-pointer items-center rounded-panel bg-panel py-3 font-sans text-standard font-normal transition-colors hover:bg-area-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/40 ' +
         (isCurrent ? 'ring-1 ring-inset ring-fg-highlight/30 ' : '')
       }
       onClick={onActivate}
@@ -114,12 +156,17 @@ export function ProjectCardRow({
       aria-label={ariaLabel}
     >
       <div className={`${grid} min-w-0 px-panel-padding`}>
-        <span className="min-w-0 truncate font-bold text-fg group-hover:text-fg-highlight">{project.name}</span>
+        <ProjectNameCell name={project.name} team={project.team} />
         {layout === 'full' ? (
           <>
-            <span className="min-w-0 truncate text-fg-muted group-hover:text-fg-highlight">{project.team}</span>
+            <span className="min-w-0">
+              <ProjectStatusBadge status={project.status} />
+            </span>
             <span className="truncate whitespace-nowrap text-fg-muted group-hover:text-fg-highlight">
               {project.lastModified}
+            </span>
+            <span className="tabular-nums whitespace-nowrap text-fg-muted group-hover:text-fg-highlight">
+              {project.featureFileCount.toLocaleString()}
             </span>
             <span className="truncate whitespace-nowrap text-fg-muted group-hover:text-fg-highlight">
               {project.createdRelative}
