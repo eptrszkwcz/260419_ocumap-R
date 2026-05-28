@@ -143,7 +143,7 @@ export function ProjectCardRow({
       role="button"
       tabIndex={0}
       className={
-        'group box-border flex min-h-[72px] cursor-pointer items-center rounded-panel bg-panel py-3 font-sans text-standard font-normal transition-colors hover:bg-area-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/40 ' +
+        'group box-border flex min-h-[72px] cursor-pointer items-center rounded-panel border border-transparent bg-panel py-3 font-sans text-standard font-normal transition-colors hover:border-fg-highlight hover:bg-area-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/40 ' +
         (isCurrent ? 'ring-1 ring-inset ring-fg-highlight/30 ' : '')
       }
       onClick={onActivate}
