@@ -3,6 +3,10 @@ import { DropdownMenu } from '@/components/DropdownMenu'
 
 import type { FloorPlanId } from '@/panels/map/mapFloorPlans'
 import { FLOOR_PLAN_OPTIONS, floorPlanDisplayLabel } from '@/panels/map/mapFloorPlans'
+import {
+  mapOverlayInsetTopClassName,
+  mapOverlayInsetXClassName,
+} from '@/panels/map/mapOverlayLayout'
 
 const floorTriggerClassName =
   'text-fg-muted hover:text-fg-highlight inline-flex h-8 min-w-[7.5rem] max-w-full cursor-pointer items-center justify-between gap-2 rounded-panel border border-stroke bg-panel/95 px-2.5 font-sans text-standard font-normal leading-none shadow-sm backdrop-blur-[2px] focus-visible:border-fg-highlight focus-visible:ring-1 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
@@ -48,7 +52,12 @@ export function MapControlHeader({
   return (
     <div
       id="control-header-map"
-      className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-3 bg-transparent px-panel-padding"
+      className={
+        'pointer-events-none absolute z-10 flex items-center justify-between gap-3 bg-transparent ' +
+        mapOverlayInsetXClassName +
+        ' ' +
+        mapOverlayInsetTopClassName
+      }
       role="toolbar"
       aria-label="Map floor plan"
     >

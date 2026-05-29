@@ -6,6 +6,7 @@ import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import type { SpatialAsset } from '@/data/sampleAssets'
 import { formatDisplayDateFromIsoDate, parseToIsoDate, todayIsoDate } from '@/lib/formatDisplayDateFromIsoDate'
+import { formatFloorPlanCoord } from '@/lib/formatFloorPlanCoord'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/primaryButtonClass'
 import { DEFAULT_FLOOR_PLAN_ID } from '@/panels/map/mapFloorPlans'
 import { normalizeMarkerColor } from '@/panels/map/markerColors'
@@ -29,8 +30,8 @@ function draftFromAsset(asset: SpatialAsset, isBuildingProject: boolean): Featur
     kind: asset.kind,
     dateCapturedIso: asset.dateCaptured ? parseToIsoDate(asset.dateCaptured) : '',
     dateUploadedIso: parseToIsoDate(asset.dateUploaded) || todayIsoDate(),
-    xStr: isBuildingProject ? coordInputValue(asset.floorPlanPosition?.x) : '',
-    yStr: isBuildingProject ? coordInputValue(asset.floorPlanPosition?.y) : '',
+    xStr: isBuildingProject ? formatFloorPlanCoord(asset.floorPlanPosition?.x) : '',
+    yStr: isBuildingProject ? formatFloorPlanCoord(asset.floorPlanPosition?.y) : '',
     floorPlanId: isBuildingProject ? asset.floorPlanPosition?.floorPlanId : undefined,
     latStr: isBuildingProject ? '' : coordInputValue(asset.captureLat),
     lngStr: isBuildingProject ? '' : coordInputValue(asset.captureLng),
@@ -86,8 +87,8 @@ export function FeatureMediaMetadataPanel({
       startFloorPlanLocationPick(asset.id, (floorPlanId, x, y) => {
         setDraft((d) => ({
           ...d,
-          xStr: x.toFixed(6),
-          yStr: y.toFixed(6),
+          xStr: formatFloorPlanCoord(x),
+          yStr: formatFloorPlanCoord(y),
           floorPlanId,
         }))
       })
@@ -235,8 +236,8 @@ export function FeatureMediaMetadataPanel({
               startFloorPlanLocationPick(asset.id, (floorPlanId, x, y) => {
                 setDraft((d) => ({
                   ...d,
-                  xStr: x.toFixed(6),
-                  yStr: y.toFixed(6),
+                  xStr: formatFloorPlanCoord(x),
+                  yStr: formatFloorPlanCoord(y),
                   floorPlanId,
                 }))
               })

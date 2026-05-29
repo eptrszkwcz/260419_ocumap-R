@@ -113,8 +113,22 @@ export function FeatureMetadataForm({
       </label>
 
       {isBuildingProject ? (
-        <div className="grid min-w-0 grid-cols-2 gap-x-[16px] sm:col-span-2 sm:items-end">
-          <div className="grid min-w-0 grid-cols-2 gap-x-[16px]">
+        <>
+          <div className="grid min-w-0 grid-cols-[2fr_1fr_1fr] items-end gap-x-[16px]">
+            <div className="block min-w-0">
+              <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
+                Location
+              </span>
+              <div
+                className={
+                  'flex h-8 min-w-0 items-center rounded-panel border border-stroke/40 bg-panel px-2.5 text-standard leading-none ' +
+                  (draft.floorPlanId != null ? 'text-fg' : 'text-fg-muted')
+                }
+                aria-label="Floor plan location"
+              >
+                <span className="truncate">{floorPlanLabel}</span>
+              </div>
+            </div>
             <label className="block min-w-0">
               <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
                 X
@@ -125,7 +139,7 @@ export function FeatureMetadataForm({
                 className={featureMetadataInputClassName}
                 value={draft.xStr}
                 onChange={(e) => onDraftChange({ xStr: e.target.value })}
-                placeholder="e.g. 0.340000"
+                placeholder="e.g. 0.340"
                 aria-label="Floor plan X (normalized 0–1)"
               />
             </label>
@@ -139,38 +153,22 @@ export function FeatureMetadataForm({
                 className={featureMetadataInputClassName}
                 value={draft.yStr}
                 onChange={(e) => onDraftChange({ yStr: e.target.value })}
-                placeholder="e.g. 0.410000"
+                placeholder="e.g. 0.410"
                 aria-label="Floor plan Y (normalized 0–1)"
               />
             </label>
           </div>
-          <div className="flex min-w-0 w-full flex-col justify-end gap-1">
-            <span className="text-fg-muted block text-badge font-bold uppercase tracking-wide">
-              Location
-            </span>
-            <div className="flex min-w-0 w-full items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <span
-                  className={
-                    'text-standard block truncate ' +
-                    (draft.floorPlanId != null ? 'text-fg' : 'text-fg-muted')
-                  }
-                  aria-label="Floor plan location"
-                >
-                  {floorPlanLabel}
-                </span>
-              </div>
-              <button
-                type="button"
-                className={featureMetadataSecondaryButtonClass + ' shrink-0 whitespace-nowrap'}
-                disabled={isFloorPlanPickInProgress && !isThisFormFloorPlanPickTarget}
-                onClick={onFloorPlanPickClick}
-              >
-                {isThisFormFloorPlanPickTarget ? 'Cancel' : 'Set location on plan'}
-              </button>
-            </div>
+          <div className="flex min-w-0 flex-col justify-end">
+            <button
+              type="button"
+              className={featureMetadataSecondaryButtonClass + ' w-[156px] whitespace-nowrap'}
+              disabled={isFloorPlanPickInProgress && !isThisFormFloorPlanPickTarget}
+              onClick={onFloorPlanPickClick}
+            >
+              {isThisFormFloorPlanPickTarget ? 'Cancel' : 'Set location on plan'}
+            </button>
           </div>
-        </div>
+        </>
       ) : (
         <div className="grid min-w-0 gap-2 sm:col-span-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <label className="block min-w-0">

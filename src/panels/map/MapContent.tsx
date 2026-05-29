@@ -4,6 +4,10 @@ import type { FloorPlanMarker } from '@/context/MapCaptureMarkersContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import type { FloorPlanId } from '@/panels/map/mapFloorPlans'
+import {
+  mapOverlayInsetBottomClassName,
+  mapOverlayInsetXClassName,
+} from '@/panels/map/mapOverlayLayout'
 import { markerRgba } from '@/panels/map/markerColors'
 
 const MIN_SCALE = 0.25
@@ -428,11 +432,16 @@ function MapFloorPlanViewer({
       </div>
       {isPickingFloorPlanLocation ? (
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center px-panel-padding"
+          className={
+            'pointer-events-none absolute z-20 flex justify-center ' +
+            mapOverlayInsetXClassName +
+            ' ' +
+            mapOverlayInsetBottomClassName
+          }
           role="status"
           aria-live="polite"
         >
-          <div className="max-w-md rounded-panel border border-stroke bg-panel/95 px-3 py-2 text-center font-sans text-standard text-fg shadow-sm backdrop-blur-sm">
+          <div className="max-w-md rounded-panel bg-fg-highlight px-3 py-2 text-center font-sans text-standard text-white shadow-sm">
             Click the floor plan to set where this photo was taken. Press Esc to cancel.
           </div>
         </div>
