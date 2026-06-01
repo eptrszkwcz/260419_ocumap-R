@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { useActiveProject } from '@/context/ActiveProjectContext'
+import { NEW_PROJECT_ID } from '@/data/sampleProjects'
 import { PanelTabRow, type TabItem } from '@/components/PanelTabRow'
 import { TabPanelBody } from '@/components/TabPanelBody'
 
@@ -14,7 +15,7 @@ const libraryTabs: TabItem[] = [
 ]
 
 export function LibraryColumn() {
-  const { projectId } = useActiveProject()
+  const { projectId, isNewProject } = useActiveProject()
   const [tab, setTab] = useState('feature-library')
 
   return (
@@ -22,15 +23,26 @@ export function LibraryColumn() {
       <LibraryHeader />
       <div className="h-4 shrink-0" aria-hidden />
       <div className="flex min-h-0 flex-1 flex-col">
-        <PanelTabRow
-          tabs={libraryTabs}
-          activeId={tab}
-          onSelect={setTab}
-          aria-label="Library sections"
-        />
-        <TabPanelBody>
-          <LibraryContent key={projectId} activeTabId={tab} />
-        </TabPanelBody>
+        {isNewProject ? (
+          <>
+            <div className="h-tab-row shrink-0 bg-page" aria-hidden />
+            <TabPanelBody>
+              <LibraryContent key={NEW_PROJECT_ID} activeTabId="project-details" />
+            </TabPanelBody>
+          </>
+        ) : (
+          <>
+            <PanelTabRow
+              tabs={libraryTabs}
+              activeId={tab}
+              onSelect={setTab}
+              aria-label="Library sections"
+            />
+            <TabPanelBody>
+              <LibraryContent key={projectId} activeTabId={tab} />
+            </TabPanelBody>
+          </>
+        )}
       </div>
     </div>
   )

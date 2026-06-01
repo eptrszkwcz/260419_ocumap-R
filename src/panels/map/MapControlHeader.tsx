@@ -1,8 +1,8 @@
 import { PrimaryAddButton } from '@/components/ControlHeaderToolbar'
 import { DropdownMenu } from '@/components/DropdownMenu'
 
-import type { FloorPlanId } from '@/panels/map/mapFloorPlans'
-import { FLOOR_PLAN_OPTIONS, floorPlanDisplayLabel } from '@/panels/map/mapFloorPlans'
+import type { FloorPlanId, FloorPlanOption } from '@/panels/map/mapFloorPlans'
+import { floorPlanDisplayLabel } from '@/panels/map/mapFloorPlans'
 import {
   mapOverlayInsetTopClassName,
   mapOverlayInsetXClassName,
@@ -34,7 +34,8 @@ function ChevronDownIcon({ className = '' }: { className?: string }) {
 }
 
 type MapControlHeaderProps = {
-  selectedFloorId: FloorPlanId
+  floorPlanOptions: FloorPlanOption[]
+  selectedFloorId: FloorPlanId | null
   onFloorChange: (id: FloorPlanId) => void
   onAddFloorPlan?: () => void
 }
@@ -43,11 +44,13 @@ type MapControlHeaderProps = {
  * Transparent overlay strip on the 2D map: floor plan selector + Add Floor Plan.
  */
 export function MapControlHeader({
+  floorPlanOptions,
   selectedFloorId,
   onFloorChange,
   onAddFloorPlan,
 }: MapControlHeaderProps) {
-  const selectedLabel = floorPlanDisplayLabel(selectedFloorId)
+  const selectedLabel =
+    selectedFloorId != null ? floorPlanDisplayLabel(selectedFloorId) : 'No floor plans'
 
   return (
     <div
@@ -62,31 +65,33 @@ export function MapControlHeader({
       aria-label="Map floor plan"
     >
       <div className="pointer-events-auto min-w-0">
-        <DropdownMenu
-          menuAriaLabel="Floor plan"
-          align="left"
-          panelWidth="7.5rem"
-          items={FLOOR_PLAN_OPTIONS.map((opt) => ({
-            id: opt.id,
-            label: opt.label,
-            selected: opt.id === selectedFloorId,
-            onSelect: () => onFloorChange(opt.id),
-          }))}
-          renderTrigger={({ open, menuId, onToggle }) => (
-            <button
-              type="button"
-              onClick={onToggle}
-              className={floorTriggerClassName}
-              aria-expanded={open}
-              aria-haspopup="menu"
-              aria-controls={menuId}
-              aria-label={`Floor plan: ${selectedLabel}`}
-            >
-              <span className="truncate">{selectedLabel}</span>
-              <ChevronDownIcon />
-            </button>
-          )}
-        />
+        {floorPlanOptions.length > 0 && selectedFloorId != null ? (
+          <DropdownMenu
+            menuAriaLabel="Floor plan"
+            align="left"
+            panelWidth="7.5rem"
+            items={floorPlanOptions.map((opt) => ({
+              id: opt.id,
+              label: opt.label,
+              selected: opt.id === selectedFloorId,
+              onSelect: () => onFloorChange(opt.id),
+            }))}
+            renderTrigger={({ open, menuId, onToggle }) => (
+              <button
+                type="button"
+                onClick={onToggle}
+                className={floorTriggerClassName}
+                aria-expanded={open}
+                aria-haspopup="menu"
+                aria-controls={menuId}
+                aria-label={`Floor plan: ${selectedLabel}`}
+              >
+                <span className="truncate">{selectedLabel}</span>
+                <ChevronDownIcon />
+              </button>
+            )}
+          />
+        ) : null}
       </div>
       <div className="pointer-events-auto shrink-0">
         <PrimaryAddButton

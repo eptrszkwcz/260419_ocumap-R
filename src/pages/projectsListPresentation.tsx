@@ -48,7 +48,8 @@ export function MoreVerticalIcon({ className = '' }: { className?: string }) {
 }
 
 function ProjectTypeTag({ type }: { type: ProjectType }) {
-  const label = type === 'Building' ? 'Floor Plan' : 'Map'
+  const label =
+    type === 'Building' ? 'Floor Plan' : type === 'Infrastructure' ? 'Map' : 'Files Only'
   return (
     <span
       className={

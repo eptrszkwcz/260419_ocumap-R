@@ -1,5 +1,6 @@
 import { Panel } from '@/components/Panel'
 import { useActiveProject } from '@/context/ActiveProjectContext'
+import { useNewProject } from '@/context/NewProjectContext'
 import { useProjectsDrawer } from '@/context/ProjectsDrawerContext'
 
 function HamburgerIcon() {
@@ -24,7 +25,9 @@ function HamburgerIcon() {
 
 export function LibraryHeader() {
   const { toggle } = useProjectsDrawer()
-  const { project } = useActiveProject()
+  const { project, isNewProject } = useActiveProject()
+  const { draft } = useNewProject()
+  const displayName = isNewProject ? draft.name.trim() : project.name
 
   return (
     <Panel className="flex h-header shrink-0 items-center gap-3 border-0 px-panel-padding">
@@ -36,7 +39,7 @@ export function LibraryHeader() {
       >
         <HamburgerIcon />
       </button>
-      <h1 className="min-w-0 truncate font-title text-title font-bold text-fg">{project.name}</h1>
+      <h1 className="min-w-0 truncate font-title text-title font-bold text-fg">{displayName}</h1>
     </Panel>
   )
 }

@@ -1,12 +1,15 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 
 import { useActiveProject } from '@/context/ActiveProjectContext'
+import { useProjects } from '@/context/ProjectsContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useMapCaptureMarkers, type FloorPlanMarker, type MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import { getSampleAssetsForProject, type SpatialAsset } from '@/data/sampleAssets'
+import type { DemoProjectDetailsProfile } from '@/data/sampleProjectProfile'
+import { NEW_PROJECT_ID, sampleProjects } from '@/data/sampleProjects'
 import { downloadSpatialAsset } from '@/lib/downloadSpatialAsset'
 import { markerColorsFromAsset } from '@/panels/map/markerColors'
 import { AddFeatureFlow } from '@/panels/library/AddFeatureFlow'
@@ -16,10 +19,18 @@ import { FeatureLibraryMediaViewer } from '@/panels/library/FeatureLibraryMediaV
 import { FeatureMediaMetadataPanel } from '@/panels/library/FeatureMediaMetadataPanel'
 import { FeatureLibraryTable } from '@/panels/library/FeatureLibraryTable'
 import { FeatureLibraryToolbar } from '@/panels/library/FeatureLibraryToolbar'
+import { NewProjectDetailsForm } from '@/panels/library/newProject/NewProjectDetailsForm'
 import { ProjectDetailsPanel } from '@/panels/library/ProjectDetailsPanel'
-
 type LibraryContentProps = {
   activeTabId: string
+}
+
+const legacySampleProjectIds = new Set(sampleProjects.map((p) => p.id))
+
+function assetsForProject(projectId: string, isNewProject: boolean): SpatialAsset[] {
+  if (isNewProject || projectId === NEW_PROJECT_ID) return []
+  if (!legacySampleProjectIds.has(projectId)) return []
+  return getSampleAssetsForProject(projectId)
 }
 
 function assetsToCaptureMarkers(assets: SpatialAsset[]): MapCaptureMarker[] {
@@ -71,9 +82,22 @@ function assetsToFloorPlanMarkers(assets: SpatialAsset[]): FloorPlanMarker[] {
 }
 
 export function LibraryContent({ activeTabId }: LibraryContentProps) {
-  const { projectId } = useActiveProject()
+  const { projectId, isNewProject } = useActiveProject()
+  const { getProjectProfile, updateProjectProfile } = useProjects()
   const { setCaptureMarkers, setFloorPlanMarkers } = useMapCaptureMarkers()
-  const [assets, setAssets] = useState<SpatialAsset[]>(() => getSampleAssetsForProject(projectId))
+  const [assets, setAssets] = useState<SpatialAsset[]>(() =>
+    assetsForProject(projectId, isNewProject),
+  )
+
+  useEffect(() => {
+    setAssets(assetsForProject(projectId, isNewProject))
+  }, [isNewProject, projectId])
+
+  const projectProfile = getProjectProfile(projectId)
+
+  const saveProjectProfile = (profile: DemoProjectDetailsProfile) => {
+    updateProjectProfile(projectId, profile)
+  }
 
   useEffect(() => {
     setCaptureMarkers(assetsToCaptureMarkers(assets))
@@ -84,8 +108,18 @@ export function LibraryContent({ activeTabId }: LibraryContentProps) {
     }
   }, [assets, setCaptureMarkers, setFloorPlanMarkers])
 
+  if (isNewProject) {
+    return <NewProjectDetailsForm />
+  }
+
   if (activeTabId === 'project-details') {
-    return <ProjectDetailsPanel assets={assets} />
+    return (
+      <ProjectDetailsPanel
+        assets={assets}
+        profile={projectProfile}
+        onSaveProfile={saveProjectProfile}
+      />
+    )
   }
 
   if (activeTabId === 'log-book') {

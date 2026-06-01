@@ -2,9 +2,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import {
   DEMO_OPENS_LIBRARY_PROJECT_ID,
-  getProjectById,
+  NEW_PROJECT_ID,
   type ProjectRecord,
 } from '@/data/sampleProjects'
+import { useProjects } from '@/context/ProjectsContext'
 import { ProjectsListHeader, ProjectsListRows } from '@/pages/projectsListPresentation'
 
 type ProjectsDrawerTableProps = {
@@ -17,9 +18,13 @@ type ProjectsDrawerTableProps = {
  */
 export function ProjectsDrawerTable({ projects, onCloseDrawer }: ProjectsDrawerTableProps) {
   const navigate = useNavigate()
+  const { getProjectById } = useProjects()
   const [searchParams] = useSearchParams()
   const paramId = searchParams.get('project')?.trim()
-  const fromQuery = paramId != null && paramId !== '' ? getProjectById(paramId) : undefined
+  const fromQuery =
+    paramId != null && paramId !== '' && paramId !== NEW_PROJECT_ID
+      ? getProjectById(paramId)
+      : undefined
   const activeProjectId = fromQuery?.id ?? DEMO_OPENS_LIBRARY_PROJECT_ID
 
   return (
