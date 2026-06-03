@@ -1,4 +1,5 @@
 import { KATY_FREEWAY_PROJECT_ID } from '@/data/sampleProjects'
+import { formatDisplayDateFromIsoDate, todayIsoDate } from '@/lib/formatDisplayDateFromIsoDate'
 
 export type ProjectTeamMember = {
   role: string
@@ -8,9 +9,6 @@ export type ProjectTeamMember = {
 }
 
 export type DemoProjectDetailsProfile = {
-  projectTitle: string
-  projectSubtitle: string
-  statusLabel: string
   createdOn: string
   createdOnIso: string
   location: {
@@ -21,7 +19,8 @@ export type DemoProjectDetailsProfile = {
   identifiers: {
     projectNumber: string
     clientName: string
-    buildingType: string
+    buildingSizeSf: number
+    floorCount: number
     gcName: string
   }
   schedule: {
@@ -39,11 +38,41 @@ export type DemoProjectDetailsProfile = {
   summary: string
 }
 
-/** Static demo profile for the Project Details tab; aligns with the library header title. */
+export function createEmptyProjectProfile(): DemoProjectDetailsProfile {
+  const createdOnIso = todayIsoDate()
+  return {
+    createdOn: formatDisplayDateFromIsoDate(createdOnIso),
+    createdOnIso,
+    location: {
+      addressLines: [],
+      cityStateZip: '',
+      notes: '',
+    },
+    identifiers: {
+      projectNumber: '',
+      clientName: '',
+      buildingSizeSf: 0,
+      floorCount: 0,
+      gcName: '',
+    },
+    schedule: {
+      targetSubstantialCompletion: '',
+      lastSiteWalk: '',
+      nextMilestone: '',
+    },
+    permits: '',
+    insurance: '',
+    team: [],
+    operations: {
+      siteHours: '',
+      afterHours: '',
+    },
+    summary: '',
+  }
+}
+
+/** Static demo profile for the Project Details tab. */
 export const sampleProjectProfile = {
-  projectTitle: '1603 Jefferson St',
-  projectSubtitle: 'Class B office — phased tenant improvement & ongoing building operations',
-  statusLabel: 'Construction — interior fit-out',
   createdOn: 'March 4, 2024',
   createdOnIso: '2024-03-04',
   location: {
@@ -54,7 +83,8 @@ export const sampleProjectProfile = {
   identifiers: {
     projectNumber: 'PRJ-2024-0847',
     clientName: 'Harborline Properties LLC',
-    buildingType: 'Mid-rise office (6 floors, ~118,000 SF)',
+    buildingSizeSf: 118000,
+    floorCount: 6,
     gcName: 'North Bay Builders Cooperative',
   },
   schedule: {
@@ -72,7 +102,7 @@ export const sampleProjectProfile = {
       email: 'e.voss@harborlineprops.com',
     },
     {
-      role: 'Owner’s representative',
+      role: "Owner's representative",
       name: 'Marcus Chen',
       phone: '(510) 555-0198',
       email: 'mchen@harborlineprops.com',
@@ -124,9 +154,6 @@ export const sampleProjectProfile = {
 
 /** Demo profile for the Katy Freeway Expansion infrastructure project. */
 export const sampleKatyFreewayProjectProfile = {
-  projectTitle: 'Katy Freeway Expansion',
-  projectSubtitle: 'I-10 mainlanes and managed lanes — corridor design and ROW coordination (demo)',
-  statusLabel: 'Design — environmental review',
   createdOn: 'April 1, 2025',
   createdOnIso: '2025-04-01',
   location: {
@@ -137,7 +164,8 @@ export const sampleKatyFreewayProjectProfile = {
   identifiers: {
     projectNumber: 'CSJ-0915-00-000 (demo)',
     clientName: 'Texas Department of Transportation',
-    buildingType: 'Controlled-access freeway expansion and interchange improvements',
+    buildingSizeSf: 0,
+    floorCount: 0,
     gcName: 'Design-build joint venture (TBD — demo)',
   },
   schedule: {

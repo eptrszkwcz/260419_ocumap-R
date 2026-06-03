@@ -8,7 +8,7 @@ type ProjectsTableProps = {
 }
 
 /**
- * Project directory as card rows (64px): name, team, last modified, created, type icon, actions.
+ * Project directory as card rows: name (with type tag), team, dates, status, actions.
  */
 export function ProjectsTable({ projects }: ProjectsTableProps) {
   const navigate = useNavigate()

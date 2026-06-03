@@ -1,11 +1,17 @@
+import { useNavigate } from 'react-router-dom'
+
 import { ControlHeaderToolbar } from '@/components/ControlHeaderToolbar'
 import { Panel } from '@/components/Panel'
 import { UserAccountDisplay } from '@/components/UserAccountDisplay'
-import { sampleProjects } from '@/data/sampleProjects'
+import { useProjects } from '@/context/ProjectsContext'
+import { NEW_PROJECT_ID } from '@/data/sampleProjects'
 import { ProjectsBadgeRow } from '@/pages/ProjectsBadgeRow'
 import { ProjectsTable } from '@/pages/ProjectsTable'
 
 export function ProjectsPage() {
+  const navigate = useNavigate()
+  const { projects } = useProjects()
+
   return (
     <div className="bg-page flex h-full min-h-0 min-w-0 flex-col p-page">
       <header className="flex h-header shrink-0 items-center justify-between gap-4 pl-panel-padding">
@@ -31,9 +37,10 @@ export function ProjectsPage() {
           addButtonAriaLabel="New project"
           addButtonLabelMaxWidthClass="max-w-[7.5rem]"
           addButtonAlwaysExpanded
+          onAddClick={() => navigate(`/library?project=${NEW_PROJECT_ID}`)}
         />
-        <ProjectsBadgeRow projectCount={sampleProjects.length} />
-        <ProjectsTable projects={sampleProjects} />
+        <ProjectsBadgeRow projectCount={projects.length} />
+        <ProjectsTable projects={projects} />
       </Panel>
     </div>
   )

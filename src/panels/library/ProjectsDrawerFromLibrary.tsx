@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router-dom'
 
 import { ControlHeaderToolbar } from '@/components/ControlHeaderToolbar'
 import { Panel } from '@/components/Panel'
+import { useProjects } from '@/context/ProjectsContext'
 import { useProjectsDrawer } from '@/context/ProjectsDrawerContext'
-import { sampleProjects } from '@/data/sampleProjects'
+import { NEW_PROJECT_ID } from '@/data/sampleProjects'
 import { ProjectsBadgeRow } from '@/pages/ProjectsBadgeRow'
 import { ProjectsDrawerTable } from '@/pages/ProjectsDrawerTable'
 
@@ -36,6 +37,7 @@ const EXPAND_WIDTH_MS = 650
 export function ProjectsDrawerFromLibrary() {
   const { open, close } = useProjectsDrawer()
   const navigate = useNavigate()
+  const { projects } = useProjects()
   const panelRef = useRef<HTMLDivElement>(null)
   const [entered, setEntered] = useState(false)
   const [expanding, setExpanding] = useState(false)
@@ -149,10 +151,14 @@ export function ProjectsDrawerFromLibrary() {
               addButtonVisibleLabel="New Project"
               addButtonAriaLabel="New project"
               addButtonLabelMaxWidthClass="max-w-[7.5rem]"
+              onAddClick={() => {
+                close()
+                navigate(`/library?project=${NEW_PROJECT_ID}`)
+              }}
             />
-            <ProjectsBadgeRow projectCount={sampleProjects.length} />
+            <ProjectsBadgeRow projectCount={projects.length} />
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-              <ProjectsDrawerTable projects={sampleProjects} onCloseDrawer={close} />
+              <ProjectsDrawerTable projects={projects} onCloseDrawer={close} />
             </div>
           </Panel>
         </div>

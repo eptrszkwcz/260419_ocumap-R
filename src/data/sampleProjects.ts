@@ -1,7 +1,10 @@
 /**
  * Prototype project directory for the signed-in user (John Smith in demos).
  */
-export type ProjectType = 'Building' | 'Infrastructure'
+export type ProjectType = 'Building' | 'Infrastructure' | 'FilesOnly'
+
+/** URL sentinel while the user is creating a project (not a persisted record). */
+export const NEW_PROJECT_ID = 'new'
 
 export type ProjectStatus = 'Draft' | 'Published'
 
@@ -95,4 +98,9 @@ for (const p of sampleProjects) {
 
 export function getProjectById(id: string): ProjectRecord | undefined {
   return projectsById[id]
+}
+
+export function projectTypeLabel(type: ProjectType): string {
+  if (type === 'FilesOnly') return 'Files Only'
+  return type
 }

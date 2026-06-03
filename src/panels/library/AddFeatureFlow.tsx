@@ -7,6 +7,7 @@ import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import type { AssetKind, SpatialAsset } from '@/data/sampleAssets'
 import { inferKindFromFile } from '@/data/sampleAssets'
 import { formatDisplayDateFromIsoDate, todayIsoDate } from '@/lib/formatDisplayDateFromIsoDate'
+import { formatFloorPlanCoord } from '@/lib/formatFloorPlanCoord'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/primaryButtonClass'
 import { DEFAULT_FLOOR_PLAN_ID, type FloorPlanId } from '@/panels/map/mapFloorPlans'
 import { normalizeMarkerColor } from '@/panels/map/markerColors'
@@ -345,8 +346,8 @@ export function AddFeatureFlow({ onCancel, onSave }: AddFeatureFlowProps) {
       setPickingFloorPlanItemId(itemId)
       startFloorPlanLocationPick(itemId, (floorPlanId, x, y) => {
         updateItem(itemId, {
-          xStr: x.toFixed(6),
-          yStr: y.toFixed(6),
+          xStr: formatFloorPlanCoord(x),
+          yStr: formatFloorPlanCoord(y),
           floorPlanId,
         })
         setPickingFloorPlanItemId(null)

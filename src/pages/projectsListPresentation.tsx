@@ -1,5 +1,3 @@
-import { BuildingOfficeIcon, TruckIcon } from '@heroicons/react/24/outline'
-
 import { type ProjectRecord, type ProjectStatus, type ProjectType } from '@/data/sampleProjects'
 
 const projectStatusBadgeBaseClass =
@@ -49,36 +47,42 @@ export function MoreVerticalIcon({ className = '' }: { className?: string }) {
   )
 }
 
-const typeIconClass = 'size-5 shrink-0'
-
-function ProjectTypeIcon({ type }: { type: ProjectType }) {
-  const label = type === 'Building' ? 'Building project' : 'Infrastructure project'
-  if (type === 'Infrastructure') {
-    return (
-      <span className="inline-flex shrink-0 text-fg-muted group-hover:text-fg-highlight" title={label}>
-        <TruckIcon className={typeIconClass} aria-hidden />
-        <span className="sr-only">{label}</span>
-      </span>
-    )
-  }
+function ProjectTypeTag({ type }: { type: ProjectType }) {
+  const label =
+    type === 'Building' ? 'Floor Plan' : type === 'Infrastructure' ? 'Map' : 'Files Only'
   return (
-    <span className="inline-flex shrink-0 text-fg-muted group-hover:text-fg-highlight" title={label}>
-      <BuildingOfficeIcon className={typeIconClass} aria-hidden />
-      <span className="sr-only">{label}</span>
+    <span
+      className={
+        projectStatusBadgeBaseClass +
+        ' text-fg-muted bg-area-highlight group-hover:bg-fg-highlight/12 group-hover:text-fg-highlight'
+      }
+    >
+      {label}
     </span>
   )
 }
 
-/** Full page: name (+ team subtitle), status, last modified, files, created, type icon, actions */
+/** Full page: name (+ type tag + team subtitle), last modified, files, created, status, actions */
 export const projectsGridClass =
-  'grid w-full min-w-0 grid-cols-[minmax(0,1.4fr)_minmax(0,5.75rem)_minmax(0,7.5rem)_minmax(0,3.25rem)_minmax(0,5.5rem)_2.5rem_2.25rem] items-center gap-x-3'
+  'grid w-full min-w-0 grid-cols-[minmax(0,1.4fr)_minmax(0,7.5rem)_minmax(0,3.25rem)_minmax(0,120px)_minmax(0,5.75rem)_2.25rem] items-center gap-x-4'
 
-function ProjectNameCell({ name, team }: { name: string; team: string }) {
+function ProjectNameCell({
+  name,
+  team,
+  projectType,
+}: {
+  name: string
+  team: string
+  projectType: ProjectType
+}) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5 py-0.5">
-      <span className="truncate text-[16px] leading-[1.2] font-bold text-fg group-hover:text-fg-highlight">
-        {name}
-      </span>
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="min-w-0 truncate text-[16px] leading-[1.2] font-bold text-fg group-hover:text-fg-highlight">
+          {name}
+        </span>
+        <ProjectTypeTag type={projectType} />
+      </div>
       <span className="truncate text-[12px] leading-[1.2] text-fg-muted group-hover:text-fg-highlight">
         {team}
       </span>
@@ -88,7 +92,7 @@ function ProjectNameCell({ name, team }: { name: string; team: string }) {
 
 /** Drawer: name + kebab only */
 export const projectsGridDrawerClass =
-  'grid w-full min-w-0 grid-cols-[minmax(0,1fr)_2.25rem] items-center gap-x-3'
+  'grid w-full min-w-0 grid-cols-[minmax(0,1fr)_2.25rem] items-center gap-x-4'
 
 function gridClassForLayout(layout: ProjectsListLayout) {
   return layout === 'drawer' ? projectsGridDrawerClass : projectsGridClass
@@ -111,11 +115,10 @@ export function ProjectsListHeader({ layout = 'full' }: { layout?: ProjectsListL
       className={`${grid} shrink-0 px-panel-padding pb-2 pt-1 font-sans text-standard font-bold text-fg-muted`}
     >
       <div className="min-w-0">Name</div>
-      <div className="min-w-0">Status</div>
       <div className="whitespace-nowrap">Last Modified</div>
       <div className="whitespace-nowrap">Files</div>
       <div className="whitespace-nowrap">Created</div>
-      <div className="sr-only">Type</div>
+      <div className="min-w-0">Status</div>
       <div className="sr-only text-right">Actions</div>
     </div>
   )
@@ -156,12 +159,13 @@ export function ProjectCardRow({
       aria-label={ariaLabel}
     >
       <div className={`${grid} min-w-0 px-panel-padding`}>
-        <ProjectNameCell name={project.name} team={project.team} />
+        <ProjectNameCell
+          name={project.name}
+          team={project.team}
+          projectType={project.projectType}
+        />
         {layout === 'full' ? (
           <>
-            <span className="min-w-0">
-              <ProjectStatusBadge status={project.status} />
-            </span>
             <span className="truncate whitespace-nowrap text-fg-muted group-hover:text-fg-highlight">
               {project.lastModified}
             </span>
@@ -171,8 +175,8 @@ export function ProjectCardRow({
             <span className="truncate whitespace-nowrap text-fg-muted group-hover:text-fg-highlight">
               {project.createdRelative}
             </span>
-            <span className="flex justify-center">
-              <ProjectTypeIcon type={project.projectType} />
+            <span className="min-w-0">
+              <ProjectStatusBadge status={project.status} />
             </span>
           </>
         ) : null}

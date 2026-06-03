@@ -265,8 +265,8 @@ export function ControlHeaderToolbar({
     <div
       id={id}
       className={
-        'flex h-16 w-full shrink-0 items-center gap-3 px-panel-padding ' +
-        (projectsChrome ? 'border-b-0 bg-transparent' : 'border-b border-stroke')
+        'flex h-16 w-full shrink-0 items-center gap-3 ' +
+        (projectsChrome ? 'px-0 border-b-0 bg-transparent' : 'border-b border-stroke px-panel-padding')
       }
       role="toolbar"
       aria-label={toolbarAriaLabel}
