@@ -1,11 +1,13 @@
 import { useNewProject } from '@/context/NewProjectContext'
 import type { ProjectType } from '@/data/sampleProjects'
 
+type OrganizationShape = 'circle' | 'triangle' | 'square'
+
 type OrganizationOption = {
   type: ProjectType
   title: string
   description: string
-  icon: string
+  shape: OrganizationShape
 }
 
 const options: OrganizationOption[] = [
@@ -14,23 +16,49 @@ const options: OrganizationOption[] = [
     title: 'Map / Site',
     description:
       'Best for roads, rail, outdoor sites, GPS media, KML/KMZ, GPX, or CSV files.',
-    icon: '🗺️',
+    shape: 'circle',
   },
   {
     type: 'Building',
     title: 'Floor Plan / Drawing',
     description:
       'Best for buildings, interiors, PDF drawings, rooms, floors, and floor-based documentation.',
-    icon: '📐',
+    shape: 'triangle',
   },
   {
     type: 'FilesOnly',
     title: 'Files Only',
     description:
       'Best if you only have photos, videos, documents, or 360s and want to place them later.',
-    icon: '📁',
+    shape: 'square',
   },
 ]
+
+function OrganizationShapeIcon({ shape }: { shape: OrganizationShape }) {
+  const strokeProps = {
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.75,
+    strokeLinejoin: 'round' as const,
+  }
+
+  return (
+    <svg
+      width="30"
+      height="30"
+      viewBox="0 0 24 24"
+      className="shrink-0 text-fg-muted"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      {shape === 'circle' && <circle cx="12" cy="12" r="8.5" {...strokeProps} />}
+      {shape === 'triangle' && (
+        <polygon points="5,19 5,5 19,19" {...strokeProps} />
+      )}
+      {shape === 'square' && <rect x="5" y="5" width="14" height="14" {...strokeProps} />}
+    </svg>
+  )
+}
 
 const heroTitleClass = 'font-title text-title font-bold text-fg'
 
@@ -66,8 +94,8 @@ export function NewProjectOrganizationPicker() {
                 }
                 aria-pressed={selected}
               >
-                <span className="text-2xl leading-none" aria-hidden>
-                  {option.icon}
+                <span className="flex shrink-0 self-stretch items-center" aria-hidden>
+                  <OrganizationShapeIcon shape={option.shape} />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block font-title text-standard font-bold text-fg">

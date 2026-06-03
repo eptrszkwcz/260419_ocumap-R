@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { PanelTabRow, type TabItem } from '@/components/PanelTabRow'
+import { PanelCenteredPrompt } from '@/components/PanelCenteredPrompt'
 import { TabPanelBody } from '@/components/TabPanelBody'
 import { useActiveProject } from '@/context/ActiveProjectContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
@@ -113,16 +114,7 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="h-tab-row shrink-0 bg-page" aria-hidden />
           <TabPanelBody>
-            <div
-              className="flex min-h-0 flex-1 flex-col items-center justify-center bg-panel p-panel-padding text-center font-sans text-standard text-fg-muted"
-              role="region"
-              aria-label="Project files workspace"
-            >
-              <p className="max-w-md leading-relaxed">
-                This project is organized around files. Add photos, videos, and documents from the
-                Feature Library tab.
-              </p>
-            </div>
+            <div className="min-h-0 flex-1 bg-panel" role="region" aria-label="Project files workspace" />
           </TabPanelBody>
         </div>
       </div>
@@ -183,15 +175,10 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
               />
             ) : null}
             {buildingTab === '2d' && !hasFloorPlans ? (
-              <div
-                className="flex min-h-0 flex-1 flex-col items-center justify-center bg-panel p-panel-padding text-center font-sans text-standard text-fg-muted"
-                role="region"
-                aria-label="Floor plan viewer"
-              >
-                <p className="max-w-md leading-relaxed">
-                  No floor plans yet. Use Add Floor Plan to upload drawings for this project.
-                </p>
-              </div>
+              <PanelCenteredPrompt aria-label="Floor plan viewer">
+                Add a floor plan to document this building. Use Add Floor Plan to upload PDF
+                drawings.
+              </PanelCenteredPrompt>
             ) : (
               <MapContent
                 activeTab={buildingTab}

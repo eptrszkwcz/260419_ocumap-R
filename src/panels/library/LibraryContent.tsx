@@ -13,6 +13,7 @@ import { NEW_PROJECT_ID, sampleProjects } from '@/data/sampleProjects'
 import { downloadSpatialAsset } from '@/lib/downloadSpatialAsset'
 import { markerColorsFromAsset } from '@/panels/map/markerColors'
 import { AddFeatureFlow } from '@/panels/library/AddFeatureFlow'
+import { PanelCenteredPrompt } from '@/components/PanelCenteredPrompt'
 import { type ActiveFilter } from '@/panels/library/FeatureLibraryBadges'
 import { FeatureLibraryFilterRow } from '@/panels/library/FeatureLibraryFilterRow'
 import { FeatureLibraryMediaViewer } from '@/panels/library/FeatureLibraryMediaViewer'
@@ -235,9 +236,13 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
     setViewerPanel('media')
   }
 
+  const showEmptyLibraryPrompt =
+    viewMode === 'browse' && viewerAsset == null && visibleCount === 0
+
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <FeatureLibraryToolbar
+    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="relative z-10 shrink-0">
+        <FeatureLibraryToolbar
         onAddFeatureClick={() => {
           cancelLocationPick()
           cancelFloorPlanLocationPick()
@@ -265,7 +270,14 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
           setOpenedFeatureId(null)
           setViewerPanel('media')
         }}
-      />
+        />
+      </div>
+      {showEmptyLibraryPrompt ? (
+        <PanelCenteredPrompt overlay aria-label="Feature library">
+          Add project files — images, videos, spherical panoramas, PDFs, and more — using Add
+          Feature.
+        </PanelCenteredPrompt>
+      ) : null}
       <div
         className="flex min-h-0 min-w-0 flex-1 flex-col"
         id="feature-library-contents"
@@ -306,22 +318,28 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
             </div>
           ) : (
             <>
-              <FeatureLibraryFilterRow
-                featureCount={visibleCount}
-                activeFilters={activeFilters}
-                onRemoveFilter={(id) => setActiveFilters((prev) => prev.filter((f) => f.id !== id))}
-              />
-              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                <FeatureLibraryTable
-                  assets={visibleAssets}
-                  onOpenAsset={openAsset}
-                  onSetLocation={openSetLocation}
-                  onDownloadAsset={downloadSpatialAsset}
-                  onDeleteAsset={deleteAsset}
-                  onFeatureProperties={openFeatureProperties}
-                  showLocationColumn={project.projectType === 'Building'}
+              <div className="relative z-10 shrink-0">
+                <FeatureLibraryFilterRow
+                  featureCount={visibleCount}
+                  activeFilters={activeFilters}
+                  onRemoveFilter={(id) => setActiveFilters((prev) => prev.filter((f) => f.id !== id))}
                 />
               </div>
+              {visibleCount === 0 ? (
+                <div className="min-h-0 flex-1 bg-panel" aria-hidden />
+              ) : (
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                  <FeatureLibraryTable
+                    assets={visibleAssets}
+                    onOpenAsset={openAsset}
+                    onSetLocation={openSetLocation}
+                    onDownloadAsset={downloadSpatialAsset}
+                    onDeleteAsset={deleteAsset}
+                    onFeatureProperties={openFeatureProperties}
+                    showLocationColumn={project.projectType === 'Building'}
+                  />
+                </div>
+              )}
             </>
           )
         ) : (
