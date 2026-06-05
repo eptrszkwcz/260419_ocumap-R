@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { PRIMARY_BUTTON_CLASS } from '@/lib/primaryButtonClass'
 
 /** 2×2 grid — thumbnail / gallery view. */
-function ThumbnailGridIcon({ className = '' }: { className?: string }) {
+export function ThumbnailGridIcon({ className = '' }: { className?: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -23,7 +23,7 @@ function ThumbnailGridIcon({ className = '' }: { className?: string }) {
 }
 
 /** Two side-by-side column panes — same stroke, rx, and 16×16 layout bounds as the thumbnail grid. */
-function ColumnsIcon({ className = '' }: { className?: string }) {
+export function ColumnsIcon({ className = '' }: { className?: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -40,7 +40,7 @@ function ColumnsIcon({ className = '' }: { className?: string }) {
   )
 }
 
-function FunnelIcon({ className = '' }: { className?: string }) {
+export function FunnelIcon({ className = '' }: { className?: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -103,6 +103,33 @@ function PlusIcon({ className = '' }: { className?: string }) {
     </svg>
   )
 }
+
+/** Three horizontal lines — list view. */
+export function ListViewIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      className={className}
+      aria-hidden
+    >
+      <path d="M2.5 4h11" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+      <path d="M2.5 8h11" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+      <path d="M2.5 12h11" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export const secondaryToolbarButtonClassName =
+  'text-fg flex h-8 max-h-8 min-h-8 items-center gap-1 rounded-panel px-3 text-standard leading-none transition-colors hover:bg-area-highlight focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
+
+export const secondaryToolbarButtonActiveClassName = 'bg-area-highlight'
+
+export const secondaryToolbarButtonDisabledClassName =
+  'pointer-events-none opacity-50'
 
 const secondaryConfig = [
   { id: 'view' as const, label: 'View', Icon: ThumbnailGridIcon },
@@ -239,6 +266,8 @@ export type ControlHeaderToolbarProps = {
   /** Keep primary add button fully expanded (no hover reveal). */
   addButtonAlwaysExpanded?: boolean
   onAddClick?: () => void
+  /** When set, replaces default View / Columns / Filters placeholder buttons. */
+  secondaryActions?: ReactNode
 }
 
 const defaultSearchPlaceholder = 'Search here...'
@@ -257,6 +286,7 @@ export function ControlHeaderToolbar({
   addButtonLabelMaxWidthClass = 'max-w-[6.75rem]',
   addButtonAlwaysExpanded = false,
   onAddClick,
+  secondaryActions,
 }: ControlHeaderToolbarProps) {
   const [activeId, setActiveId] = useState<(typeof secondaryConfig)[number]['id'] | null>(null)
   const projectsChrome = id === 'control-header-projects'
@@ -273,23 +303,24 @@ export function ControlHeaderToolbar({
     >
       {showSecondaryActions ? (
         <div className="flex shrink-0 items-center gap-1">
-          {secondaryConfig.map(({ id: btnId, label, Icon }) => {
-            const isActive = activeId === btnId
-            return (
-              <button
-                key={btnId}
-                type="button"
-                onClick={() => setActiveId((prev) => (prev === btnId ? null : btnId))}
-                className={`text-fg flex h-8 max-h-8 min-h-8 items-center gap-1 rounded-panel px-3 text-standard leading-none transition-colors hover:bg-area-highlight focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none ${isActive ? 'bg-area-highlight' : ''}`}
-                aria-pressed={isActive}
-              >
-                <span className="text-fg-muted shrink-0" aria-hidden>
-                  <Icon />
-                </span>
-                {label}
-              </button>
-            )
-          })}
+          {secondaryActions ??
+            secondaryConfig.map(({ id: btnId, label, Icon }) => {
+              const isActive = activeId === btnId
+              return (
+                <button
+                  key={btnId}
+                  type="button"
+                  onClick={() => setActiveId((prev) => (prev === btnId ? null : btnId))}
+                  className={`${secondaryToolbarButtonClassName} ${isActive ? secondaryToolbarButtonActiveClassName : ''}`}
+                  aria-pressed={isActive}
+                >
+                  <span className="text-fg-muted shrink-0" aria-hidden>
+                    <Icon />
+                  </span>
+                  {label}
+                </button>
+              )
+            })}
         </div>
       ) : null}
 

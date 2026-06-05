@@ -61,6 +61,31 @@
     height: calc(var(--height-tab-row) + 2px);
     margin-bottom: -2px;
   }
+
+  /** Filter dropdown date fields — match muted body text and calendar icon. */
+  .ocu-filter-date-input {
+    color: var(--color-fg-muted);
+    font-weight: 400;
+  }
+
+  .ocu-filter-date-input::-webkit-datetime-edit,
+  .ocu-filter-date-input::-webkit-datetime-edit-fields-wrapper,
+  .ocu-filter-date-input::-webkit-datetime-edit-text,
+  .ocu-filter-date-input::-webkit-datetime-edit-month-field,
+  .ocu-filter-date-input::-webkit-datetime-edit-day-field,
+  .ocu-filter-date-input::-webkit-datetime-edit-year-field {
+    color: var(--color-fg-muted);
+  }
+
+  .ocu-filter-date-input::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.55;
+  }
+
+  .ocu-filter-date-input::-moz-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.55;
+  }
 }
 
 @layer base {

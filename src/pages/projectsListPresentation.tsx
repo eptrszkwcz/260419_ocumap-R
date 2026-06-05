@@ -20,7 +20,7 @@ function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
     <span
       className={
         projectStatusBadgeBaseClass +
-        ' text-fg-highlight bg-fg-highlight/12 group-hover:bg-fg-highlight/18'
+        ' text-fg-muted bg-area-highlight group-hover:bg-fg-highlight/12 group-hover:text-fg-highlight'
       }
     >
       Draft

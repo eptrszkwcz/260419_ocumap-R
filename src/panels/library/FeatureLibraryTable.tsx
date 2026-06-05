@@ -1,55 +1,65 @@
 import type { SpatialAsset } from '@/data/sampleAssets'
+import type { ProjectType } from '@/data/sampleProjects'
+
+import {
+  ACTIONS_COLUMN_WIDTH_PX,
+  columnDefinitions,
+  FEATURE_COLUMN_MIN_WIDTH_PX,
+} from '@/panels/library/featureLibrary/columnDefinitions'
+import type { OptionalColumnId } from '@/panels/library/featureLibrary/types'
 import { FeatureLibraryTableRow } from '@/panels/library/FeatureLibraryTableRow'
 
 type FeatureLibraryTableProps = {
   assets: SpatialAsset[]
+  projectType: ProjectType
+  visibleColumns: OptionalColumnId[]
   onOpenAsset?: (asset: SpatialAsset) => void
   onSetLocation?: (asset: SpatialAsset) => void
   onDownloadAsset?: (asset: SpatialAsset) => void
   onDeleteAsset?: (asset: SpatialAsset) => void
   onFeatureProperties?: (asset: SpatialAsset) => void
-  /** Building projects: show floor plan name in a Location column. */
-  showLocationColumn?: boolean
 }
 
 /**
- * Full-width list: Name, Date, Type, [Location], actions. Rows 40px; hover fills area highlight and uses highlight text on cells + action icon.
+ * Full-width list: Feature (pinned), optional columns, actions. Rows 40px.
  */
 export function FeatureLibraryTable({
   assets,
+  projectType,
+  visibleColumns,
   onOpenAsset,
   onSetLocation,
   onDownloadAsset,
   onDeleteAsset,
   onFeatureProperties,
-  showLocationColumn = false,
 }: FeatureLibraryTableProps) {
   return (
     <div className="min-h-0 w-full min-w-0 flex-1 overflow-auto px-0">
       <table className="w-full min-w-0 table-fixed border-collapse text-left font-sans text-standard">
         <colgroup>
-          <col />
-          <col style={{ width: '10rem' }} />
-          <col style={{ width: '8.5rem' }} />
-          {showLocationColumn ? <col style={{ width: '7rem' }} /> : null}
-          <col style={{ width: '2.25rem' }} />
+          <col style={{ minWidth: FEATURE_COLUMN_MIN_WIDTH_PX, width: `${FEATURE_COLUMN_MIN_WIDTH_PX}px` }} />
+          {visibleColumns.map((id) => (
+            <col
+              key={id}
+              style={{ width: `${columnDefinitions[id].minWidthPx}px` }}
+            />
+          ))}
+          <col style={{ width: `${ACTIONS_COLUMN_WIDTH_PX}px` }} />
         </colgroup>
         <thead>
           <tr className="h-10 border-b border-solid border-fg-muted">
-            <th className="pl-panel-padding pr-4 text-left font-bold text-fg" scope="col">
-              Name
+            <th
+              className="pl-panel-padding pr-4 text-left font-bold text-fg"
+              scope="col"
+              style={{ minWidth: FEATURE_COLUMN_MIN_WIDTH_PX }}
+            >
+              Feature
             </th>
-            <th className="pl-0 pr-4 font-bold text-fg" scope="col">
-              Date Uploaded
-            </th>
-            <th className="pl-0 pr-4 font-bold text-fg" scope="col">
-              Type
-            </th>
-            {showLocationColumn ? (
-              <th className="pl-0 pr-4 font-bold text-fg" scope="col">
-                Location
+            {visibleColumns.map((id) => (
+              <th key={id} className="pl-0 pr-4 font-bold text-fg" scope="col">
+                {columnDefinitions[id].label}
               </th>
-            ) : null}
+            ))}
             <th
               className="pr-panel-padding pl-0 text-right font-bold"
               scope="col"
@@ -64,7 +74,8 @@ export function FeatureLibraryTable({
             <FeatureLibraryTableRow
               key={asset.id}
               asset={asset}
-              showLocationColumn={showLocationColumn}
+              projectType={projectType}
+              visibleColumns={visibleColumns}
               onOpen={onOpenAsset != null ? () => onOpenAsset(asset) : undefined}
               onSetLocation={onSetLocation != null ? () => onSetLocation(asset) : undefined}
               onDownload={onDownloadAsset != null ? () => onDownloadAsset(asset) : undefined}

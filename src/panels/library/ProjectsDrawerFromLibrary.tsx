@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { ControlHeaderToolbar } from '@/components/ControlHeaderToolbar'
@@ -32,24 +32,18 @@ function ChevronRightIcon({ className = '' }: { className?: string }) {
   )
 }
 
-const EXPAND_WIDTH_MS = 650
-
 export function ProjectsDrawerFromLibrary() {
   const { open, close } = useProjectsDrawer()
   const navigate = useNavigate()
   const { projects } = useProjects()
-  const panelRef = useRef<HTMLDivElement>(null)
   const [entered, setEntered] = useState(false)
-  const [expanding, setExpanding] = useState(false)
 
   useLayoutEffect(() => {
     if (!open) {
       setEntered(false)
-      setExpanding(false)
       return
     }
     setEntered(false)
-    setExpanding(false)
     const id = requestAnimationFrame(() => {
       requestAnimationFrame(() => setEntered(true))
     })
@@ -57,63 +51,28 @@ export function ProjectsDrawerFromLibrary() {
   }, [open])
 
   useEffect(() => {
-    if (!expanding) return
-    const el = panelRef.current
-    if (el == null) return
-    let finished = false
-    const finish = () => {
-      if (finished) return
-      finished = true
-      navigate('/projects')
-      close()
-    }
-    const onWidthTransitionEnd = (e: TransitionEvent) => {
-      if (e.target !== el || e.propertyName !== 'width') return
-      finish()
-    }
-    el.addEventListener('transitionend', onWidthTransitionEnd)
-    const fallback = window.setTimeout(finish, EXPAND_WIDTH_MS + 200)
-    return () => {
-      el.removeEventListener('transitionend', onWidthTransitionEnd)
-      window.clearTimeout(fallback)
-    }
-  }, [expanding, navigate, close])
-
-  useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !expanding) close()
+      if (e.key === 'Escape') close()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, expanding, close])
+  }, [open, close])
 
-  const expandToFullProjects = () => {
-    if (expanding) return
-    requestAnimationFrame(() => {
-      setExpanding(true)
-    })
+  const goToProjectsPage = () => {
+    navigate('/projects')
+    close()
   }
 
   if (!open) return null
 
   return createPortal(
     <>
+      <div className="fixed inset-0 z-[100] bg-fg/20" aria-hidden onClick={close} />
       <div
-        className="fixed inset-0 z-[100] bg-fg/20"
-        aria-hidden
-        onClick={() => {
-          if (!expanding) close()
-        }}
-      />
-      <div
-        ref={panelRef}
-        style={expanding ? { transitionDuration: `${EXPAND_WIDTH_MS}ms` } : undefined}
         className={
-          'fixed left-0 top-0 z-[101] flex h-full flex-col border-r border-stroke bg-page shadow-lg ease-out ' +
-          (expanding
-            ? 'w-screen max-w-none translate-x-0 transition-[width]'
-            : `w-[400px] transition-transform duration-300 ${entered ? 'translate-x-0' : '-translate-x-full'}`)
+          'fixed left-0 top-0 z-[101] flex h-full w-[400px] flex-col border-r border-stroke bg-page shadow-lg ease-out transition-transform duration-300 ' +
+          (entered ? 'translate-x-0' : '-translate-x-full')
         }
         role="dialog"
         aria-modal="true"
@@ -131,13 +90,18 @@ export function ProjectsDrawerFromLibrary() {
                   height={40}
                 />
               </div>
-              <h1 className="min-w-0 flex-1 truncate font-title text-title font-bold text-fg">Projects</h1>
+              <button
+                type="button"
+                onClick={goToProjectsPage}
+                className="min-w-0 flex-1 truncate text-left font-title text-title font-bold text-fg transition-colors hover:text-fg-highlight focus-visible:ring-2 focus-visible:ring-fg-highlight/40 focus-visible:outline-none"
+              >
+                Projects
+              </button>
             </div>
             <button
               type="button"
-              onClick={expandToFullProjects}
-              disabled={expanding}
-              className="text-fg-muted hover:bg-area-highlight hover:text-fg focus-visible:ring-fg-highlight/40 flex size-icon-button shrink-0 items-center justify-center rounded-panel transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
+              onClick={goToProjectsPage}
+              className="text-fg-muted hover:bg-area-highlight hover:text-fg focus-visible:ring-fg-highlight/40 flex size-icon-button shrink-0 items-center justify-center rounded-panel transition-colors focus-visible:ring-2 focus-visible:outline-none"
               aria-label="Open full projects page"
             >
               <ChevronRightIcon />

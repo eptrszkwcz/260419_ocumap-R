@@ -1,4 +1,4 @@
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 
 import { useActiveProject } from '@/context/ActiveProjectContext'
 import { useProjects } from '@/context/ProjectsContext'
@@ -20,6 +20,20 @@ import { FeatureLibraryMediaViewer } from '@/panels/library/FeatureLibraryMediaV
 import { FeatureMediaMetadataPanel } from '@/panels/library/FeatureMediaMetadataPanel'
 import { FeatureLibraryTable } from '@/panels/library/FeatureLibraryTable'
 import { FeatureLibraryToolbar } from '@/panels/library/FeatureLibraryToolbar'
+import { applyFeatureLibraryFilters } from '@/panels/library/featureLibrary/applyFeatureLibraryFilters'
+import { FeatureLibraryControlActions } from '@/panels/library/featureLibrary/FeatureLibraryControlActions'
+import { FeatureLibraryThumbnailGrid } from '@/panels/library/featureLibrary/FeatureLibraryThumbnailGrid'
+import { filtersToBadges, removeFilterByBadgeId } from '@/panels/library/featureLibrary/filterBadges'
+import { resolveVisibleColumns } from '@/panels/library/featureLibrary/resolveVisibleColumns'
+import {
+  createDefaultColumnOrder,
+  createDefaultColumnVisibility,
+  createEmptyFilters,
+  type FeatureLibraryFilters,
+  type LibraryDropdownId,
+  type LibraryViewType,
+  type OptionalColumnId,
+} from '@/panels/library/featureLibrary/types'
 import { NewProjectDetailsForm } from '@/panels/library/newProject/NewProjectDetailsForm'
 import { ProjectDetailsPanel } from '@/panels/library/ProjectDetailsPanel'
 type LibraryContentProps = {
@@ -148,18 +162,63 @@ type FeatureLibraryViewProps = {
 
 function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   const { project } = useActiveProject()
+  const isBuildingProject = project.projectType === 'Building'
   const { cancelLocationPick, clearLocationPickPreview } = useMapLocationPick()
   const { cancelFloorPlanLocationPick, clearFloorPlanLocationPickPreview } = useFloorPlanLocationPick()
   const { clearMarkerStylePreview } = useMarkerStylePreview()
   const { setOpenedFeatureId, setMapFeatureClickHandler } = useFeatureMapHover()
-  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([])
+  const contentsRef = useRef<HTMLDivElement>(null)
+
+  const [filters, setFilters] = useState<FeatureLibraryFilters>(() => createEmptyFilters())
+  const [libraryViewType, setLibraryViewType] = useState<LibraryViewType>('list')
+  const [columnOrder, setColumnOrder] = useState<OptionalColumnId[]>(() => createDefaultColumnOrder())
+  const [columnVisibility, setColumnVisibility] = useState<Record<OptionalColumnId, boolean>>(() =>
+    createDefaultColumnVisibility(isBuildingProject),
+  )
+  const [openDropdown, setOpenDropdown] = useState<LibraryDropdownId | null>(null)
+  const [containerWidth, setContainerWidth] = useState(0)
+
   const [viewMode, setViewMode] = useState<'browse' | 'add'>('browse')
   const [openedAsset, setOpenedAsset] = useState<SpatialAsset | null>(null)
   const [viewerPanel, setViewerPanel] = useState<'media' | 'metadata'>('media')
   const [metadataAutoStartLocationPick, setMetadataAutoStartLocationPick] = useState(false)
 
-  const visibleAssets = assets
-  const visibleCount = visibleAssets.length
+  useEffect(() => {
+    setColumnVisibility((prev) => ({
+      ...prev,
+      location: isBuildingProject ? prev.location : false,
+    }))
+  }, [isBuildingProject])
+
+  useEffect(() => {
+    const el = contentsRef.current
+    if (el == null) return
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (entry != null) {
+        setContainerWidth(entry.contentRect.width)
+      }
+    })
+    ro.observe(el)
+    setContainerWidth(el.getBoundingClientRect().width)
+    return () => ro.disconnect()
+  }, [])
+
+  const filteredAssets = useMemo(
+    () => applyFeatureLibraryFilters(assets, filters, project.projectType),
+    [assets, filters, project.projectType],
+  )
+  const activeFilters: ActiveFilter[] = useMemo(() => filtersToBadges(filters), [filters])
+  const visibleColumns = useMemo(
+    () =>
+      resolveVisibleColumns({
+        containerWidthPx: containerWidth,
+        columnOrder,
+        columnVisibility,
+      }),
+    [containerWidth, columnOrder, columnVisibility],
+  )
+  const visibleCount = filteredAssets.length
 
   const viewerAsset = viewMode === 'browse' ? openedAsset : null
 
@@ -237,11 +296,11 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   }
 
   const showEmptyLibraryPrompt =
-    viewMode === 'browse' && viewerAsset == null && visibleCount === 0
+    viewMode === 'browse' && viewerAsset == null && assets.length === 0
 
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="relative z-10 shrink-0">
+      <div className="relative z-20 shrink-0">
         <FeatureLibraryToolbar
         onAddFeatureClick={() => {
           cancelLocationPick()
@@ -270,6 +329,24 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
           setOpenedFeatureId(null)
           setViewerPanel('media')
         }}
+        libraryControlActions={
+          <FeatureLibraryControlActions
+            assets={assets}
+            projectType={project.projectType}
+            viewType={libraryViewType}
+            onViewTypeChange={setLibraryViewType}
+            columnOrder={columnOrder}
+            columnVisibility={columnVisibility}
+            onColumnOrderChange={setColumnOrder}
+            onColumnVisibilityChange={(id, visible) =>
+              setColumnVisibility((prev) => ({ ...prev, [id]: visible }))
+            }
+            filters={filters}
+            onFiltersChange={setFilters}
+            openDropdown={openDropdown}
+            onOpenDropdownChange={setOpenDropdown}
+          />
+        }
         />
       </div>
       {showEmptyLibraryPrompt ? (
@@ -279,6 +356,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
         </PanelCenteredPrompt>
       ) : null}
       <div
+        ref={contentsRef}
         className="flex min-h-0 min-w-0 flex-1 flex-col"
         id="feature-library-contents"
       >
@@ -311,32 +389,39 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
               ) : (
                 <FeatureLibraryMediaViewer
                   asset={viewerAsset}
-                  libraryAssets={visibleAssets}
+                  libraryAssets={filteredAssets}
                   onAssetChange={replaceOpenedAsset}
                 />
               )}
             </div>
           ) : (
             <>
-              <div className="relative z-10 shrink-0">
+              <div className="relative shrink-0">
                 <FeatureLibraryFilterRow
                   featureCount={visibleCount}
                   activeFilters={activeFilters}
-                  onRemoveFilter={(id) => setActiveFilters((prev) => prev.filter((f) => f.id !== id))}
+                  onRemoveFilter={(id) => setFilters((prev) => removeFilterByBadgeId(prev, id))}
                 />
               </div>
               {visibleCount === 0 ? (
                 <div className="min-h-0 flex-1 bg-panel" aria-hidden />
+              ) : libraryViewType === 'thumbnail' ? (
+                <FeatureLibraryThumbnailGrid
+                  assets={filteredAssets}
+                  projectType={project.projectType}
+                  onOpenAsset={openAsset}
+                />
               ) : (
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                   <FeatureLibraryTable
-                    assets={visibleAssets}
+                    assets={filteredAssets}
+                    projectType={project.projectType}
+                    visibleColumns={visibleColumns}
                     onOpenAsset={openAsset}
                     onSetLocation={openSetLocation}
                     onDownloadAsset={downloadSpatialAsset}
                     onDeleteAsset={deleteAsset}
                     onFeatureProperties={openFeatureProperties}
-                    showLocationColumn={project.projectType === 'Building'}
                   />
                 </div>
               )}

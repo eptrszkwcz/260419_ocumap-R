@@ -1,17 +1,15 @@
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
-import { getAssetTypeLabel, type SpatialAsset } from '@/data/sampleAssets'
-import { floorPlanDisplayLabel } from '@/panels/map/mapFloorPlans'
-import { FeatureLibraryRowMenu } from '@/panels/library/FeatureLibraryRowMenu'
+import type { SpatialAsset } from '@/data/sampleAssets'
+import type { ProjectType } from '@/data/sampleProjects'
 
-function assetLocationLabel(asset: SpatialAsset): string {
-  const floorPlanId = asset.floorPlanPosition?.floorPlanId
-  if (floorPlanId == null) return '—'
-  return floorPlanDisplayLabel(floorPlanId)
-}
+import { columnDefinitions } from '@/panels/library/featureLibrary/columnDefinitions'
+import type { OptionalColumnId } from '@/panels/library/featureLibrary/types'
+import { FeatureLibraryRowMenu } from '@/panels/library/FeatureLibraryRowMenu'
 
 export type FeatureLibraryTableRowProps = {
   asset: SpatialAsset
-  showLocationColumn?: boolean
+  projectType: ProjectType
+  visibleColumns: OptionalColumnId[]
   onOpen?: () => void
   onSetLocation?: () => void
   onDownload?: () => void
@@ -19,10 +17,11 @@ export type FeatureLibraryTableRowProps = {
   onFeatureProperties?: () => void
 }
 
-/** One 40px data row: name, date, type, [location], actions. Use one instance per asset inside `<tbody>`. */
+/** One 40px data row: feature name, optional columns, actions. */
 export function FeatureLibraryTableRow({
   asset,
-  showLocationColumn = false,
+  projectType,
+  visibleColumns,
   onOpen,
   onSetLocation,
   onDownload,
@@ -65,17 +64,14 @@ export function FeatureLibraryTableRow({
       <td className={`min-w-0 pl-panel-padding pr-4 align-middle ${cellTextClass}`}>
         <span className="block truncate">{asset.title}</span>
       </td>
-      <td className={`pl-0 pr-4 align-middle whitespace-nowrap ${cellTextClass}`}>
-        {asset.dateUploaded}
-      </td>
-      <td className={`pl-0 pr-4 align-middle whitespace-nowrap ${cellTextClass}`}>
-        {getAssetTypeLabel(asset.kind)}
-      </td>
-      {showLocationColumn ? (
-        <td className={`pl-0 pr-4 align-middle whitespace-nowrap ${cellTextClass}`}>
-          {assetLocationLabel(asset)}
+      {visibleColumns.map((id) => (
+        <td
+          key={id}
+          className={`pl-0 pr-4 align-middle whitespace-nowrap ${cellTextClass}`}
+        >
+          {columnDefinitions[id].getCellValue(asset, projectType)}
         </td>
-      ) : null}
+      ))}
       <td className="pl-0 pr-panel-padding text-right align-middle" onClick={(e) => e.stopPropagation()}>
         {onSetLocation != null &&
         onDownload != null &&

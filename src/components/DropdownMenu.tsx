@@ -1,23 +1,23 @@
-import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+
+import {
+  DropdownPanel,
+  type DropdownPanelTriggerProps,
+} from '@/components/DropdownPanel'
 
 export type DropdownMenuItemConfig = {
   id: string
   label: string
   onSelect: () => void
-  /** Shown on the left side of the menu row (decorative; label remains the accessible name). */
   icon?: ReactNode
-  /** Highlights the active choice (e.g. current floor). */
   selected?: boolean
 }
 
-export type DropdownMenuTriggerProps = {
-  open: boolean
+export type DropdownMenuTriggerProps = DropdownPanelTriggerProps & {
   menuId: string | undefined
-  onToggle: (e: MouseEvent) => void
 }
 
-export const dropdownMenuPanelClassName =
-  'border-stroke font-sans text-standard font-normal absolute top-full z-40 w-[200px] overflow-hidden rounded-panel border bg-panel py-1 shadow-lg'
+export { dropdownMenuPanelClassName } from '@/components/DropdownPanel'
 
 export const dropdownMenuItemClassName =
   'text-fg-muted hover:text-fg-highlight flex w-full cursor-pointer items-center gap-2.5 rounded-panel px-[16px] py-[12px] text-left font-sans text-standard font-normal leading-none hover:bg-area-highlight hover:font-normal focus-visible:bg-area-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35'
@@ -33,9 +33,10 @@ type DropdownMenuProps = {
   items: DropdownMenuItemConfig[]
   menuAriaLabel: string
   align?: 'left' | 'right'
-  /** Overrides default panel width (200px). */
   panelWidth?: string
   stopTriggerPropagation?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   renderTrigger: (props: DropdownMenuTriggerProps) => ReactNode
 }
 
@@ -45,37 +46,18 @@ export function DropdownMenu({
   align = 'right',
   panelWidth,
   stopTriggerPropagation = false,
+  open: openControlled,
+  onOpenChange,
   renderTrigger,
 }: DropdownMenuProps) {
-  const menuId = useId()
-  const rootRef = useRef<HTMLDivElement>(null)
-  const [open, setOpen] = useState(false)
+  const [openInternal, setOpenInternal] = useState(false)
+  const open = openControlled ?? openInternal
 
-  useEffect(() => {
-    if (!open) return
-    const onPointerDown = (e: PointerEvent) => {
-      if (rootRef.current?.contains(e.target as Node)) return
-      setOpen(false)
+  const setOpen = (next: boolean) => {
+    if (openControlled == null) {
+      setOpenInternal(next)
     }
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        setOpen(false)
-      }
-    }
-    window.addEventListener('pointerdown', onPointerDown)
-    window.addEventListener('keydown', onKeyDown)
-    return () => {
-      window.removeEventListener('pointerdown', onPointerDown)
-      window.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
-
-  const onToggle = (e: MouseEvent) => {
-    if (stopTriggerPropagation) {
-      e.stopPropagation()
-    }
-    setOpen((v) => !v)
+    onOpenChange?.(next)
   }
 
   const run = (fn: () => void) => {
@@ -83,37 +65,34 @@ export function DropdownMenu({
     fn()
   }
 
-  const alignClass = align === 'left' ? 'left-0' : 'right-0'
-
   return (
-    <div ref={rootRef} className="relative inline-flex min-w-0">
-      {renderTrigger({ open, menuId: open ? menuId : undefined, onToggle })}
-
-      {open ? (
-        <div
-          id={menuId}
-          role="menu"
-          aria-label={menuAriaLabel}
-          className={dropdownMenuPanelClassName + ' ' + alignClass}
-          style={panelWidth != null ? { width: panelWidth } : undefined}
-          onMouseLeave={() => setOpen(false)}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {items.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="menuitem"
-              aria-current={item.selected ? 'true' : undefined}
-              className={dropdownMenuItemClass(item.selected)}
-              onClick={() => run(item.onSelect)}
-            >
-              {item.icon != null ? <span className="shrink-0">{item.icon}</span> : null}
-              <span className="min-w-0">{item.label}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
+    <DropdownPanel
+      panelAriaLabel={menuAriaLabel}
+      align={align}
+      panelWidth={panelWidth}
+      closeOnMouseLeave
+      stopTriggerPropagation={stopTriggerPropagation}
+      open={open}
+      onOpenChange={setOpen}
+      renderTrigger={({ open: isOpen, panelId, onToggle }) =>
+        renderTrigger({ open: isOpen, menuId: panelId, panelId, onToggle })
+      }
+    >
+      <div role="menu">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="menuitem"
+            aria-current={item.selected ? 'true' : undefined}
+            className={dropdownMenuItemClass(item.selected)}
+            onClick={() => run(item.onSelect)}
+          >
+            {item.icon != null ? <span className="shrink-0">{item.icon}</span> : null}
+            <span className="min-w-0">{item.label}</span>
+          </button>
+        ))}
+      </div>
+    </DropdownPanel>
   )
 }
