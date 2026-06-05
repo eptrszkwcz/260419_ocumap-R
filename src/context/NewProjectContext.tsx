@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { useProjects } from '@/context/ProjectsContext'
 import { NEW_PROJECT_ID, type ProjectRecord, type ProjectType } from '@/data/sampleProjects'
+import { todayIsoDate } from '@/lib/formatDisplayDateFromIsoDate'
 import {
   createEmptyProjectDetailsDraft,
   draftToProfile,
@@ -103,6 +104,7 @@ export function NewProjectProvider({
       lastModified: '',
       featureFileCount: 0,
       createdRelative: 'Just now',
+      createdIso: todayIsoDate(),
       projectType: draft.organizationType ?? 'Building',
     }),
     [draft.name, draft.organizationType],

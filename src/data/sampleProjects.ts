@@ -20,15 +20,22 @@ export type ProjectRecord = {
   featureFileCount: number
   /** Short relative label for “Created” (e.g. “3 days ago”). */
   createdRelative: string
+  /** ISO date for “Created” filtering (YYYY-MM-DD). */
+  createdIso: string
   projectType: ProjectType
   /** Mapbox GL style URL; required when projectType is Infrastructure. */
   mapboxStyleUrl?: string
+  /** WGS84 center for Infrastructure project map thumbnails. */
+  mapCenterLat?: number
+  mapCenterLng?: number
 }
 
 /** 1603 Jefferson St. — default library demo project. */
 export const DEMO_OPENS_LIBRARY_PROJECT_ID = 'p-1'
 
 export const KATY_FREEWAY_PROJECT_ID = 'p-katy'
+
+export const FILES_ONLY_DEMO_PROJECT_ID = 'p-files-demo'
 
 export const KATY_FREEWAY_MAPBOX_STYLE =
   'mapbox://styles/ptrszkwcz/cmopctwjj005v01rge2ht02w2' as const
@@ -47,6 +54,7 @@ export const sampleProjects: ProjectRecord[] = [
     lastModified: 'May 3, 2026',
     featureFileCount: 142,
     createdRelative: '3 days ago',
+    createdIso: '2026-06-01',
     projectType: 'Building',
   },
   {
@@ -57,6 +65,7 @@ export const sampleProjects: ProjectRecord[] = [
     lastModified: 'April 30, 2026',
     featureFileCount: 87,
     createdRelative: '2 weeks ago',
+    createdIso: '2026-05-21',
     projectType: 'Building',
   },
   {
@@ -67,6 +76,7 @@ export const sampleProjects: ProjectRecord[] = [
     lastModified: 'April 25, 2026',
     featureFileCount: 23,
     createdRelative: '5 weeks ago',
+    createdIso: '2026-04-30',
     projectType: 'Building',
   },
   {
@@ -77,6 +87,7 @@ export const sampleProjects: ProjectRecord[] = [
     lastModified: 'April 12, 2026',
     featureFileCount: 310,
     createdRelative: '3 months ago',
+    createdIso: '2026-03-04',
     projectType: 'Building',
   },
   {
@@ -87,8 +98,22 @@ export const sampleProjects: ProjectRecord[] = [
     lastModified: 'May 2, 2026',
     featureFileCount: 56,
     createdRelative: '4 weeks ago',
+    createdIso: '2026-05-07',
     projectType: 'Infrastructure',
     mapboxStyleUrl: KATY_FREEWAY_MAPBOX_STYLE,
+    mapCenterLat: 29.786,
+    mapCenterLng: -95.794,
+  },
+  {
+    id: FILES_ONLY_DEMO_PROJECT_ID,
+    name: 'Westside Document Archive',
+    status: 'Draft',
+    team: 'Smith Property Management',
+    lastModified: 'May 28, 2026',
+    featureFileCount: 412,
+    createdRelative: '1 week ago',
+    createdIso: '2026-05-28',
+    projectType: 'FilesOnly',
   },
 ]
 
@@ -103,4 +128,11 @@ export function getProjectById(id: string): ProjectRecord | undefined {
 export function projectTypeLabel(type: ProjectType): string {
   if (type === 'FilesOnly') return 'Files Only'
   return type
+}
+
+/** UI label for project type in filters and tags. */
+export function projectTypeFilterLabel(type: ProjectType): string {
+  if (type === 'Building') return 'Floor Plan'
+  if (type === 'Infrastructure') return 'Map'
+  return 'Files Only'
 }

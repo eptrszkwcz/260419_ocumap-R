@@ -63,9 +63,14 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
       lastModified: today,
       featureFileCount: 0,
       createdRelative: 'Just now',
+      createdIso: todayIsoDate(),
       projectType: input.projectType,
       ...(input.projectType === 'Infrastructure'
-        ? { mapboxStyleUrl: KATY_FREEWAY_MAPBOX_STYLE }
+        ? {
+            mapboxStyleUrl: KATY_FREEWAY_MAPBOX_STYLE,
+            mapCenterLat: 29.786,
+            mapCenterLng: -95.794,
+          }
         : {}),
     }
     const primaryLine = input.location.trim()
