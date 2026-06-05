@@ -20,6 +20,7 @@ import {
   type ProjectFilters,
 } from '@/pages/projects/types'
 import { ProjectsBadgeRow } from '@/pages/ProjectsBadgeRow'
+import { ProjectsSummaryStats } from '@/pages/ProjectsSummaryStats'
 import { ProjectsTable } from '@/pages/ProjectsTable'
 
 export function ProjectsPage() {
@@ -62,7 +63,8 @@ export function ProjectsPage() {
         </div>
         <UserAccountDisplay />
       </header>
-      <Panel className="!border-0 !bg-transparent mx-auto mt-[52px] flex min-h-0 min-w-0 w-full max-w-[1200px] flex-1 flex-col p-0 shadow-none">
+      <Panel className="!border-0 !bg-transparent mx-auto mt-[52px] flex min-h-0 min-w-0 w-full max-w-[1200px] flex-1 flex-col gap-4 p-0 shadow-none">
+        <ProjectsSummaryStats projects={projects} />
         <div className="relative z-20 shrink-0">
           <ControlHeaderToolbar
             id="control-header-projects"
