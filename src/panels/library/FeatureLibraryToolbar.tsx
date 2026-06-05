@@ -1,4 +1,5 @@
 import { InformationCircleIcon, PhotoIcon } from '@heroicons/react/24/outline'
+import type { ReactNode } from 'react'
 
 import { ControlHeaderToolbar } from '@/components/ControlHeaderToolbar'
 
@@ -48,6 +49,8 @@ type FeatureLibraryToolbarProps = {
   onOpenMetadata?: () => void
   onOpenMedia?: () => void
   onCloseViewer?: () => void
+  /** View / Columns / Filters dropdown cluster for browse mode. */
+  libraryControlActions?: ReactNode
 }
 
 const iconBtnClass =
@@ -60,6 +63,7 @@ export function FeatureLibraryToolbar({
   onOpenMetadata,
   onOpenMedia,
   onCloseViewer,
+  libraryControlActions,
 }: FeatureLibraryToolbarProps) {
   if (viewerAsset != null) {
     return (
@@ -121,6 +125,7 @@ export function FeatureLibraryToolbar({
       id="control-header-feature-lib"
       toolbarAriaLabel="Feature library actions"
       onAddClick={onAddFeatureClick}
+      secondaryActions={libraryControlActions}
     />
   )
 }
