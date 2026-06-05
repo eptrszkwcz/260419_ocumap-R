@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 
 export const dropdownMenuPanelClassName =
-  'border-stroke font-sans text-standard font-normal absolute top-full z-40 w-[200px] overflow-hidden rounded-panel border bg-panel py-1 shadow-lg'
+  'border-stroke font-sans text-standard font-normal absolute top-full z-40 mt-2 w-[200px] overflow-hidden rounded-panel border bg-panel py-1 shadow-lg'
 
 export type DropdownPanelTriggerProps = {
   open: boolean
