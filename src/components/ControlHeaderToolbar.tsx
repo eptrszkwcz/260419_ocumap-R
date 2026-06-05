@@ -295,14 +295,14 @@ export function ControlHeaderToolbar({
     <div
       id={id}
       className={
-        'flex h-16 w-full shrink-0 items-center gap-3 ' +
+        'flex h-16 w-full shrink-0 items-center gap-3 overflow-visible ' +
         (projectsChrome ? 'px-0 border-b-0 bg-transparent' : 'border-b border-stroke px-panel-padding')
       }
       role="toolbar"
       aria-label={toolbarAriaLabel}
     >
       {showSecondaryActions ? (
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1 overflow-visible">
           {secondaryActions ??
             secondaryConfig.map(({ id: btnId, label, Icon }) => {
               const isActive = activeId === btnId
