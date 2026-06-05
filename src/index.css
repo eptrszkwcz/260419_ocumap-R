@@ -62,14 +62,6 @@
     margin-bottom: -2px;
   }
 
-  /** Dropdown anchor: 8px transparent gap between trigger and panel surface. */
-  .ocu-dropdown-anchor {
-    position: absolute;
-    top: 100%;
-    z-index: 40;
-    padding-top: 8px;
-  }
-
   /** Filter dropdown date fields — match muted body text and calendar icon. */
   .ocu-filter-date-input {
     color: var(--color-fg-muted);

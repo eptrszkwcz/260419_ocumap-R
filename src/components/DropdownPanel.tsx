@@ -1,10 +1,7 @@
 import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 
-/** Visible panel surface (border, background, shadow). */
 export const dropdownMenuPanelClassName =
-  'border-stroke font-sans text-standard font-normal w-[200px] overflow-hidden rounded-panel border bg-panel py-1 shadow-lg'
-
-const dropdownAnchorClassName = 'ocu-dropdown-anchor'
+  'border-stroke font-sans text-standard font-normal absolute top-full z-40 mt-2 w-[200px] overflow-hidden rounded-panel border bg-panel py-1 shadow-lg'
 
 export type DropdownPanelTriggerProps = {
   open: boolean
@@ -84,18 +81,14 @@ export function DropdownPanel({
 
       {open ? (
         <div
-          className={dropdownAnchorClassName + ' ' + alignClass}
+          id={panelId}
+          aria-label={panelAriaLabel}
+          className={dropdownMenuPanelClassName + ' ' + alignClass}
+          style={panelWidth != null ? { width: panelWidth } : undefined}
           onMouseLeave={closeOnMouseLeave ? () => setOpen(false) : undefined}
+          onClick={(e) => e.stopPropagation()}
         >
-          <div
-            id={panelId}
-            aria-label={panelAriaLabel}
-            className={dropdownMenuPanelClassName}
-            style={panelWidth != null ? { width: panelWidth } : undefined}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {children}
-          </div>
+          {children}
         </div>
       ) : null}
     </div>

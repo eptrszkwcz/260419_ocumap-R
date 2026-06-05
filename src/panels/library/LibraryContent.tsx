@@ -300,7 +300,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
 
   return (
     <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="relative z-20 shrink-0 overflow-visible">
+      <div className="relative z-20 shrink-0">
         <FeatureLibraryToolbar
         onAddFeatureClick={() => {
           cancelLocationPick()
