@@ -14,6 +14,7 @@ import { downloadSpatialAsset } from '@/lib/downloadSpatialAsset'
 import { markerColorsFromAsset } from '@/panels/map/markerColors'
 import { AddFeatureFlow } from '@/panels/library/AddFeatureFlow'
 import { PanelCenteredPrompt } from '@/components/PanelCenteredPrompt'
+import { nextSortDirection, type SortDirection } from '@/components/SortableColumnHeader'
 import { type ActiveFilter } from '@/panels/library/FeatureLibraryBadges'
 import { FeatureLibraryFilterRow } from '@/panels/library/FeatureLibraryFilterRow'
 import { FeatureLibraryMediaViewer } from '@/panels/library/FeatureLibraryMediaViewer'
@@ -25,6 +26,10 @@ import { FeatureLibraryControlActions } from '@/panels/library/featureLibrary/Fe
 import { FeatureLibraryThumbnailGrid } from '@/panels/library/featureLibrary/FeatureLibraryThumbnailGrid'
 import { filtersToBadges, removeFilterByBadgeId } from '@/panels/library/featureLibrary/filterBadges'
 import { resolveVisibleColumns } from '@/panels/library/featureLibrary/resolveVisibleColumns'
+import {
+  sortFeatureLibraryAssets,
+  type FeatureLibrarySortColumn,
+} from '@/panels/library/featureLibrary/sortFeatureLibraryAssets'
 import {
   createDefaultColumnOrder,
   createDefaultColumnVisibility,
@@ -177,6 +182,8 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   )
   const [openDropdown, setOpenDropdown] = useState<LibraryDropdownId | null>(null)
   const [containerWidth, setContainerWidth] = useState(0)
+  const [sortColumn, setSortColumn] = useState<FeatureLibrarySortColumn>('feature')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
   const [viewMode, setViewMode] = useState<'browse' | 'add'>('browse')
   const [openedAsset, setOpenedAsset] = useState<SpatialAsset | null>(null)
@@ -218,7 +225,17 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
       }),
     [containerWidth, columnOrder, columnVisibility],
   )
-  const visibleCount = filteredAssets.length
+  const sortedAssets = useMemo(
+    () => sortFeatureLibraryAssets(filteredAssets, sortColumn, sortDirection, project.projectType),
+    [filteredAssets, sortColumn, sortDirection, project.projectType],
+  )
+
+  const handleSortColumn = (column: FeatureLibrarySortColumn) => {
+    setSortDirection(nextSortDirection(sortColumn, column, sortDirection))
+    setSortColumn(column)
+  }
+
+  const visibleCount = sortedAssets.length
 
   const viewerAsset = viewMode === 'browse' ? openedAsset : null
 
@@ -389,7 +406,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
               ) : (
                 <FeatureLibraryMediaViewer
                   asset={viewerAsset}
-                  libraryAssets={filteredAssets}
+                  libraryAssets={sortedAssets}
                   onAssetChange={replaceOpenedAsset}
                 />
               )}
@@ -407,16 +424,19 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
                 <div className="min-h-0 flex-1 bg-panel" aria-hidden />
               ) : libraryViewType === 'thumbnail' ? (
                 <FeatureLibraryThumbnailGrid
-                  assets={filteredAssets}
+                  assets={sortedAssets}
                   projectType={project.projectType}
                   onOpenAsset={openAsset}
                 />
               ) : (
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                   <FeatureLibraryTable
-                    assets={filteredAssets}
+                    assets={sortedAssets}
                     projectType={project.projectType}
                     visibleColumns={visibleColumns}
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                    onSortColumn={handleSortColumn}
                     onOpenAsset={openAsset}
                     onSetLocation={openSetLocation}
                     onDownloadAsset={downloadSpatialAsset}

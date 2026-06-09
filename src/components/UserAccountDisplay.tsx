@@ -4,6 +4,7 @@ import {
   Cog6ToothIcon,
   QuestionMarkCircleIcon,
   SwatchIcon,
+  UserCircleIcon,
 } from '@heroicons/react/24/outline'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -16,6 +17,7 @@ import { useAuth } from '@/context/AuthContext'
 const menuItemIconClass = 'size-4 shrink-0'
 
 const accountMenuItems = [
+  { id: 'account', label: 'Account', icon: UserCircleIcon },
   { id: 'settings', label: 'Settings', icon: Cog6ToothIcon },
   { id: 'activity', label: 'Activity', icon: ClockIcon },
   { id: 'theme', label: 'Theme', icon: SwatchIcon },
