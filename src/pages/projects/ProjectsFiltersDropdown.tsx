@@ -283,6 +283,40 @@ export function ProjectsFiltersDropdown({
             </label>
           </div>
         </div>
+
+        <div className="border-stroke border-t">
+          <FilterSectionHeader
+            title="Size (MB)"
+            showReset={filters.projectSizeMin.trim() !== '' || filters.projectSizeMax.trim() !== ''}
+            onReset={() => onFiltersChange({ ...filters, projectSizeMin: '', projectSizeMax: '' })}
+          />
+          <div className="grid grid-cols-2 gap-2 px-4 pb-3">
+            <label className="block min-w-0">
+              <span className="text-fg-muted mb-1 block text-badge">Min</span>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                placeholder="Any"
+                value={filters.projectSizeMin}
+                onChange={(e) => onFiltersChange({ ...filters, projectSizeMin: e.target.value })}
+                className={featureMetadataInputClassName}
+              />
+            </label>
+            <label className="block min-w-0">
+              <span className="text-fg-muted mb-1 block text-badge">Max</span>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                placeholder="Any"
+                value={filters.projectSizeMax}
+                onChange={(e) => onFiltersChange({ ...filters, projectSizeMax: e.target.value })}
+                className={featureMetadataInputClassName}
+              />
+            </label>
+          </div>
+        </div>
       </div>
 
       {isProjectFilterActive(filters) ? (

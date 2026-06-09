@@ -103,6 +103,7 @@ export function NewProjectProvider({
       team: '',
       lastModified: '',
       featureFileCount: 0,
+      projectSizeMb: 0,
       createdRelative: 'Just now',
       createdIso: todayIsoDate(),
       projectType: draft.organizationType ?? 'Building',

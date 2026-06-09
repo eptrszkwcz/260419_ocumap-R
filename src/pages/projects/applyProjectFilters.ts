@@ -55,12 +55,12 @@ function dateInFilterRange(isoDate: string, filter: DateFilterState | null): boo
   return fromD != null || toD != null
 }
 
-function fileCountInRange(count: number, min: string, max: string): boolean {
+function numericRangeInRange(value: number, min: string, max: string): boolean {
   if (min.trim() === '' && max.trim() === '') return true
   const minN = min.trim() === '' ? null : Number(min)
   const maxN = max.trim() === '' ? null : Number(max)
-  if (minN != null && Number.isFinite(minN) && count < minN) return false
-  if (maxN != null && Number.isFinite(maxN) && count > maxN) return false
+  if (minN != null && Number.isFinite(minN) && value < minN) return false
+  if (maxN != null && Number.isFinite(maxN) && value > maxN) return false
   return true
 }
 
@@ -81,7 +81,9 @@ export function isProjectFilterActive(filters: ProjectFilters): boolean {
     isDateFilterActive(filters.lastModified) ||
     isDateFilterActive(filters.created) ||
     filters.fileCountMin.trim() !== '' ||
-    filters.fileCountMax.trim() !== ''
+    filters.fileCountMax.trim() !== '' ||
+    filters.projectSizeMin.trim() !== '' ||
+    filters.projectSizeMax.trim() !== ''
   )
 }
 
@@ -116,7 +118,11 @@ export function applyProjectFilters(
       return false
     }
 
-    if (!fileCountInRange(project.featureFileCount, filters.fileCountMin, filters.fileCountMax)) {
+    if (!numericRangeInRange(project.featureFileCount, filters.fileCountMin, filters.fileCountMax)) {
+      return false
+    }
+
+    if (!numericRangeInRange(project.projectSizeMb, filters.projectSizeMin, filters.projectSizeMax)) {
       return false
     }
 

@@ -37,6 +37,7 @@ function ActiveProjectInner({ children }: { children: ReactNode }) {
           team: '',
           lastModified: '',
           featureFileCount: 0,
+          projectSizeMb: 0,
           createdRelative: 'Just now',
           createdIso: '',
           projectType: 'Building',

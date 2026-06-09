@@ -1,4 +1,14 @@
+import type { CSSProperties } from 'react'
+
 import { type ProjectRecord, type ProjectStatus, type ProjectType } from '@/data/sampleProjects'
+import { formatBytes } from '@/lib/formatBytes'
+import {
+  PROJECT_LIST_COLUMN_ORDER,
+  projectColumnDefinitions,
+  projectsListGridStyle,
+  type ProjectListColumnId,
+} from '@/pages/projects/projectListColumns'
+import { ProjectRowMenu } from '@/pages/projects/ProjectRowMenu'
 
 const projectStatusBadgeBaseClass =
   'inline-flex h-badge min-h-badge max-h-badge shrink-0 items-center justify-center rounded-panel px-2 text-badge font-bold leading-none'
@@ -62,9 +72,17 @@ function ProjectTypeTag({ type }: { type: ProjectType }) {
   )
 }
 
-/** Full page: name (+ type tag + team subtitle), last modified, files, created, status, actions */
-export const projectsGridClass =
-  'grid w-full min-w-0 grid-cols-[minmax(0,1.4fr)_minmax(0,7.5rem)_minmax(0,3.25rem)_minmax(0,120px)_minmax(0,5.75rem)_2.25rem] items-center gap-x-4'
+/** Full page grid: name pinned; optional columns supplied via `visibleColumns`. */
+export const projectsListGridClass =
+  'grid w-full min-w-0 items-center gap-x-4'
+
+function fullPageGridStyle(visibleColumns: ProjectListColumnId[]): CSSProperties {
+  return projectsListGridStyle(visibleColumns)
+}
+
+function formatProjectSizeMb(sizeMb: number): string {
+  return formatBytes(sizeMb * 1024 * 1024)
+}
 
 function ProjectNameCell({
   name,
@@ -95,10 +113,51 @@ export const projectsGridDrawerClass =
   'grid w-full min-w-0 grid-cols-[minmax(0,1fr)_2.25rem] items-center gap-x-4'
 
 function gridClassForLayout(layout: ProjectsListLayout) {
-  return layout === 'drawer' ? projectsGridDrawerClass : projectsGridClass
+  return layout === 'drawer' ? projectsGridDrawerClass : projectsListGridClass
 }
 
-export function ProjectsListHeader({ layout = 'full' }: { layout?: ProjectsListLayout }) {
+function ProjectListColumnCell({
+  columnId,
+  project,
+}: {
+  columnId: ProjectListColumnId
+  project: ProjectRecord
+}) {
+  switch (columnId) {
+    case 'lastModified':
+      return (
+        <span className="truncate whitespace-nowrap text-fg-muted group-hover:text-fg-highlight">
+          {project.lastModified}
+        </span>
+      )
+    case 'files':
+      return (
+        <span className="tabular-nums whitespace-nowrap text-fg-muted group-hover:text-fg-highlight">
+          {project.featureFileCount.toLocaleString()}
+        </span>
+      )
+    case 'size':
+      return (
+        <span className="tabular-nums whitespace-nowrap text-fg-muted group-hover:text-fg-highlight">
+          {formatProjectSizeMb(project.projectSizeMb)}
+        </span>
+      )
+    case 'status':
+      return (
+        <span className="min-w-0">
+          <ProjectStatusBadge status={project.status} />
+        </span>
+      )
+  }
+}
+
+export function ProjectsListHeader({
+  layout = 'full',
+  visibleColumns = PROJECT_LIST_COLUMN_ORDER,
+}: {
+  layout?: ProjectsListLayout
+  visibleColumns?: ProjectListColumnId[]
+}) {
   const grid = gridClassForLayout(layout)
   if (layout === 'drawer') {
     return (
@@ -113,12 +172,14 @@ export function ProjectsListHeader({ layout = 'full' }: { layout?: ProjectsListL
   return (
     <div
       className={`${grid} shrink-0 px-panel-padding pb-2 pt-1 font-sans text-standard font-bold text-fg-muted`}
+      style={fullPageGridStyle(visibleColumns)}
     >
       <div className="min-w-0">Name</div>
-      <div className="whitespace-nowrap">Last Modified</div>
-      <div className="whitespace-nowrap">Files</div>
-      <div className="whitespace-nowrap">Created</div>
-      <div className="min-w-0">Status</div>
+      {visibleColumns.map((columnId) => (
+        <div key={columnId} className="min-w-0 whitespace-nowrap">
+          {projectColumnDefinitions[columnId].label}
+        </div>
+      ))}
       <div className="sr-only text-right">Actions</div>
     </div>
   )
@@ -127,6 +188,7 @@ export function ProjectsListHeader({ layout = 'full' }: { layout?: ProjectsListL
 type ProjectCardRowProps = {
   project: ProjectRecord
   layout?: ProjectsListLayout
+  visibleColumns?: ProjectListColumnId[]
   onActivate: () => void
   isCurrent?: boolean
   ariaLabel: string
@@ -135,6 +197,7 @@ type ProjectCardRowProps = {
 export function ProjectCardRow({
   project,
   layout = 'full',
+  visibleColumns = PROJECT_LIST_COLUMN_ORDER,
   onActivate,
   isCurrent = false,
   ariaLabel,
@@ -158,37 +221,22 @@ export function ProjectCardRow({
       }}
       aria-label={ariaLabel}
     >
-      <div className={`${grid} min-w-0 px-panel-padding`}>
+      <div
+        className={`${grid} min-w-0 px-panel-padding`}
+        style={layout === 'full' ? fullPageGridStyle(visibleColumns) : undefined}
+      >
         <ProjectNameCell
           name={project.name}
           team={project.team}
           projectType={project.projectType}
         />
-        {layout === 'full' ? (
-          <>
-            <span className="truncate whitespace-nowrap text-fg-muted group-hover:text-fg-highlight">
-              {project.lastModified}
-            </span>
-            <span className="tabular-nums whitespace-nowrap text-fg-muted group-hover:text-fg-highlight">
-              {project.featureFileCount.toLocaleString()}
-            </span>
-            <span className="truncate whitespace-nowrap text-fg-muted group-hover:text-fg-highlight">
-              {project.createdRelative}
-            </span>
-            <span className="min-w-0">
-              <ProjectStatusBadge status={project.status} />
-            </span>
-          </>
-        ) : null}
+        {layout === 'full'
+          ? visibleColumns.map((columnId) => (
+              <ProjectListColumnCell key={columnId} columnId={columnId} project={project} />
+            ))
+          : null}
         <span className="flex justify-end">
-          <button
-            type="button"
-            onClick={(e) => e.stopPropagation()}
-            className="text-fg-muted group-hover:text-fg-highlight inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-panel align-middle transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/40 focus-visible:outline-none"
-            aria-label={`Actions for ${project.name}`}
-          >
-            <MoreVerticalIcon />
-          </button>
+          <ProjectRowMenu project={project} />
         </span>
       </div>
     </div>
@@ -199,10 +247,12 @@ export function ProjectCardRow({
 export function ProjectsListRows({
   projects,
   layout = 'full',
+  visibleColumns = PROJECT_LIST_COLUMN_ORDER,
   rowProps,
 }: {
   projects: ProjectRecord[]
   layout?: ProjectsListLayout
+  visibleColumns?: ProjectListColumnId[]
   rowProps: (project: ProjectRecord) => {
     onActivate: () => void
     isCurrent?: boolean
@@ -218,6 +268,7 @@ export function ProjectsListRows({
             key={project.id}
             project={project}
             layout={layout}
+            visibleColumns={visibleColumns}
             onActivate={onActivate}
             isCurrent={isCurrent}
             ariaLabel={ariaLabel}

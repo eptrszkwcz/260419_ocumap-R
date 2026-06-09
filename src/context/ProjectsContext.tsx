@@ -62,6 +62,7 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
       team: input.profile.identifiers.clientName.trim() || '',
       lastModified: today,
       featureFileCount: 0,
+      projectSizeMb: 0,
       createdRelative: 'Just now',
       createdIso: todayIsoDate(),
       projectType: input.projectType,

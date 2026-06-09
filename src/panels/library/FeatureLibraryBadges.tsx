@@ -1,5 +1,5 @@
 const badgeClassName =
-  'text-fg-muted inline-flex h-badge min-h-badge max-h-badge min-w-0 shrink-0 items-center justify-center rounded-panel bg-area-highlight px-2 text-badge font-bold leading-none'
+  'text-fg-muted inline-flex h-[24px] min-w-0 shrink-0 items-center justify-center rounded-panel bg-area-highlight px-2 text-[12.5px] font-bold leading-[18px]'
 
 type FeatureCountBadgeProps = {
   count: number
