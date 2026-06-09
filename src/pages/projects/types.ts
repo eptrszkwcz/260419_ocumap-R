@@ -13,6 +13,8 @@ export type ProjectFilters = {
   created: DateFilterState | null
   fileCountMin: string
   fileCountMax: string
+  projectSizeMin: string
+  projectSizeMax: string
 }
 
 export function createEmptyProjectFilters(): ProjectFilters {
@@ -24,5 +26,7 @@ export function createEmptyProjectFilters(): ProjectFilters {
     created: null,
     fileCountMin: '',
     fileCountMax: '',
+    projectSizeMin: '',
+    projectSizeMax: '',
   }
 }

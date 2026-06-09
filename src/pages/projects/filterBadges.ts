@@ -70,6 +70,13 @@ export function projectFiltersToBadges(filters: ProjectFilters): ActiveFilter[] 
     badges.push({ id: 'filter-fileCount', label: `Files: ${parts.join(', ')}` })
   }
 
+  if (filters.projectSizeMin.trim() !== '' || filters.projectSizeMax.trim() !== '') {
+    const parts: string[] = []
+    if (filters.projectSizeMin.trim()) parts.push(`≥ ${filters.projectSizeMin} MB`)
+    if (filters.projectSizeMax.trim()) parts.push(`≤ ${filters.projectSizeMax} MB`)
+    badges.push({ id: 'filter-projectSize', label: `Size: ${parts.join(', ')}` })
+  }
+
   return badges
 }
 
@@ -90,6 +97,8 @@ export function removeProjectFilterByBadgeId(
       return { ...filters, created: null }
     case 'filter-fileCount':
       return { ...filters, fileCountMin: '', fileCountMax: '' }
+    case 'filter-projectSize':
+      return { ...filters, projectSizeMin: '', projectSizeMax: '' }
     default:
       return filters
   }

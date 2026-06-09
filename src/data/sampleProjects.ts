@@ -18,6 +18,8 @@ export type ProjectRecord = {
   lastModified: string
   /** Feature library file count shown in the projects list. */
   featureFileCount: number
+  /** Cumulative project size in megabytes (projects list “Project Size” column). */
+  projectSizeMb: number
   /** Short relative label for “Created” (e.g. “3 days ago”). */
   createdRelative: string
   /** ISO date for “Created” filtering (YYYY-MM-DD). */
@@ -53,6 +55,7 @@ export const sampleProjects: ProjectRecord[] = [
     team: 'Smith Property Management',
     lastModified: 'May 3, 2026',
     featureFileCount: 142,
+    projectSizeMb: 486,
     createdRelative: '3 days ago',
     createdIso: '2026-06-01',
     projectType: 'Building',
@@ -64,6 +67,7 @@ export const sampleProjects: ProjectRecord[] = [
     team: 'Cypress Health Partners',
     lastModified: 'April 30, 2026',
     featureFileCount: 87,
+    projectSizeMb: 312,
     createdRelative: '2 weeks ago',
     createdIso: '2026-05-21',
     projectType: 'Building',
@@ -75,6 +79,7 @@ export const sampleProjects: ProjectRecord[] = [
     team: 'Eastern Valley SD',
     lastModified: 'April 25, 2026',
     featureFileCount: 23,
+    projectSizeMb: 94,
     createdRelative: '5 weeks ago',
     createdIso: '2026-04-30',
     projectType: 'Building',
@@ -86,6 +91,7 @@ export const sampleProjects: ProjectRecord[] = [
     team: 'Lakeside Municipality',
     lastModified: 'April 12, 2026',
     featureFileCount: 310,
+    projectSizeMb: 1240,
     createdRelative: '3 months ago',
     createdIso: '2026-03-04',
     projectType: 'Building',
@@ -97,6 +103,7 @@ export const sampleProjects: ProjectRecord[] = [
     team: 'Build Co.',
     lastModified: 'May 2, 2026',
     featureFileCount: 56,
+    projectSizeMb: 428,
     createdRelative: '4 weeks ago',
     createdIso: '2026-05-07',
     projectType: 'Infrastructure',
@@ -111,6 +118,7 @@ export const sampleProjects: ProjectRecord[] = [
     team: 'Smith Property Management',
     lastModified: 'May 28, 2026',
     featureFileCount: 412,
+    projectSizeMb: 892,
     createdRelative: '1 week ago',
     createdIso: '2026-05-28',
     projectType: 'FilesOnly',
