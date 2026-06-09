@@ -20,7 +20,7 @@ export const projectColumnDefinitions: Record<
   { label: string; minWidthPx: number }
 > = {
   lastModified: { label: 'Last Modified', minWidthPx: 120 },
-  files: { label: 'Files', minWidthPx: 52 },
+  files: { label: 'Files', minWidthPx: 64 },
   size: { label: 'Size', minWidthPx: 88 },
   status: { label: 'Status', minWidthPx: 92 },
 }

@@ -1,3 +1,4 @@
+import { SortableColumnHeader, type SortDirection } from '@/components/SortableColumnHeader'
 import type { SpatialAsset } from '@/data/sampleAssets'
 import type { ProjectType } from '@/data/sampleProjects'
 
@@ -6,6 +7,7 @@ import {
   columnDefinitions,
   FEATURE_COLUMN_MIN_WIDTH_PX,
 } from '@/panels/library/featureLibrary/columnDefinitions'
+import type { FeatureLibrarySortColumn } from '@/panels/library/featureLibrary/sortFeatureLibraryAssets'
 import type { OptionalColumnId } from '@/panels/library/featureLibrary/types'
 import { FeatureLibraryTableRow } from '@/panels/library/FeatureLibraryTableRow'
 
@@ -13,6 +15,9 @@ type FeatureLibraryTableProps = {
   assets: SpatialAsset[]
   projectType: ProjectType
   visibleColumns: OptionalColumnId[]
+  sortColumn: FeatureLibrarySortColumn
+  sortDirection: SortDirection
+  onSortColumn: (column: FeatureLibrarySortColumn) => void
   onOpenAsset?: (asset: SpatialAsset) => void
   onSetLocation?: (asset: SpatialAsset) => void
   onDownloadAsset?: (asset: SpatialAsset) => void
@@ -27,6 +32,9 @@ export function FeatureLibraryTable({
   assets,
   projectType,
   visibleColumns,
+  sortColumn,
+  sortDirection,
+  onSortColumn,
   onOpenAsset,
   onSetLocation,
   onDownloadAsset,
@@ -53,11 +61,19 @@ export function FeatureLibraryTable({
               scope="col"
               style={{ minWidth: FEATURE_COLUMN_MIN_WIDTH_PX }}
             >
-              Feature
+              <SortableColumnHeader
+                label="Feature"
+                activeDirection={sortColumn === 'feature' ? sortDirection : null}
+                onSort={() => onSortColumn('feature')}
+              />
             </th>
             {visibleColumns.map((id) => (
               <th key={id} className="pl-0 pr-4 font-bold text-fg" scope="col">
-                {columnDefinitions[id].label}
+                <SortableColumnHeader
+                  label={columnDefinitions[id].label}
+                  activeDirection={sortColumn === id ? sortDirection : null}
+                  onSort={() => onSortColumn(id)}
+                />
               </th>
             ))}
             <th

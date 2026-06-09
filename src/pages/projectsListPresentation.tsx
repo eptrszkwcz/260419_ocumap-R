@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 
+import { SortableColumnHeader, type SortDirection } from '@/components/SortableColumnHeader'
 import { type ProjectRecord, type ProjectStatus, type ProjectType } from '@/data/sampleProjects'
 import { formatBytes } from '@/lib/formatBytes'
 import {
@@ -9,6 +10,7 @@ import {
   type ProjectListColumnId,
 } from '@/pages/projects/projectListColumns'
 import { ProjectRowMenu } from '@/pages/projects/ProjectRowMenu'
+import type { ProjectListSortColumn } from '@/pages/projects/sortProjects'
 
 const projectStatusBadgeBaseClass =
   'inline-flex h-badge min-h-badge max-h-badge shrink-0 items-center justify-center rounded-panel px-2 text-badge font-bold leading-none'
@@ -154,11 +156,18 @@ function ProjectListColumnCell({
 export function ProjectsListHeader({
   layout = 'full',
   visibleColumns = PROJECT_LIST_COLUMN_ORDER,
+  sortColumn,
+  sortDirection,
+  onSortColumn,
 }: {
   layout?: ProjectsListLayout
   visibleColumns?: ProjectListColumnId[]
+  sortColumn?: ProjectListSortColumn
+  sortDirection?: SortDirection
+  onSortColumn?: (column: ProjectListSortColumn) => void
 }) {
   const grid = gridClassForLayout(layout)
+  const sortable = sortColumn != null && sortDirection != null && onSortColumn != null
   if (layout === 'drawer') {
     return (
       <div
@@ -174,12 +183,31 @@ export function ProjectsListHeader({
       className={`${grid} shrink-0 px-panel-padding pb-2 pt-1 font-sans text-standard font-bold text-fg-muted`}
       style={fullPageGridStyle(visibleColumns)}
     >
-      <div className="min-w-0">Name</div>
-      {visibleColumns.map((columnId) => (
-        <div key={columnId} className="min-w-0 whitespace-nowrap">
-          {projectColumnDefinitions[columnId].label}
-        </div>
-      ))}
+      {sortable ? (
+        <SortableColumnHeader
+          label="Name"
+          activeDirection={sortColumn === 'name' ? sortDirection : null}
+          onSort={() => onSortColumn('name')}
+          className="text-fg-muted hover:text-fg-highlight"
+        />
+      ) : (
+        <div className="min-w-0">Name</div>
+      )}
+      {visibleColumns.map((columnId) =>
+        sortable ? (
+          <SortableColumnHeader
+            key={columnId}
+            label={projectColumnDefinitions[columnId].label}
+            activeDirection={sortColumn === columnId ? sortDirection : null}
+            onSort={() => onSortColumn(columnId)}
+            className="text-fg-muted hover:text-fg-highlight whitespace-nowrap"
+          />
+        ) : (
+          <div key={columnId} className="min-w-0 whitespace-nowrap">
+            {projectColumnDefinitions[columnId].label}
+          </div>
+        ),
+      )}
       <div className="sr-only text-right">Actions</div>
     </div>
   )

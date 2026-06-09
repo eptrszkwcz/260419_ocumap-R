@@ -19,8 +19,12 @@ export function todayIsoDate(): string {
 export function parseToIsoDate(input: string): string {
   const t = input.trim()
   if (!t) return ''
-  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t
-  const d = new Date(t.includes('T') ? t : `${t}T12:00:00`)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
+    const d = new Date(`${t}T12:00:00`)
+    if (Number.isNaN(d.getTime())) return ''
+    return t
+  }
+  const d = new Date(t)
   if (Number.isNaN(d.getTime())) return ''
   return d.toISOString().slice(0, 10)
 }

@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { nextSortDirection, type SortDirection } from '@/components/SortableColumnHeader'
 import { type ProjectRecord } from '@/data/sampleProjects'
 import { resolveVisibleProjectColumns } from '@/pages/projects/projectListColumns'
 import { ProjectsListHeader, ProjectsListRows } from '@/pages/projectsListPresentation'
+import {
+  sortProjects,
+  type ProjectListSortColumn,
+} from '@/pages/projects/sortProjects'
 
 type ProjectsTableProps = {
   projects: ProjectRecord[]
@@ -16,6 +21,8 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
   const navigate = useNavigate()
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
+  const [sortColumn, setSortColumn] = useState<ProjectListSortColumn>('lastModified')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
   useEffect(() => {
     const el = containerRef.current
@@ -37,14 +44,29 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
     [containerWidth],
   )
 
+  const sortedProjects = useMemo(
+    () => sortProjects(projects, sortColumn, sortDirection),
+    [projects, sortColumn, sortDirection],
+  )
+
+  const handleSortColumn = (column: ProjectListSortColumn) => {
+    setSortDirection(nextSortDirection(sortColumn, column, sortDirection))
+    setSortColumn(column)
+  }
+
   return (
     <div
       ref={containerRef}
       className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-auto bg-page pb-panel-padding"
     >
-      <ProjectsListHeader visibleColumns={visibleColumns} />
+      <ProjectsListHeader
+        visibleColumns={visibleColumns}
+        sortColumn={sortColumn}
+        sortDirection={sortDirection}
+        onSortColumn={handleSortColumn}
+      />
       <ProjectsListRows
-        projects={projects}
+        projects={sortedProjects}
         visibleColumns={visibleColumns}
         rowProps={(project) => ({
           onActivate: () => {
