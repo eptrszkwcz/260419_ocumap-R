@@ -125,33 +125,43 @@ function syncCaptureMarkersLayer(
   linkedFeatureId: string | null,
   openedFeatureId: string | null,
 ) {
-  if (!map.isStyleLoaded()) return
   const data = captureMarkersFeatureCollection(markers)
   try {
-    if (!map.getSource(CAPTURE_SOURCE_ID)) {
-      map.addSource(CAPTURE_SOURCE_ID, { type: 'geojson', data })
-      map.addLayer({
-        id: CAPTURE_LAYER_ID,
-        type: 'circle',
-        source: CAPTURE_SOURCE_ID,
-        paint: {
-          'circle-radius': 6,
-          'circle-color': ['get', 'fillColor'],
-          'circle-opacity': 0.32,
-          'circle-stroke-width': 2,
-          'circle-stroke-color': ['get', 'strokeColor'],
-        },
-      })
-      applyCaptureMarkerPaint(map, linkedFeatureId, openedFeatureId)
-    } else {
-      const src = map.getSource(CAPTURE_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined
-      src?.setData(data)
+    const existingLayer = map.getLayer(CAPTURE_LAYER_ID)
+    const existingSource = map.getSource(CAPTURE_SOURCE_ID)
+
+    if (existingLayer != null && existingSource != null) {
+      const src = existingSource as mapboxgl.GeoJSONSource
+      src.setData(data)
       map.setPaintProperty(CAPTURE_LAYER_ID, 'circle-color', ['get', 'fillColor'])
       map.setPaintProperty(CAPTURE_LAYER_ID, 'circle-stroke-color', ['get', 'strokeColor'])
       applyCaptureMarkerPaint(map, linkedFeatureId, openedFeatureId)
+      return
     }
+
+    if (existingLayer != null) {
+      map.removeLayer(CAPTURE_LAYER_ID)
+    }
+    if (existingSource != null) {
+      map.removeSource(CAPTURE_SOURCE_ID)
+    }
+
+    map.addSource(CAPTURE_SOURCE_ID, { type: 'geojson', data })
+    map.addLayer({
+      id: CAPTURE_LAYER_ID,
+      type: 'circle',
+      source: CAPTURE_SOURCE_ID,
+      paint: {
+        'circle-radius': 6,
+        'circle-color': ['get', 'fillColor'],
+        'circle-opacity': 0.32,
+        'circle-stroke-width': 2,
+        'circle-stroke-color': ['get', 'strokeColor'],
+      },
+    })
+    applyCaptureMarkerPaint(map, linkedFeatureId, openedFeatureId)
   } catch {
-    /* rare: style does not accept custom layers */
+    /* style still loading or style does not accept custom layers */
   }
 }
 
@@ -177,6 +187,8 @@ export function InfrastructureMapView({
 }: InfrastructureMapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
+  const styleUrlRef = useRef(styleUrl)
+  const appliedStyleUrlRef = useRef<string | null>(null)
   const captureMarkersRef = useRef(captureMarkers)
   const linkedFeatureIdRef = useRef<string | null>(null)
   const openedFeatureIdRef = useRef<string | null>(null)
@@ -190,6 +202,10 @@ export function InfrastructureMapView({
     setOpenedFeatureId,
     openFeatureFromMap,
   } = useFeatureMapHover()
+
+  useLayoutEffect(() => {
+    styleUrlRef.current = styleUrl
+  }, [styleUrl])
 
   useLayoutEffect(() => {
     captureMarkersRef.current = captureMarkers
@@ -213,15 +229,18 @@ export function InfrastructureMapView({
 
     mapboxgl.accessToken = token
 
+    const initialStyleUrl = styleUrlRef.current
+    appliedStyleUrlRef.current = initialStyleUrl
+
     const map = new mapboxgl.Map({
       container: el,
-      style: styleUrl,
+      style: initialStyleUrl,
       center: [-95.80992002324031, 29.783350113603223],
       zoom: 12.8,
     })
     mapRef.current = map
 
-    const onLoad = () => {
+    const resyncMarkersAfterStyleLoad = () => {
       syncCaptureMarkersLayer(
         map,
         captureMarkersRef.current,
@@ -229,7 +248,8 @@ export function InfrastructureMapView({
         openedFeatureIdRef.current,
       )
     }
-    map.on('load', onLoad)
+
+    map.on('style.load', resyncMarkersAfterStyleLoad)
 
     const scheduleResize = () => {
       if (resizeRafRef.current !== 0) return
@@ -245,14 +265,24 @@ export function InfrastructureMapView({
     ro.observe(el)
 
     return () => {
-      map.off('load', onLoad)
+      map.off('style.load', resyncMarkersAfterStyleLoad)
       cancelAnimationFrame(resizeRafRef.current)
       resizeRafRef.current = 0
       ro.disconnect()
       map.remove()
       mapRef.current = null
+      appliedStyleUrlRef.current = null
     }
-  }, [styleUrl, token])
+  }, [token])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (map == null) return
+    if (styleUrl === appliedStyleUrlRef.current) return
+
+    appliedStyleUrlRef.current = styleUrl
+    map.setStyle(styleUrl)
+  }, [styleUrl])
 
   useEffect(() => {
     const map = mapRef.current
@@ -301,7 +331,7 @@ export function InfrastructureMapView({
     return () => {
       map.off('click', CAPTURE_LAYER_ID, onClick)
     }
-  }, [isPickingLocation, openFeatureFromMap, setOpenedFeatureId])
+  }, [isPickingLocation, openFeatureFromMap, setOpenedFeatureId, styleUrl])
 
   useEffect(() => {
     const map = mapRef.current
@@ -333,7 +363,7 @@ export function InfrastructureMapView({
       setMapHoveredFeatureId(null)
       canvas.style.cursor = prevCursor
     }
-  }, [isPickingLocation, setMapHoveredFeatureId])
+  }, [isPickingLocation, setMapHoveredFeatureId, styleUrl])
 
   useEffect(() => {
     if (splitCommitToken === 0) return

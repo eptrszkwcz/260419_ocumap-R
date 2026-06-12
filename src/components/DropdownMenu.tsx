@@ -10,6 +10,7 @@ export type DropdownMenuItemConfig = {
   label: string
   onSelect: () => void
   icon?: ReactNode
+  trailing?: ReactNode
   selected?: boolean
 }
 
@@ -85,11 +86,23 @@ export function DropdownMenu({
             type="button"
             role="menuitem"
             aria-current={item.selected ? 'true' : undefined}
-            className={dropdownMenuItemClass(item.selected)}
+            className={
+              dropdownMenuItemClass(item.selected) +
+              (item.trailing != null ? ' justify-between gap-3' : '')
+            }
             onClick={() => run(item.onSelect)}
           >
-            {item.icon != null ? <span className="shrink-0">{item.icon}</span> : null}
-            <span className="min-w-0">{item.label}</span>
+            {item.trailing != null ? (
+              <>
+                <span className="min-w-0">{item.label}</span>
+                <span className="shrink-0">{item.trailing}</span>
+              </>
+            ) : (
+              <>
+                {item.icon != null ? <span className="shrink-0">{item.icon}</span> : null}
+                <span className="min-w-0">{item.label}</span>
+              </>
+            )}
           </button>
         ))}
       </div>

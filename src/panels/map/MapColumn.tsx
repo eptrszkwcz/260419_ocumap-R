@@ -11,6 +11,7 @@ import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 
 import { NewProjectOrganizationPicker } from '@/panels/library/newProject/NewProjectOrganizationPicker'
+import { InfrastructureMapStyleHeader } from '@/panels/map/InfrastructureMapStyleHeader'
 import { InfrastructureMapView } from '@/panels/map/InfrastructureMapView'
 import { MapContent } from '@/panels/map/MapContent'
 import { MapControlHeader } from '@/panels/map/MapControlHeader'
@@ -22,6 +23,10 @@ import {
   floorPlanImageSrc,
   getFloorPlanOptionsForProject,
 } from '@/panels/map/mapFloorPlans'
+import {
+  resolveMapBaseStyleUrl,
+  type MapBaseStyleId,
+} from '@/panels/map/mapBaseStyles'
 import {
   mergeCaptureMarkerPreview,
   mergeCaptureMarkerStylePreview,
@@ -48,12 +53,17 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
   const { openedFeatureId, linkedFeatureId } = useFeatureMapHover()
   const [buildingTab, setBuildingTab] = useState('2d')
   const [floorPlanId, setFloorPlanId] = useState<FloorPlanId>(DEFAULT_FLOOR_PLAN_ID)
+  const [baseMapStyleId, setBaseMapStyleId] = useState<MapBaseStyleId>('default')
 
   const floorPlanOptions = useMemo(
     () => getFloorPlanOptionsForProject(projectId),
     [projectId],
   )
   const hasFloorPlans = floorPlanOptions.length > 0
+
+  useEffect(() => {
+    setBaseMapStyleId('default')
+  }, [projectId])
 
   useEffect(() => {
     if (!hasFloorPlans) return
@@ -123,6 +133,8 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
 
   if (project.projectType === 'Infrastructure') {
     const styleUrl = project.mapboxStyleUrl
+    const activeStyleUrl =
+      styleUrl != null ? resolveMapBaseStyleUrl(baseMapStyleId, styleUrl) : null
     return (
       <div className="flex h-full min-h-[680px] min-w-0 flex-col">
         <MapHeader />
@@ -132,12 +144,18 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
           <div className="h-tab-row shrink-0 bg-page" aria-hidden />
           <TabPanelBody>
             <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-              {styleUrl != null ? (
-                <InfrastructureMapView
-                  styleUrl={styleUrl}
-                  splitCommitToken={splitCommitToken}
-                  captureMarkers={displayCaptureMarkers}
-                />
+              {activeStyleUrl != null ? (
+                <>
+                  <InfrastructureMapStyleHeader
+                    selectedStyleId={baseMapStyleId}
+                    onStyleChange={setBaseMapStyleId}
+                  />
+                  <InfrastructureMapView
+                    styleUrl={activeStyleUrl}
+                    splitCommitToken={splitCommitToken}
+                    captureMarkers={displayCaptureMarkers}
+                  />
+                </>
               ) : (
                 <div
                   className="flex min-h-0 flex-1 items-center justify-center bg-panel p-panel-padding font-sans text-standard text-fg-muted"
