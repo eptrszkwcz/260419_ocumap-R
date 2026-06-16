@@ -6,6 +6,9 @@ import {
 } from '@/panels/library/assetGeometryHelpers'
 import { normalizeMarkerColor } from '@/panels/map/markerColors'
 
+export const FEATURE_DRAW_INSTRUCTION =
+  'Click to add points. Select Confirm on the popup panel when finished. Press Esc to cancel.'
+
 export type LoadedDrawState = {
   floorPlanId: FloorPlanId | null
   floorPlanVertices: { x: number; y: number }[]

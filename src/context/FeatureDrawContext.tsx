@@ -17,6 +17,11 @@ type EditSnapshot = {
   geometryType: FeatureGeometryType | null
 }
 
+type DrawUndoEntry =
+  | { type: 'addVertex'; surface: 'floorPlan' | 'map' }
+  | { type: 'moveVertex'; surface: 'floorPlan' | 'map'; index: number; previous: FloorPlanDrawVertex | MapDrawVertex }
+  | { type: 'closePolygon' }
+
 export type FeatureDrawContextValue = {
   isDrawing: boolean
   isEditingFeature: boolean
@@ -41,10 +46,16 @@ export type FeatureDrawContextValue = {
   updateMapVertex: (index: number, lng: number, lat: number) => void
   addFloorPlanVertex: (floorPlanId: FloorPlanId, x: number, y: number) => void
   addMapVertex: (lng: number, lat: number) => void
-  finishLine: () => void
   closePolygon: () => void
   confirmGeometry: () => void
   redrawGeometry: () => void
+  canUndoDraw: boolean
+  undoDrawMove: () => void
+  recordDrawVertexMove: (
+    surface: 'floorPlan' | 'map',
+    index: number,
+    previous: FloorPlanDrawVertex | MapDrawVertex,
+  ) => void
   isNearFirstFloorPlanVertex: (
     floorPlanId: FloorPlanId,
     x: number,
@@ -69,6 +80,7 @@ type DrawState = {
   geometryConfirmed: boolean
   draftMarkerColor: string
   editSnapshot: EditSnapshot | null
+  drawUndoStack: DrawUndoEntry[]
 }
 
 const INITIAL_STATE: DrawState = {
@@ -84,10 +96,30 @@ const INITIAL_STATE: DrawState = {
   geometryConfirmed: false,
   draftMarkerColor: DEFAULT_MARKER_COLOR,
   editSnapshot: null,
+  drawUndoStack: [],
 }
 
 function isActiveSession(s: DrawState): boolean {
   return s.isDrawing || s.isEditingFeature
+}
+
+function isValidGeometryForConfirm(
+  geometryType: FeatureGeometryType,
+  vertexCount: number,
+): boolean {
+  if (geometryType === 'point') return vertexCount >= 1
+  if (geometryType === 'line') return vertexCount >= 2
+  return vertexCount >= 3
+}
+
+function geometryTypeForVertexCount(count: number): FeatureGeometryType | null {
+  if (count === 0) return null
+  if (count === 1) return 'point'
+  return 'line'
+}
+
+function pushDrawUndo(stack: DrawUndoEntry[], entry: DrawUndoEntry): DrawUndoEntry[] {
+  return [...stack, entry]
 }
 
 export function FeatureDrawProvider({ children }: { children: ReactNode }) {
@@ -155,7 +187,10 @@ export function FeatureDrawProvider({ children }: { children: ReactNode }) {
 
   const updateFloorPlanVertex = useCallback((index: number, x: number, y: number) => {
     setState((s) => {
-      if (!s.isEditingFeature || s.drawPhase !== 'editing') return s
+      const canEdit = s.isEditingFeature && s.drawPhase === 'editing'
+      const canCollect =
+        s.isDrawing && s.drawPhase === 'collecting' && s.geometryType !== 'polygon'
+      if (!canEdit && !canCollect) return s
       if (index < 0 || index >= s.floorPlanVertices.length) return s
       const next = [...s.floorPlanVertices]
       next[index] = { x, y }
@@ -165,7 +200,10 @@ export function FeatureDrawProvider({ children }: { children: ReactNode }) {
 
   const updateMapVertex = useCallback((index: number, lng: number, lat: number) => {
     setState((s) => {
-      if (!s.isEditingFeature || s.drawPhase !== 'editing') return s
+      const canEdit = s.isEditingFeature && s.drawPhase === 'editing'
+      const canCollect =
+        s.isDrawing && s.drawPhase === 'collecting' && s.geometryType !== 'polygon'
+      if (!canEdit && !canCollect) return s
       if (index < 0 || index >= s.mapVertices.length) return s
       const next = [...s.mapVertices]
       next[index] = { lng, lat }
@@ -191,103 +229,151 @@ export function FeatureDrawProvider({ children }: { children: ReactNode }) {
 
   const addFloorPlanVertex = useCallback((floorPlanId: FloorPlanId, x: number, y: number) => {
     setState((s) => {
-      if (!isActiveSession(s) || s.drawPhase === 'confirmed' || s.drawPhase === 'editing') return s
-
-      if (s.drawPhase === 'awaitingConfirm' && s.geometryType === 'point' && s.floorPlanVertices.length === 1) {
-        return {
-          ...s,
-          floorPlanId,
-          floorPlanVertices: [...s.floorPlanVertices, { x, y }],
-          geometryType: 'line',
-          drawPhase: 'collecting',
-          geometryConfirmed: false,
-        }
-      }
-
-      if (s.drawPhase === 'awaitingConfirm') return s
+      if (!isActiveSession(s) || s.drawPhase !== 'collecting') return s
+      if (s.geometryType === 'polygon') return s
 
       const nextVertices = [...s.floorPlanVertices, { x, y }]
-      if (nextVertices.length === 1) {
-        return {
-          ...s,
-          floorPlanId,
-          floorPlanVertices: nextVertices,
-          geometryType: 'point',
-          drawPhase: 'awaitingConfirm',
-          geometryConfirmed: false,
-        }
-      }
+      const geometryType: FeatureGeometryType = nextVertices.length === 1 ? 'point' : 'line'
 
       return {
         ...s,
         floorPlanId,
         floorPlanVertices: nextVertices,
-        geometryType: 'line',
-        drawPhase: 'collecting',
+        geometryType,
         geometryConfirmed: false,
+        drawUndoStack: s.isDrawing
+          ? pushDrawUndo(s.drawUndoStack, { type: 'addVertex', surface: 'floorPlan' })
+          : s.drawUndoStack,
       }
     })
   }, [])
 
   const addMapVertex = useCallback((lng: number, lat: number) => {
     setState((s) => {
-      if (!isActiveSession(s) || s.drawPhase === 'confirmed' || s.drawPhase === 'editing') return s
-
-      if (s.drawPhase === 'awaitingConfirm' && s.geometryType === 'point' && s.mapVertices.length === 1) {
-        return {
-          ...s,
-          mapVertices: [...s.mapVertices, { lng, lat }],
-          geometryType: 'line',
-          drawPhase: 'collecting',
-          geometryConfirmed: false,
-        }
-      }
-
-      if (s.drawPhase === 'awaitingConfirm') return s
+      if (!isActiveSession(s) || s.drawPhase !== 'collecting') return s
+      if (s.geometryType === 'polygon') return s
 
       const nextVertices = [...s.mapVertices, { lng, lat }]
-      if (nextVertices.length === 1) {
-        return {
-          ...s,
-          mapVertices: nextVertices,
-          geometryType: 'point',
-          drawPhase: 'awaitingConfirm',
-          geometryConfirmed: false,
-        }
-      }
+      const geometryType: FeatureGeometryType = nextVertices.length === 1 ? 'point' : 'line'
 
       return {
         ...s,
         mapVertices: nextVertices,
-        geometryType: 'line',
-        drawPhase: 'collecting',
+        geometryType,
         geometryConfirmed: false,
+        drawUndoStack: s.isDrawing
+          ? pushDrawUndo(s.drawUndoStack, { type: 'addVertex', surface: 'map' })
+          : s.drawUndoStack,
       }
-    })
-  }, [])
-
-  const finishLine = useCallback(() => {
-    setState((s) => {
-      if (!isActiveSession(s) || s.floorPlanVertices.length + s.mapVertices.length < 2) return s
-      return { ...s, geometryType: 'line', drawPhase: 'awaitingConfirm', geometryConfirmed: false }
     })
   }, [])
 
   const closePolygon = useCallback(() => {
     setState((s) => {
       const count = s.floorPlanVertices.length + s.mapVertices.length
-      if (!isActiveSession(s) || count < 3) return s
-      return { ...s, geometryType: 'polygon', drawPhase: 'awaitingConfirm', geometryConfirmed: false }
+      if (!isActiveSession(s) || s.drawPhase !== 'collecting' || count < 3) return s
+      return {
+        ...s,
+        geometryType: 'polygon',
+        geometryConfirmed: false,
+        drawUndoStack: s.isDrawing
+          ? pushDrawUndo(s.drawUndoStack, { type: 'closePolygon' })
+          : s.drawUndoStack,
+      }
+    })
+  }, [])
+
+  const recordDrawVertexMove = useCallback(
+    (surface: 'floorPlan' | 'map', index: number, previous: FloorPlanDrawVertex | MapDrawVertex) => {
+      setState((s) => {
+        if (!s.isDrawing || s.drawPhase !== 'collecting' || s.geometryType === 'polygon') return s
+        return {
+          ...s,
+          drawUndoStack: pushDrawUndo(s.drawUndoStack, {
+            type: 'moveVertex',
+            surface,
+            index,
+            previous,
+          }),
+        }
+      })
+    },
+    [],
+  )
+
+  const undoDrawMove = useCallback(() => {
+    setState((s) => {
+      if (!s.isDrawing || s.drawPhase !== 'collecting' || s.drawUndoStack.length === 0) return s
+
+      const entry = s.drawUndoStack[s.drawUndoStack.length - 1]
+      const nextStack = s.drawUndoStack.slice(0, -1)
+
+      if (entry.type === 'addVertex') {
+        if (entry.surface === 'floorPlan') {
+          const nextVertices = s.floorPlanVertices.slice(0, -1)
+          return {
+            ...s,
+            floorPlanVertices: nextVertices,
+            geometryType: geometryTypeForVertexCount(nextVertices.length),
+            geometryConfirmed: false,
+            drawUndoStack: nextStack,
+          }
+        }
+        const nextVertices = s.mapVertices.slice(0, -1)
+        return {
+          ...s,
+          mapVertices: nextVertices,
+          geometryType: geometryTypeForVertexCount(nextVertices.length),
+          geometryConfirmed: false,
+          drawUndoStack: nextStack,
+        }
+      }
+
+      if (entry.type === 'moveVertex') {
+        if (entry.surface === 'floorPlan') {
+          if (entry.index < 0 || entry.index >= s.floorPlanVertices.length) return s
+          const prev = entry.previous as FloorPlanDrawVertex
+          const nextVertices = [...s.floorPlanVertices]
+          nextVertices[entry.index] = { x: prev.x, y: prev.y }
+          return {
+            ...s,
+            floorPlanVertices: nextVertices,
+            geometryConfirmed: false,
+            drawUndoStack: nextStack,
+          }
+        }
+        if (entry.index < 0 || entry.index >= s.mapVertices.length) return s
+        const prev = entry.previous as MapDrawVertex
+        const nextVertices = [...s.mapVertices]
+        nextVertices[entry.index] = { lng: prev.lng, lat: prev.lat }
+        return {
+          ...s,
+          mapVertices: nextVertices,
+          geometryConfirmed: false,
+          drawUndoStack: nextStack,
+        }
+      }
+
+      return {
+        ...s,
+        geometryType: 'line',
+        geometryConfirmed: false,
+        drawUndoStack: nextStack,
+      }
     })
   }, [])
 
   const confirmGeometry = useCallback(() => {
     setState((s) => {
-      if (s.drawPhase !== 'awaitingConfirm' || s.geometryType == null) return s
+      if (s.drawPhase !== 'collecting' && s.drawPhase !== 'awaitingConfirm') return s
+      if (s.geometryType == null) return s
+      const count = s.floorPlanVertices.length + s.mapVertices.length
+      if (!isValidGeometryForConfirm(s.geometryType, count)) return s
       return {
         ...s,
         drawPhase: 'confirmed',
         geometryConfirmed: true,
+        drawUndoStack: [],
       }
     })
   }, [])
@@ -300,6 +386,7 @@ export function FeatureDrawProvider({ children }: { children: ReactNode }) {
       geometryType: null,
       drawPhase: 'collecting',
       geometryConfirmed: false,
+      drawUndoStack: [],
     }))
   }, [])
 
@@ -356,10 +443,12 @@ export function FeatureDrawProvider({ children }: { children: ReactNode }) {
       updateMapVertex,
       addFloorPlanVertex,
       addMapVertex,
-      finishLine,
       closePolygon,
       confirmGeometry,
       redrawGeometry,
+      canUndoDraw: state.drawUndoStack.length > 0,
+      undoDrawMove,
+      recordDrawVertexMove,
       isNearFirstFloorPlanVertex,
       isNearFirstMapVertex,
     }),
@@ -377,10 +466,11 @@ export function FeatureDrawProvider({ children }: { children: ReactNode }) {
       updateMapVertex,
       addFloorPlanVertex,
       addMapVertex,
-      finishLine,
       closePolygon,
       confirmGeometry,
       redrawGeometry,
+      undoDrawMove,
+      recordDrawVertexMove,
       isNearFirstFloorPlanVertex,
       isNearFirstMapVertex,
     ],
@@ -407,10 +497,12 @@ export function useFeatureDraw(): FeatureDrawContextValue {
       updateMapVertex: () => {},
       addFloorPlanVertex: () => {},
       addMapVertex: () => {},
-      finishLine: () => {},
       closePolygon: () => {},
       confirmGeometry: () => {},
       redrawGeometry: () => {},
+      canUndoDraw: false,
+      undoDrawMove: () => {},
+      recordDrawVertexMove: () => {},
       isNearFirstFloorPlanVertex: () => false,
       isNearFirstMapVertex: () => false,
     }
