@@ -9,13 +9,14 @@ import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import type { MapDrawnGeometry } from '@/panels/library/assetGeometryHelpers'
 import { FeatureDrawConfirmPanel } from '@/panels/map/FeatureDrawConfirmPanel'
+import { FEATURE_DRAW_INSTRUCTION } from '@/panels/map/featureDrawUtils'
 import { MapOverlayControlBar } from '@/panels/map/MapOverlayControlBar'
 import {
   DRAWN_FILL_LAYER_ID,
   DRAWN_LINE_LAYER_ID,
   resyncAllDrawLayers,
 } from '@/panels/map/mapDrawLayers'
-import { markerColorsFromAsset } from '@/panels/map/markerColors'
+import { markerColorsFromAsset, markerRgba } from '@/panels/map/markerColors'
 import {
   mapOverlayInsetBottomClassName,
   mapOverlayInsetXClassName,
@@ -23,6 +24,20 @@ import {
 
 const CAPTURE_SOURCE_ID = 'ocumap-capture-markers'
 const CAPTURE_LAYER_ID = 'ocumap-capture-markers-circle'
+
+function createPolygonCloseMarkerElement(fillColor: string, strokeColor: string): HTMLDivElement {
+  const el = document.createElement('div')
+  el.style.width = '20px'
+  el.style.height = '20px'
+  el.style.borderRadius = '50%'
+  el.style.backgroundColor = markerRgba(fillColor, 0.85)
+  el.style.border = `2px dashed ${markerRgba(strokeColor, 1)}`
+  el.style.cursor = 'pointer'
+  el.style.boxSizing = 'border-box'
+  el.setAttribute('role', 'button')
+  el.setAttribute('aria-label', 'Close polygon')
+  return el
+}
 
 function captureMarkersFeatureCollection(markers: MapCaptureMarker[]) {
   return {
@@ -243,14 +258,13 @@ export function InfrastructureMapView({
     geometryType,
     draftMarkerColor,
     addMapVertex,
-    finishLine,
     closePolygon,
     cancelDraw,
     cancelEditFeature,
     requestEditConfirm,
     redrawGeometry,
     updateMapVertex,
-    isNearFirstMapVertex,
+    recordDrawVertexMove,
   } = useFeatureDraw()
   const { markerStylePreview } = useMarkerStylePreview()
   const previewColor = markerStylePreview?.color ?? draftMarkerColor
@@ -269,6 +283,8 @@ export function InfrastructureMapView({
     (g) => !(isEditingThisFeature && g.id === editingFeatureId),
   )
   const editVertexMarkersRef = useRef<mapboxgl.Marker[]>([])
+  const collectingVertexMarkersRef = useRef<mapboxgl.Marker[]>([])
+  const suppressMapClickRef = useRef(false)
 
   const mapDrawnGeometriesRef = useRef(visibleMapDrawnGeometries)
   const drawPreviewRef = useRef({
@@ -449,6 +465,88 @@ export function InfrastructureMapView({
     updateMapVertex,
   ])
 
+  const showCollectingVertexMarkers =
+    isDrawing && drawPhase === 'collecting' && geometryType !== 'polygon' && mapVertices.length > 0
+  const canClosePolygon = mapVertices.length >= 3 && geometryType === 'line'
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (map == null || !showCollectingVertexMarkers) {
+      collectingVertexMarkersRef.current.forEach((m) => m.remove())
+      collectingVertexMarkersRef.current = []
+      return
+    }
+
+    collectingVertexMarkersRef.current.forEach((m) => m.remove())
+    collectingVertexMarkersRef.current = []
+
+    const closeListeners: Array<{ el: HTMLDivElement; handler: (e: MouseEvent) => void }> = []
+
+    for (let i = 0; i < mapVertices.length; i++) {
+      const v = mapVertices[i]
+      if (v == null) continue
+
+      if (i === 0 && !canClosePolygon) continue
+
+      if (i === 0 && canClosePolygon) {
+        const el = createPolygonCloseMarkerElement(previewFill, previewStroke)
+        const onCloseClick = (e: MouseEvent) => {
+          e.stopPropagation()
+          closePolygon()
+        }
+        el.addEventListener('click', onCloseClick)
+        closeListeners.push({ el, handler: onCloseClick })
+        const marker = new mapboxgl.Marker({ element: el, draggable: false })
+          .setLngLat([v.lng, v.lat])
+          .addTo(map)
+        collectingVertexMarkersRef.current.push(marker)
+        continue
+      }
+
+      const marker = new mapboxgl.Marker({ draggable: true, color: previewFill })
+        .setLngLat([v.lng, v.lat])
+        .addTo(map)
+      const index = i
+      let dragStart: { lng: number; lat: number } | null = null
+      marker.on('dragstart', () => {
+        const ll = marker.getLngLat()
+        dragStart = { lng: ll.lng, lat: ll.lat }
+      })
+      marker.on('drag', () => {
+        const ll = marker.getLngLat()
+        updateMapVertex(index, ll.lng, ll.lat)
+      })
+      marker.on('dragend', () => {
+        suppressMapClickRef.current = true
+        if (dragStart != null) {
+          const ll = marker.getLngLat()
+          if (ll.lng !== dragStart.lng || ll.lat !== dragStart.lat) {
+            recordDrawVertexMove('map', index, dragStart)
+          }
+        }
+        dragStart = null
+      })
+      collectingVertexMarkersRef.current.push(marker)
+    }
+
+    return () => {
+      for (const { el, handler } of closeListeners) {
+        el.removeEventListener('click', handler)
+      }
+      collectingVertexMarkersRef.current.forEach((m) => m.remove())
+      collectingVertexMarkersRef.current = []
+    }
+  }, [
+    showCollectingVertexMarkers,
+    canClosePolygon,
+    mapVertices.length,
+    previewFill,
+    previewStroke,
+    closePolygon,
+    updateMapVertex,
+    recordDrawVertexMove,
+  ])
+
   useEffect(() => {
     const map = mapRef.current
     if (map == null || isPickingLocation || isDrawing || isEditingFeature) return
@@ -524,27 +622,12 @@ export function InfrastructureMapView({
     canvas.style.cursor = 'crosshair'
 
     const onClick = (e: mapboxgl.MapMouseEvent) => {
-      const { lng, lat } = e.lngLat
-
-      if (
-        mapVertices.length >= 3 &&
-        isNearFirstMapVertex(lng, lat, 12, (lngVal, latVal) => {
-          const p = map.project([lngVal, latVal])
-          return { x: p.x, y: p.y }
-        })
-      ) {
-        closePolygon()
+      if (suppressMapClickRef.current) {
+        suppressMapClickRef.current = false
         return
       }
-
+      const { lng, lat } = e.lngLat
       addMapVertex(lng, lat)
-    }
-
-    const onDblClick = (e: mapboxgl.MapMouseEvent) => {
-      e.preventDefault()
-      if (drawPhase === 'collecting' && mapVertices.length >= 2) {
-        finishLine()
-      }
     }
 
     const onKeyDown = (ev: KeyboardEvent) => {
@@ -559,26 +642,19 @@ export function InfrastructureMapView({
     }
 
     map.on('click', onClick)
-    map.on('dblclick', onDblClick)
     window.addEventListener('keydown', onKeyDown)
 
     return () => {
       map.off('click', onClick)
-      map.off('dblclick', onDblClick)
       canvas.style.cursor = prevCursor
       window.removeEventListener('keydown', onKeyDown)
     }
   }, [
     isCollectingGeometry,
     isEditingFeature,
-    drawPhase,
-    mapVertices.length,
     addMapVertex,
-    finishLine,
-    closePolygon,
     cancelDraw,
     cancelEditFeature,
-    isNearFirstMapVertex,
   ])
 
   useEffect(() => {
@@ -708,8 +784,7 @@ export function InfrastructureMapView({
           aria-live="polite"
         >
           <div className="max-w-lg rounded-panel bg-fg-highlight px-3 py-2 text-center font-sans text-standard text-white shadow-sm">
-            Click to add points. Double-click to finish a line. Click the first point to close a polygon.
-            Press Esc to cancel.
+            {FEATURE_DRAW_INSTRUCTION}
           </div>
         </div>
       ) : null}

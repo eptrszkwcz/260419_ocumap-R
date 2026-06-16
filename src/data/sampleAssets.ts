@@ -154,6 +154,26 @@ export const sampleAssetsJefferson: SpatialAsset[] = [
       ],
     },
   },
+  {
+    id: 'drawn-jefferson-floor-5-line',
+    kind: 'image',
+    title: '5th Floor Path',
+    dateUploaded: 'June 16, 2026',
+    geometryType: 'line',
+    markerColor: '#2563eb',
+    floorPlanGeometry: {
+      floorPlanId: 'SOM-5',
+      coordinates: [
+        { x: 0.896, y: 0.759 },
+        { x: 0.873, y: 0.772 },
+        { x: 0.871, y: 0.791 },
+        { x: 0.284, y: 0.787 },
+        { x: 0.284, y: 0.209 },
+        { x: 0.179, y: 0.209 },
+        { x: 0.177, y: 0.112 },
+      ],
+    },
+  },
 ]
 
 /** Katy Freeway Expansion: three katy-* panoramas in the same folder. */
@@ -184,6 +204,21 @@ export const sampleAssetsKaty: SpatialAsset[] = [
     fileUrl: `${sphericalPanoBase}/katy-surface-road.png`,
     captureLat: 29.77776,
     captureLng: -95.822758,
+  },
+  {
+    id: 'drawn-katy-fort-bend-rd',
+    kind: 'image',
+    title: 'Fort Bend Rd',
+    dateUploaded: 'June 16, 2026',
+    geometryType: 'line',
+    markerColor: '#2563eb',
+    mapGeometry: {
+      coordinates: [
+        { lng: -95.801782, lat: 29.801706 },
+        { lng: -95.801703, lat: 29.782109 },
+        { lng: -95.801703, lat: 29.773602 },
+      ],
+    },
   },
 ]
 

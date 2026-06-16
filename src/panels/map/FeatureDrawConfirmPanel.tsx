@@ -9,6 +9,12 @@ function getConfirmLabel(type: FeatureGeometryType | null, isEditing: boolean): 
   return isEditing ? `Confirm updated ${label}` : `Confirm ${label}`
 }
 
+function canConfirmGeometry(type: FeatureGeometryType, vertexCount: number): boolean {
+  if (type === 'point') return vertexCount >= 1
+  if (type === 'line') return vertexCount >= 2
+  return vertexCount >= 3
+}
+
 export function FeatureDrawConfirmPanel({ featureTitle }: { featureTitle?: string }) {
   const {
     drawPhase,
@@ -19,17 +25,28 @@ export function FeatureDrawConfirmPanel({ featureTitle }: { featureTitle?: strin
     confirmGeometry,
     confirmEditGeometry,
     redrawGeometry,
+    canUndoDraw,
+    undoDrawMove,
     cancelDraw,
     cancelEditFeature,
   } = useFeatureDraw()
 
-  if (drawPhase !== 'awaitingConfirm' || geometryType == null) {
+  if (geometryType == null) {
     return null
   }
 
   const vertexCount = floorPlanVertices.length + mapVertices.length
+  const showForNewDraw =
+    !isEditingFeature && drawPhase === 'collecting' && vertexCount > 0
+  const showForEdit = isEditingFeature && drawPhase === 'awaitingConfirm'
+
+  if (!showForNewDraw && !showForEdit) {
+    return null
+  }
+
   const onConfirm = isEditingFeature ? confirmEditGeometry : confirmGeometry
   const onCancel = isEditingFeature ? cancelEditFeature : cancelDraw
+  const confirmEnabled = canConfirmGeometry(geometryType, vertexCount)
 
   return (
     <div
@@ -55,19 +72,23 @@ export function FeatureDrawConfirmPanel({ featureTitle }: { featureTitle?: strin
         <button
           type="button"
           onClick={onConfirm}
+          disabled={!confirmEnabled}
           className={
             PRIMARY_BUTTON_CLASS +
-            ' h-8 w-full rounded-panel text-standard focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
+            ' h-8 w-full rounded-panel text-standard focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50'
           }
         >
           Confirm
         </button>
         <button
           type="button"
-          onClick={redrawGeometry}
-          className="text-fg-highlight hover:bg-area-highlight h-8 w-full rounded-panel border border-stroke bg-panel font-sans text-standard transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none"
+          onClick={isEditingFeature ? redrawGeometry : undoDrawMove}
+          disabled={!isEditingFeature && !canUndoDraw}
+          className={
+            'text-fg-highlight hover:bg-area-highlight h-8 w-full rounded-panel border border-stroke bg-panel font-sans text-standard transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50'
+          }
         >
-          Redraw
+          {isEditingFeature ? 'Redraw' : 'Undo'}
         </button>
         <button
           type="button"

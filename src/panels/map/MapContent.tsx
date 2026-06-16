@@ -7,6 +7,7 @@ import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import type { FloorPlanDrawnGeometry } from '@/panels/library/assetGeometryHelpers'
 import { FeatureDrawConfirmPanel } from '@/panels/map/FeatureDrawConfirmPanel'
+import { FEATURE_DRAW_INSTRUCTION } from '@/panels/map/featureDrawUtils'
 import { MapOverlayControlBar } from '@/panels/map/MapOverlayControlBar'
 import type { FloorPlanId } from '@/panels/map/mapFloorPlans'
 import {
@@ -25,7 +26,6 @@ const DEFAULT_FILL_OPACITY = 0.32
 const DIM_OPACITY = 0.35
 const HIGHLIGHT_FILL_OPACITY = 1
 const MARKER_DIAMETER_PX = 12
-const FIRST_VERTEX_TOLERANCE_PX = 12
 
 function clamp(n: number, lo: number, hi: number) {
   return Math.min(hi, Math.max(lo, n))
@@ -291,24 +291,38 @@ function FloorPlanDrawPreview({
   )
 }
 
-function FloorPlanEditHandles({
+function FloorPlanVertexHandles({
+  mode,
   vertices,
+  geometryType,
   naturalSize,
   view,
   containerRef,
   color,
   strokeColor,
   onMoveVertex,
+  onClosePolygon,
+  onVertexDragEnd,
 }: {
+  mode: 'edit' | 'collecting'
   vertices: { x: number; y: number }[]
+  geometryType?: 'point' | 'line' | 'polygon' | null
   naturalSize: { w: number; h: number }
   view: ViewState
   containerRef: React.RefObject<HTMLDivElement | null>
   color: string
   strokeColor: string
   onMoveVertex: (index: number, x: number, y: number) => void
+  onClosePolygon?: () => void
+  onVertexDragEnd?: (index: number, previous: { x: number; y: number }) => void
 }) {
   const dragIndexRef = useRef<number | null>(null)
+  const dragMovedRef = useRef(false)
+  const dragStartVertexRef = useRef<{ index: number; vertex: { x: number; y: number } } | null>(
+    null,
+  )
+  const canClosePolygon =
+    mode === 'collecting' && vertices.length >= 3 && geometryType === 'line'
 
   const vertexFromClient = useCallback(
     (clientX: number, clientY: number) => {
@@ -332,13 +346,22 @@ function FloorPlanEditHandles({
     const onMove = (e: PointerEvent) => {
       const idx = dragIndexRef.current
       if (idx == null) return
+      dragMovedRef.current = true
       const coords = vertexFromClient(e.clientX, e.clientY)
       if (coords == null) return
       onMoveVertex(idx, coords.x, coords.y)
     }
 
     const onUp = () => {
+      if (dragIndexRef.current != null && dragMovedRef.current) {
+        const start = dragStartVertexRef.current
+        if (start != null) {
+          onVertexDragEnd?.(start.index, start.vertex)
+        }
+      }
       dragIndexRef.current = null
+      dragMovedRef.current = false
+      dragStartVertexRef.current = null
     }
 
     window.addEventListener('pointermove', onMove)
@@ -349,7 +372,7 @@ function FloorPlanEditHandles({
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
     }
-  }, [onMoveVertex, vertexFromClient])
+  }, [onMoveVertex, onVertexDragEnd, vertexFromClient])
 
   const { w, h } = naturalSize
 
@@ -360,24 +383,49 @@ function FloorPlanEditHandles({
       preserveAspectRatio="none"
       aria-hidden
     >
-      {vertices.map((v, i) => (
-        <circle
-          key={i}
-          cx={v.x * w}
-          cy={v.y * h}
-          r={8}
-          className="pointer-events-auto cursor-grab active:cursor-grabbing"
-          fill={markerRgba(color, 0.95)}
-          stroke={markerRgba(strokeColor, 1)}
-          strokeWidth={2}
-          onPointerDown={(e) => {
-            e.stopPropagation()
-            e.preventDefault()
-            dragIndexRef.current = i
-            ;(e.currentTarget as SVGCircleElement).setPointerCapture(e.pointerId)
-          }}
-        />
-      ))}
+      {vertices.map((v, i) => {
+        if (mode === 'collecting' && i === 0 && !canClosePolygon) {
+          return null
+        }
+
+        const isCloseHandle = mode === 'collecting' && i === 0 && canClosePolygon
+        const radius = isCloseHandle ? 10 : 8
+
+        return (
+          <circle
+            key={i}
+            cx={v.x * w}
+            cy={v.y * h}
+            r={radius}
+            className={
+              isCloseHandle
+                ? 'pointer-events-auto cursor-pointer'
+                : 'pointer-events-auto cursor-grab active:cursor-grabbing'
+            }
+            fill={markerRgba(color, isCloseHandle ? 0.85 : 0.95)}
+            stroke={markerRgba(strokeColor, 1)}
+            strokeWidth={isCloseHandle ? 2 : 2}
+            strokeDasharray={isCloseHandle ? '4 3' : undefined}
+            aria-label={isCloseHandle ? 'Close polygon' : undefined}
+            onPointerDown={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              if (isCloseHandle) return
+              dragMovedRef.current = false
+              dragStartVertexRef.current = { index: i, vertex: { x: v.x, y: v.y } }
+              dragIndexRef.current = i
+              ;(e.currentTarget as SVGCircleElement).setPointerCapture(e.pointerId)
+            }}
+            onClick={(e) => {
+              e.stopPropagation()
+              e.preventDefault()
+              if (isCloseHandle) {
+                onClosePolygon?.()
+              }
+            }}
+          />
+        )
+      })}
     </svg>
   )
 }
@@ -401,6 +449,7 @@ function MapFloorPlanViewer({
     origPanX: 0,
     origPanY: 0,
   })
+  const suppressPlanClickRef = useRef(false)
 
   const {
     linkedFeatureId,
@@ -425,14 +474,13 @@ function MapFloorPlanViewer({
     geometryType,
     draftMarkerColor,
     addFloorPlanVertex,
-    finishLine,
     closePolygon,
     cancelDraw,
     cancelEditFeature,
     requestEditConfirm,
     redrawGeometry,
     updateFloorPlanVertex,
-    isNearFirstFloorPlanVertex,
+    recordDrawVertexMove,
   } = useFeatureDraw()
 
   const { markerStylePreview } = useMarkerStylePreview()
@@ -664,28 +712,15 @@ function MapFloorPlanViewer({
       return
     }
     if (e.detail > 1) return
+    if (suppressPlanClickRef.current) {
+      suppressPlanClickRef.current = false
+      return
+    }
 
     const coords = planCoordsFromEvent(e)
     if (coords == null) return
 
-    const toleranceNorm = FIRST_VERTEX_TOLERANCE_PX / (Math.min(naturalSize.w, naturalSize.h) * view.scale)
-    if (
-      floorPlanVertices.length >= 3 &&
-      isNearFirstFloorPlanVertex(floorPlanId, coords.x, coords.y, toleranceNorm)
-    ) {
-      closePolygon()
-      return
-    }
-
     addFloorPlanVertex(floorPlanId, coords.x, coords.y)
-  }
-
-  const onPlanDoubleClick = (e: React.MouseEvent) => {
-    if (!isCollectingGeometry || drawPhase !== 'collecting') return
-    e.preventDefault()
-    if (floorPlanVertices.length >= 2) {
-      finishLine()
-    }
   }
 
   const visibleDrawnGeometries = floorDrawnGeometries.filter((g) => {
@@ -716,7 +751,6 @@ function MapFloorPlanViewer({
         role="region"
         aria-label="Floor plan"
         onClick={onPlanClick}
-        onDoubleClick={onPlanDoubleClick}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
@@ -771,7 +805,8 @@ function MapFloorPlanViewer({
               />
             ) : null}
             {isEditingThisFeature && drawPhase === 'editing' ? (
-              <FloorPlanEditHandles
+              <FloorPlanVertexHandles
+                mode="edit"
                 vertices={floorPlanVertices}
                 naturalSize={naturalSize}
                 view={view}
@@ -779,6 +814,24 @@ function MapFloorPlanViewer({
                 color={previewFill}
                 strokeColor={previewStroke}
                 onMoveVertex={updateFloorPlanVertex}
+              />
+            ) : null}
+            {isDrawing && drawPhase === 'collecting' && geometryType !== 'polygon' && floorPlanVertices.length > 0 ? (
+              <FloorPlanVertexHandles
+                mode="collecting"
+                vertices={floorPlanVertices}
+                geometryType={geometryType}
+                naturalSize={naturalSize}
+                view={view}
+                containerRef={containerRef}
+                color={previewFill}
+                strokeColor={previewStroke}
+                onMoveVertex={updateFloorPlanVertex}
+                onClosePolygon={closePolygon}
+                onVertexDragEnd={(index, previous) => {
+                  suppressPlanClickRef.current = true
+                  recordDrawVertexMove('floorPlan', index, previous)
+                }}
               />
             ) : null}
           </>
@@ -848,7 +901,7 @@ function MapFloorPlanViewer({
             </button>
           </div>
         </div>
-      ) : isCollectingGeometry && drawPhase === 'collecting' ? (
+      ) : isCollectingGeometry ? (
         <div
           className={
             'pointer-events-none absolute z-20 flex justify-center ' +
@@ -860,8 +913,7 @@ function MapFloorPlanViewer({
           aria-live="polite"
         >
           <div className="max-w-lg rounded-panel bg-fg-highlight px-3 py-2 text-center font-sans text-standard text-white shadow-sm">
-            Click to add points. Double-click to finish a line. Click the first point to close a polygon.
-            Press Esc to cancel.
+            {FEATURE_DRAW_INSTRUCTION}
           </div>
         </div>
       ) : null}
