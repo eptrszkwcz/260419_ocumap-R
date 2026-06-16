@@ -1,5 +1,5 @@
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
-import type { SpatialAsset } from '@/data/sampleAssets'
+import { getFeatureTypeLabel, isDrawnFeature, type SpatialAsset } from '@/data/sampleAssets'
 import type { ProjectType } from '@/data/sampleProjects'
 
 import { assetLocationLabel } from '@/panels/library/featureLibrary/assetLocationLabel'
@@ -23,7 +23,8 @@ export function FeatureLibraryThumbnailGrid({
         {assets.map((asset) => {
           const isLinked = linkedFeatureId === asset.id
           const location = assetLocationLabel(asset, projectType)
-          const isVideo = asset.kind === 'video'
+          const isVideo = asset.kind === 'video' && !isDrawnFeature(asset)
+          const isGeometry = isDrawnFeature(asset)
 
           return (
             <button
@@ -38,7 +39,12 @@ export function FeatureLibraryThumbnailGrid({
               onClick={() => onOpenAsset?.(asset)}
             >
               <div className="bg-area-highlight size-[140px] shrink-0 overflow-hidden rounded-panel">
-                {isVideo ? (
+                {isGeometry ? (
+                  <div className="text-fg-muted flex size-full flex-col items-center justify-center gap-1 px-2 text-center font-sans text-badge">
+                    <span className="text-fg-highlight font-semibold">{getFeatureTypeLabel(asset)}</span>
+                    <span>Drawn feature</span>
+                  </div>
+                ) : isVideo ? (
                   <video
                     src={asset.fileUrl}
                     className="size-full object-cover"

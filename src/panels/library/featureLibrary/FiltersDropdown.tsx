@@ -10,11 +10,11 @@ import { filterDropdownDateInputClassName } from '@/panels/library/featureLibrar
 
 import {
   distinctLocationFilterValues,
+  distinctTypeFilterOptions,
   isFilterActive,
-  TYPE_FILTER_OPTIONS,
 } from '@/panels/library/featureLibrary/applyFeatureLibraryFilters'
 import { DATE_PRESET_OPTIONS } from '@/panels/library/featureLibrary/filterBadges'
-import type { SpatialAsset } from '@/data/sampleAssets'
+import type { FeatureTypeFilter, SpatialAsset } from '@/data/sampleAssets'
 import type { ProjectType } from '@/data/sampleProjects'
 import type {
   DateFilterPreset,
@@ -130,12 +130,13 @@ export function FiltersDropdown({
   onOpenChange,
 }: FiltersDropdownProps) {
   const locationOptions = distinctLocationFilterValues(assets, projectType)
+  const typeOptions = distinctTypeFilterOptions(assets)
 
-  const toggleType = (kind: (typeof TYPE_FILTER_OPTIONS)[number]['kind']) => {
-    const has = filters.types.includes(kind)
+  const toggleType = (id: FeatureTypeFilter) => {
+    const has = filters.types.includes(id)
     onFiltersChange({
       ...filters,
-      types: has ? filters.types.filter((t) => t !== kind) : [...filters.types, kind],
+      types: has ? filters.types.filter((t) => t !== id) : [...filters.types, id],
     })
   }
 
@@ -179,13 +180,13 @@ export function FiltersDropdown({
           onReset={() => onFiltersChange({ ...filters, types: [] })}
         />
         <div className="pb-2">
-          {TYPE_FILTER_OPTIONS.map(({ kind, label }) => (
+          {typeOptions.map(({ id, label }) => (
             <Checkbox
-              key={kind}
-              id={`filter-type-${kind}`}
+              key={id}
+              id={`filter-type-${id}`}
               label={label}
-              checked={filters.types.includes(kind)}
-              onChange={() => toggleType(kind)}
+              checked={filters.types.includes(id)}
+              onChange={() => toggleType(id)}
             />
           ))}
         </div>

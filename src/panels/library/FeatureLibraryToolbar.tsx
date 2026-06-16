@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 
 import { ControlHeaderToolbar } from '@/components/ControlHeaderToolbar'
 
-import { getAssetTypeLabel, type SpatialAsset } from '@/data/sampleAssets'
+import { getFeatureTypeLabel, isDrawnFeature, type SpatialAsset } from '@/data/sampleAssets'
 
 function MoreVerticalIcon({ className = '' }: { className?: string }) {
   return (
@@ -38,7 +38,7 @@ function CloseIcon() {
 const mediaBadgeClass =
   'text-fg-highlight inline-flex h-badge min-h-badge max-h-badge min-w-0 shrink-0 items-center justify-center rounded-panel bg-fg-highlight/12 px-2 text-badge font-bold leading-none'
 
-type ViewerPanelMode = 'media' | 'metadata'
+type ViewerPanelMode = 'media' | 'metadata' | 'draw-metadata'
 
 type FeatureLibraryToolbarProps = {
   onAddFeatureClick?: () => void
@@ -46,6 +46,8 @@ type FeatureLibraryToolbarProps = {
   viewerAsset?: SpatialAsset | null
   /** Browse vs metadata when `viewerAsset` is open. Ignored when `viewerAsset` is null. */
   viewerPanel?: ViewerPanelMode
+  /** True when viewing an in-progress drawn feature draft. */
+  isDrawDraft?: boolean
   onOpenMetadata?: () => void
   onOpenMedia?: () => void
   onCloseViewer?: () => void
@@ -60,22 +62,27 @@ export function FeatureLibraryToolbar({
   onAddFeatureClick,
   viewerAsset,
   viewerPanel = 'media',
+  isDrawDraft = false,
   onOpenMetadata,
   onOpenMedia,
   onCloseViewer,
   libraryControlActions,
 }: FeatureLibraryToolbarProps) {
   if (viewerAsset != null) {
+    const isGeometry = isDrawDraft || isDrawnFeature(viewerAsset)
+    const typeLabel = isDrawDraft ? 'New feature' : getFeatureTypeLabel(viewerAsset)
+    const toolbarLabel = isDrawDraft ? 'Draw feature' : isGeometry ? 'Feature details' : 'Feature media'
+
     return (
       <div
         id="control-header-feature-lib"
         className="flex h-16 w-full shrink-0 items-center gap-3 border-b border-stroke px-panel-padding"
         role="toolbar"
-        aria-label="Feature media"
+        aria-label={toolbarLabel}
       >
         <div className="flex min-w-0 flex-1 items-center gap-1">
           <h2 className="min-w-0 flex-1 truncate font-title text-title font-bold text-fg">{viewerAsset.title}</h2>
-          {viewerPanel === 'media' ? (
+          {!isGeometry && viewerPanel === 'media' ? (
             <button
               type="button"
               className={iconBtnClass}
@@ -84,7 +91,7 @@ export function FeatureLibraryToolbar({
             >
               <InformationCircleIcon className="size-5" aria-hidden />
             </button>
-          ) : (
+          ) : !isGeometry && viewerPanel === 'metadata' ? (
             <button
               type="button"
               className={iconBtnClass}
@@ -93,11 +100,11 @@ export function FeatureLibraryToolbar({
             >
               <PhotoIcon className="size-5" aria-hidden />
             </button>
-          )}
+          ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className={mediaBadgeClass}>{getAssetTypeLabel(viewerAsset.kind)}</span>
-          <span className={mediaBadgeClass}>{viewerAsset.dateUploaded}</span>
+          <span className={mediaBadgeClass}>{typeLabel}</span>
+          {!isDrawDraft ? <span className={mediaBadgeClass}>{viewerAsset.dateUploaded}</span> : null}
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <button

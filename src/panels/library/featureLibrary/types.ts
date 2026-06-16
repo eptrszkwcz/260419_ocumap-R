@@ -1,4 +1,4 @@
-import type { AssetKind } from '@/data/sampleAssets'
+import type { FeatureTypeFilter } from '@/data/sampleAssets'
 
 export type LibraryViewType = 'list' | 'thumbnail'
 
@@ -23,7 +23,7 @@ export type DateFilterState = {
 }
 
 export type FeatureLibraryFilters = {
-  types: AssetKind[]
+  types: FeatureTypeFilter[]
   locations: string[]
   dateUploaded: DateFilterState | null
   dateCaptured: DateFilterState | null

@@ -116,11 +116,11 @@ export const sampleProjects: ProjectRecord[] = [
     name: 'Westside Document Archive',
     status: 'Draft',
     team: 'Smith Property Management',
-    lastModified: 'May 28, 2026',
+    lastModified: 'April 27, 2026',
     featureFileCount: 412,
     projectSizeMb: 892,
     createdRelative: '1 week ago',
-    createdIso: '2026-05-28',
+    createdIso: '2026-04-27',
     projectType: 'FilesOnly',
   },
 ]

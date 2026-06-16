@@ -12,6 +12,18 @@ import type { FloorPlanId } from '@/panels/map/mapFloorPlans'
 
 export type AssetKind = 'image' | 'video' | 'panorama'
 
+export type FeatureGeometryType = 'point' | 'line' | 'polygon'
+
+export type FloorPlanGeometry = {
+  floorPlanId: FloorPlanId
+  /** Normalized 0–1 coordinates */
+  coordinates: { x: number; y: number }[]
+}
+
+export type MapGeometry = {
+  coordinates: { lng: number; lat: number }[]
+}
+
 /** @deprecated Legacy 0–100 placement; prefer `floorPlanPosition` (normalized) for building projects. */
 export type MapPosition = { x: number; y: number }
 
@@ -32,7 +44,15 @@ export type SpatialAsset = {
   /** When the source media was captured, if known (long form like `dateUploaded`) */
   dateCaptured?: string
   /** Public URL path, blob URL for local uploads, or path under the dev server root */
-  fileUrl: string
+  fileUrl?: string
+  /** Drawn geometry type (point, line, or polygon). */
+  geometryType?: FeatureGeometryType
+  /** Building projects: drawn geometry on a floor plan. */
+  floorPlanGeometry?: FloorPlanGeometry
+  /** Infrastructure projects: drawn geometry on the geographic map. */
+  mapGeometry?: MapGeometry
+  /** User notes for drawn or media features. */
+  notes?: string
   /** Building projects: position on a floor plan drawing. */
   floorPlanPosition?: FloorPlanPosition
   /** @deprecated Legacy demo field; use `floorPlanPosition` for building projects. */
@@ -63,6 +83,32 @@ export function getAssetTypeLabel(kind: AssetKind): string {
   return 'Image'
 }
 
+export function getGeometryTypeLabel(type: FeatureGeometryType): string {
+  if (type === 'line') return 'Line'
+  if (type === 'polygon') return 'Polygon'
+  return 'Point'
+}
+
+export function isDrawnFeature(asset: SpatialAsset): boolean {
+  return asset.geometryType != null
+}
+
+export type FeatureTypeFilter = AssetKind | FeatureGeometryType
+
+export function getFeatureTypeFilterKey(asset: SpatialAsset): FeatureTypeFilter {
+  return asset.geometryType ?? asset.kind
+}
+
+export function getFeatureTypeLabel(asset: SpatialAsset): string {
+  if (asset.geometryType != null) return getGeometryTypeLabel(asset.geometryType)
+  return getAssetTypeLabel(asset.kind)
+}
+
+export function featureTypeFilterLabel(id: FeatureTypeFilter): string {
+  if (id === 'point' || id === 'line' || id === 'polygon') return getGeometryTypeLabel(id)
+  return getAssetTypeLabel(id)
+}
+
 const sphericalPanoBase = '/samples/feature-viewer/spherical-pano'
 
 /** Default building project (e.g. 1603 Jefferson): three 360-img panoramas, one per floor. */
@@ -90,6 +136,23 @@ export const sampleAssetsJefferson: SpatialAsset[] = [
     dateUploaded: 'July 20, 2025',
     fileUrl: `${sphericalPanoBase}/360-img-3.png`,
     floorPlanPosition: { floorPlanId: 'SOM-5', x: 0.48, y: 0.58 },
+  },
+  {
+    id: 'drawn-jefferson-conference-room',
+    kind: 'image',
+    title: 'Conference Room',
+    dateUploaded: 'June 15, 2026',
+    geometryType: 'polygon',
+    markerColor: '#2563eb',
+    floorPlanGeometry: {
+      floorPlanId: 'SOM-2',
+      coordinates: [
+        { x: 0.202, y: 0.319 },
+        { x: 0.381, y: 0.317 },
+        { x: 0.38, y: 0.217 },
+        { x: 0.227, y: 0.219 },
+      ],
+    },
   },
 ]
 
