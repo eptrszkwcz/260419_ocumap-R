@@ -206,7 +206,7 @@ export function FeatureMediaMetadataPanel({
                 : resolutionLabel(asset.width, asset.height),
             extensionLabel: extensionLabelFromMimeAndKind(asset.mimeType, asset.kind, asset.fileUrl),
           }}
-          preview={{ url: asset.fileUrl, isVideo }}
+          preview={{ url: asset.fileUrl ?? '', isVideo }}
           isBuildingProject={isBuildingProject}
           locationPick={{
             canPickOnMap,

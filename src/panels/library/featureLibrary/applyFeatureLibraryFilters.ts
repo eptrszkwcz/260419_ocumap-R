@@ -1,4 +1,9 @@
-import type { AssetKind, SpatialAsset } from '@/data/sampleAssets'
+import {
+  featureTypeFilterLabel,
+  getFeatureTypeFilterKey,
+  type FeatureTypeFilter,
+  type SpatialAsset,
+} from '@/data/sampleAssets'
 import type { ProjectType } from '@/data/sampleProjects'
 import { parseToIsoDate } from '@/lib/formatDisplayDateFromIsoDate'
 
@@ -75,7 +80,7 @@ export function applyFeatureLibraryFilters(
   projectType: ProjectType,
 ): SpatialAsset[] {
   return assets.filter((asset) => {
-    if (filters.types.length > 0 && !filters.types.includes(asset.kind)) {
+    if (filters.types.length > 0 && !filters.types.includes(getFeatureTypeFilterKey(asset))) {
       return false
     }
 
@@ -120,11 +125,21 @@ export function distinctLocationFilterValues(
   return [...set].sort((a, b) => a.localeCompare(b))
 }
 
-export const TYPE_FILTER_OPTIONS: { kind: AssetKind; label: string }[] = [
-  { kind: 'image', label: 'Image' },
-  { kind: 'video', label: 'Video' },
-  { kind: 'panorama', label: '360 Photo' },
-]
+export function distinctTypeFilterOptions(
+  assets: SpatialAsset[],
+): { id: FeatureTypeFilter; label: string }[] {
+  const seen = new Set<FeatureTypeFilter>()
+  const options: { id: FeatureTypeFilter; label: string }[] = []
+
+  for (const asset of assets) {
+    const id = getFeatureTypeFilterKey(asset)
+    if (seen.has(id)) continue
+    seen.add(id)
+    options.push({ id, label: featureTypeFilterLabel(id) })
+  }
+
+  return options.sort((a, b) => a.label.localeCompare(b.label))
+}
 
 export function isFilterActive(filters: FeatureLibraryFilters): boolean {
   return (

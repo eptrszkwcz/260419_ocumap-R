@@ -1,4 +1,4 @@
-import { getAssetTypeLabel, type SpatialAsset } from '@/data/sampleAssets'
+import { getFeatureTypeLabel, type SpatialAsset } from '@/data/sampleAssets'
 import type { ProjectType } from '@/data/sampleProjects'
 import { formatBytes } from '@/lib/formatBytes'
 import { extensionLabelFromMimeAndKind } from '@/panels/library/featureMetadata/fileInfo'
@@ -21,7 +21,7 @@ export const columnDefinitions: Record<OptionalColumnId, ColumnDefinition> = {
     id: 'type',
     label: 'Type',
     minWidthPx: 136,
-    getCellValue: (asset) => getAssetTypeLabel(asset.kind),
+    getCellValue: (asset) => getFeatureTypeLabel(asset),
   },
   dateUploaded: {
     id: 'dateUploaded',

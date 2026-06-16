@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 
 import type { FloorPlanId } from '@/panels/map/mapFloorPlans'
+import type { FloorPlanDrawnGeometry, MapDrawnGeometry } from '@/panels/library/assetGeometryHelpers'
 
 export type MapCaptureMarker = {
   id: string
@@ -26,6 +27,10 @@ type MapCaptureMarkersContextValue = {
   setCaptureMarkers: (markers: MapCaptureMarker[]) => void
   floorPlanMarkers: FloorPlanMarker[]
   setFloorPlanMarkers: (markers: FloorPlanMarker[]) => void
+  floorPlanDrawnGeometries: FloorPlanDrawnGeometry[]
+  setFloorPlanDrawnGeometries: (geometries: FloorPlanDrawnGeometry[]) => void
+  mapDrawnGeometries: MapDrawnGeometry[]
+  setMapDrawnGeometries: (geometries: MapDrawnGeometry[]) => void
 }
 
 const MapCaptureMarkersContext = createContext<MapCaptureMarkersContextValue | null>(null)
@@ -33,6 +38,8 @@ const MapCaptureMarkersContext = createContext<MapCaptureMarkersContextValue | n
 export function MapCaptureMarkersProvider({ children }: { children: ReactNode }) {
   const [captureMarkers, setCaptureMarkersState] = useState<MapCaptureMarker[]>([])
   const [floorPlanMarkers, setFloorPlanMarkersState] = useState<FloorPlanMarker[]>([])
+  const [floorPlanDrawnGeometries, setFloorPlanDrawnGeometriesState] = useState<FloorPlanDrawnGeometry[]>([])
+  const [mapDrawnGeometries, setMapDrawnGeometriesState] = useState<MapDrawnGeometry[]>([])
 
   const setCaptureMarkers = useCallback((markers: MapCaptureMarker[]) => {
     setCaptureMarkersState(markers)
@@ -42,14 +49,35 @@ export function MapCaptureMarkersProvider({ children }: { children: ReactNode })
     setFloorPlanMarkersState(markers)
   }, [])
 
+  const setFloorPlanDrawnGeometries = useCallback((geometries: FloorPlanDrawnGeometry[]) => {
+    setFloorPlanDrawnGeometriesState(geometries)
+  }, [])
+
+  const setMapDrawnGeometries = useCallback((geometries: MapDrawnGeometry[]) => {
+    setMapDrawnGeometriesState(geometries)
+  }, [])
+
   const value = useMemo(
     (): MapCaptureMarkersContextValue => ({
       captureMarkers,
       setCaptureMarkers,
       floorPlanMarkers,
       setFloorPlanMarkers,
+      floorPlanDrawnGeometries,
+      setFloorPlanDrawnGeometries,
+      mapDrawnGeometries,
+      setMapDrawnGeometries,
     }),
-    [captureMarkers, setCaptureMarkers, floorPlanMarkers, setFloorPlanMarkers],
+    [
+      captureMarkers,
+      setCaptureMarkers,
+      floorPlanMarkers,
+      setFloorPlanMarkers,
+      floorPlanDrawnGeometries,
+      setFloorPlanDrawnGeometries,
+      mapDrawnGeometries,
+      setMapDrawnGeometries,
+    ],
   )
 
   return <MapCaptureMarkersContext.Provider value={value}>{children}</MapCaptureMarkersContext.Provider>
@@ -64,6 +92,10 @@ export function useMapCaptureMarkers(): MapCaptureMarkersContextValue {
       setCaptureMarkers: () => {},
       floorPlanMarkers: [],
       setFloorPlanMarkers: () => {},
+      floorPlanDrawnGeometries: [],
+      setFloorPlanDrawnGeometries: () => {},
+      mapDrawnGeometries: [],
+      setMapDrawnGeometries: () => {},
     }
   }
   return ctx

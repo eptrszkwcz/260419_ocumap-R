@@ -3,15 +3,23 @@ import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateActio
 import { useActiveProject } from '@/context/ActiveProjectContext'
 import { useProjects } from '@/context/ProjectsContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
-import { useMapCaptureMarkers, type FloorPlanMarker, type MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
+import { useFeatureDraw } from '@/context/FeatureDrawContext'
+import { useMapCaptureMarkers } from '@/context/MapCaptureMarkersContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
-import { getSampleAssetsForProject, type SpatialAsset } from '@/data/sampleAssets'
+import { getSampleAssetsForProject, isDrawnFeature, type SpatialAsset } from '@/data/sampleAssets'
 import type { DemoProjectDetailsProfile } from '@/data/sampleProjectProfile'
 import { NEW_PROJECT_ID, sampleProjects } from '@/data/sampleProjects'
 import { downloadSpatialAsset } from '@/lib/downloadSpatialAsset'
-import { markerColorsFromAsset } from '@/panels/map/markerColors'
+import {
+  assetsToCaptureMarkers,
+  assetsToFloorPlanDrawnGeometries,
+  assetsToFloorPlanMarkers,
+  assetsToMapDrawnGeometries,
+} from '@/panels/library/assetGeometryHelpers'
+import { DrawnFeatureMetadataPanel } from '@/panels/library/DrawnFeatureMetadataPanel'
+import { createDraftDrawnAsset } from '@/panels/map/FeatureDrawConfirmPanel'
 import { AddFeatureFlow } from '@/panels/library/AddFeatureFlow'
 import { PanelCenteredPrompt } from '@/components/PanelCenteredPrompt'
 import { nextSortDirection, type SortDirection } from '@/components/SortableColumnHeader'
@@ -53,58 +61,11 @@ function assetsForProject(projectId: string, isNewProject: boolean): SpatialAsse
   return getSampleAssetsForProject(projectId)
 }
 
-function assetsToCaptureMarkers(assets: SpatialAsset[]): MapCaptureMarker[] {
-  return assets
-    .filter(
-      (a) =>
-        a.captureLng != null &&
-        a.captureLat != null &&
-        Number.isFinite(a.captureLng) &&
-        Number.isFinite(a.captureLat),
-    )
-    .map((a) => {
-      const { fill, stroke } = markerColorsFromAsset(a.markerColor)
-      return {
-        id: a.id,
-        lng: a.captureLng as number,
-        lat: a.captureLat as number,
-        color: fill,
-        strokeColor: stroke,
-      }
-    })
-}
-
-function assetsToFloorPlanMarkers(assets: SpatialAsset[]): FloorPlanMarker[] {
-  return assets
-    .filter((a) => {
-      const p = a.floorPlanPosition
-      if (p == null) return false
-      return (
-        Number.isFinite(p.x) &&
-        Number.isFinite(p.y) &&
-        p.x >= 0 &&
-        p.x <= 1 &&
-        p.y >= 0 &&
-        p.y <= 1
-      )
-    })
-    .map((a) => {
-      const { fill, stroke } = markerColorsFromAsset(a.markerColor)
-      return {
-        id: a.id,
-        floorPlanId: a.floorPlanPosition!.floorPlanId,
-        x: a.floorPlanPosition!.x,
-        y: a.floorPlanPosition!.y,
-        color: fill,
-        strokeColor: stroke,
-      }
-    })
-}
-
 export function LibraryContent({ activeTabId }: LibraryContentProps) {
   const { projectId, isNewProject } = useActiveProject()
   const { getProjectProfile, updateProjectProfile } = useProjects()
-  const { setCaptureMarkers, setFloorPlanMarkers } = useMapCaptureMarkers()
+  const { setCaptureMarkers, setFloorPlanMarkers, setFloorPlanDrawnGeometries, setMapDrawnGeometries } =
+    useMapCaptureMarkers()
   const [assets, setAssets] = useState<SpatialAsset[]>(() =>
     assetsForProject(projectId, isNewProject),
   )
@@ -122,11 +83,15 @@ export function LibraryContent({ activeTabId }: LibraryContentProps) {
   useEffect(() => {
     setCaptureMarkers(assetsToCaptureMarkers(assets))
     setFloorPlanMarkers(assetsToFloorPlanMarkers(assets))
+    setFloorPlanDrawnGeometries(assetsToFloorPlanDrawnGeometries(assets))
+    setMapDrawnGeometries(assetsToMapDrawnGeometries(assets))
     return () => {
       setCaptureMarkers([])
       setFloorPlanMarkers([])
+      setFloorPlanDrawnGeometries([])
+      setMapDrawnGeometries([])
     }
-  }, [assets, setCaptureMarkers, setFloorPlanMarkers])
+  }, [assets, setCaptureMarkers, setFloorPlanMarkers, setFloorPlanDrawnGeometries, setMapDrawnGeometries])
 
   if (isNewProject) {
     return <NewProjectDetailsForm />
@@ -172,7 +137,18 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   const { cancelFloorPlanLocationPick, clearFloorPlanLocationPickPreview } = useFloorPlanLocationPick()
   const { clearMarkerStylePreview } = useMarkerStylePreview()
   const { setOpenedFeatureId, setMapFeatureClickHandler } = useFeatureMapHover()
+  const {
+    isDrawing,
+    isEditingFeature,
+    draftFeatureId,
+    geometryType,
+    geometryConfirmed,
+    draftMarkerColor,
+    cancelDraw,
+    cancelEditFeature,
+  } = useFeatureDraw()
   const contentsRef = useRef<HTMLDivElement>(null)
+  const drawSessionOpenedRef = useRef<string | null>(null)
 
   const [filters, setFilters] = useState<FeatureLibraryFilters>(() => createEmptyFilters())
   const [libraryViewType, setLibraryViewType] = useState<LibraryViewType>('list')
@@ -187,7 +163,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
 
   const [viewMode, setViewMode] = useState<'browse' | 'add'>('browse')
   const [openedAsset, setOpenedAsset] = useState<SpatialAsset | null>(null)
-  const [viewerPanel, setViewerPanel] = useState<'media' | 'metadata'>('media')
+  const [viewerPanel, setViewerPanel] = useState<'media' | 'metadata' | 'draw-metadata'>('media')
   const [metadataAutoStartLocationPick, setMetadataAutoStartLocationPick] = useState(false)
 
   useEffect(() => {
@@ -238,15 +214,60 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   const visibleCount = sortedAssets.length
 
   const viewerAsset = viewMode === 'browse' ? openedAsset : null
+  const isDrawDraftSession =
+    viewerPanel === 'draw-metadata' && draftFeatureId != null && openedAsset?.id === draftFeatureId
+
+  const closeDrawSession = () => {
+    cancelDraw()
+    clearMarkerStylePreview()
+    drawSessionOpenedRef.current = null
+    setOpenedAsset(null)
+    setOpenedFeatureId(null)
+    setViewerPanel('media')
+  }
+
+  useEffect(() => {
+    if (!isDrawing || draftFeatureId == null) {
+      if (!isDrawing && viewerPanel === 'draw-metadata') {
+        clearMarkerStylePreview()
+        drawSessionOpenedRef.current = null
+        setOpenedAsset(null)
+        setOpenedFeatureId(null)
+        setViewerPanel('media')
+      }
+      if (!isDrawing) drawSessionOpenedRef.current = null
+      return
+    }
+    if (drawSessionOpenedRef.current === draftFeatureId) return
+    drawSessionOpenedRef.current = draftFeatureId
+    cancelLocationPick()
+    cancelFloorPlanLocationPick()
+    setMetadataAutoStartLocationPick(false)
+    setViewMode('browse')
+    const draft = createDraftDrawnAsset(draftFeatureId, draftMarkerColor)
+    setOpenedAsset(draft)
+    setOpenedFeatureId(draftFeatureId)
+    setViewerPanel('draw-metadata')
+  }, [
+    isDrawing,
+    draftFeatureId,
+    draftMarkerColor,
+    cancelLocationPick,
+    cancelFloorPlanLocationPick,
+  ])
 
   const openAsset = (asset: SpatialAsset) => {
+    if (isDrawing) closeDrawSession()
+    if (isEditingFeature) cancelEditFeature()
     setMetadataAutoStartLocationPick(false)
-    setViewerPanel('media')
     setOpenedAsset(asset)
     setOpenedFeatureId(asset.id)
+    setViewerPanel(isDrawnFeature(asset) ? 'metadata' : 'media')
   }
 
   const openFeatureProperties = (asset: SpatialAsset) => {
+    if (isDrawing) closeDrawSession()
+    if (isEditingFeature) cancelEditFeature()
     cancelLocationPick()
     cancelFloorPlanLocationPick()
     setMetadataAutoStartLocationPick(false)
@@ -256,6 +277,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   }
 
   const openSetLocation = (asset: SpatialAsset) => {
+    if (isDrawing) closeDrawSession()
     cancelLocationPick()
     cancelFloorPlanLocationPick()
     setMetadataAutoStartLocationPick(true)
@@ -285,15 +307,50 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
 
   useEffect(() => {
     setMapFeatureClickHandler((id) => {
+      if (isDrawing || isEditingFeature) return
       const asset = assets.find((a) => a.id === id)
       if (asset != null) {
+        if (isDrawnFeature(asset)) {
+          openFeatureProperties(asset)
+          return
+        }
         setViewerPanel('media')
         setOpenedAsset(asset)
         setOpenedFeatureId(asset.id)
       }
     })
     return () => setMapFeatureClickHandler(null)
-  }, [assets, setMapFeatureClickHandler, setOpenedFeatureId])
+  }, [assets, isDrawing, isEditingFeature, setMapFeatureClickHandler, setOpenedFeatureId])
+
+  const closeGeometryViewer = () => {
+    cancelLocationPick()
+    cancelFloorPlanLocationPick()
+    clearMarkerStylePreview()
+    cancelEditFeature()
+    setOpenedAsset(null)
+    setOpenedFeatureId(null)
+    setViewerPanel('media')
+    setMetadataAutoStartLocationPick(false)
+  }
+
+  const updateDrawnFeatureInLibrary = (updated: SpatialAsset) => {
+    clearMarkerStylePreview()
+    setMetadataAutoStartLocationPick(false)
+    cancelEditFeature()
+    setAssets((list) => list.map((a) => (a.id === updated.id ? updated : a)))
+    setOpenedAsset(updated)
+    setViewerPanel('metadata')
+  }
+
+  const saveDrawnFeature = (saved: SpatialAsset) => {
+    clearMarkerStylePreview()
+    drawSessionOpenedRef.current = null
+    cancelDraw()
+    setAssets((list) => [...list, saved])
+    setOpenedAsset(null)
+    setOpenedFeatureId(null)
+    setViewerPanel('media')
+  }
 
   const replaceOpenedAsset = (asset: SpatialAsset) => {
     setOpenedAsset(asset)
@@ -320,6 +377,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
       <div className="relative z-20 shrink-0">
         <FeatureLibraryToolbar
         onAddFeatureClick={() => {
+          if (isDrawing) closeDrawSession()
           cancelLocationPick()
           cancelFloorPlanLocationPick()
           clearMarkerStylePreview()
@@ -329,6 +387,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
         }}
         viewerAsset={viewerAsset}
         viewerPanel={viewerPanel}
+        isDrawDraft={isDrawDraftSession}
         onOpenMetadata={() => {
           setMetadataAutoStartLocationPick(false)
           setViewerPanel('metadata')
@@ -339,6 +398,14 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
           setViewerPanel('media')
         }}
         onCloseViewer={() => {
+          if (isDrawDraftSession) {
+            closeDrawSession()
+            return
+          }
+          if (viewerAsset != null && isDrawnFeature(viewerAsset)) {
+            closeGeometryViewer()
+            return
+          }
           cancelLocationPick()
           cancelFloorPlanLocationPick()
           clearMarkerStylePreview()
@@ -380,7 +447,24 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
         {viewMode === 'browse' ? (
           viewerAsset != null ? (
             <div className="flex min-h-0 min-w-0 flex-1 flex-col p-2">
-              {viewerPanel === 'metadata' ? (
+              {viewerPanel === 'draw-metadata' ? (
+                <DrawnFeatureMetadataPanel
+                  mode="draft"
+                  asset={viewerAsset}
+                  geometryType={geometryType}
+                  geometryConfirmed={geometryConfirmed}
+                  onSave={saveDrawnFeature}
+                  onCancel={closeDrawSession}
+                />
+              ) : viewerPanel === 'metadata' && isDrawnFeature(viewerAsset) ? (
+                <DrawnFeatureMetadataPanel
+                  mode="saved"
+                  asset={viewerAsset}
+                  isBuildingProject={isBuildingProject}
+                  onSave={updateDrawnFeatureInLibrary}
+                  onCancel={closeGeometryViewer}
+                />
+              ) : viewerPanel === 'metadata' ? (
                 <FeatureMediaMetadataPanel
                   key={[
                     viewerAsset.id,
@@ -406,7 +490,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
               ) : (
                 <FeatureLibraryMediaViewer
                   asset={viewerAsset}
-                  libraryAssets={sortedAssets}
+                  libraryAssets={sortedAssets.filter((a) => !isDrawnFeature(a))}
                   onAssetChange={replaceOpenedAsset}
                 />
               )}

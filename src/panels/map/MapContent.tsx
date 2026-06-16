@@ -1,14 +1,19 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import type { FloorPlanMarker } from '@/context/MapCaptureMarkersContext'
+import { useFeatureDraw } from '@/context/FeatureDrawContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
+import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
+import type { FloorPlanDrawnGeometry } from '@/panels/library/assetGeometryHelpers'
+import { FeatureDrawConfirmPanel } from '@/panels/map/FeatureDrawConfirmPanel'
+import { MapOverlayControlBar } from '@/panels/map/MapOverlayControlBar'
 import type { FloorPlanId } from '@/panels/map/mapFloorPlans'
 import {
   mapOverlayInsetBottomClassName,
   mapOverlayInsetXClassName,
 } from '@/panels/map/mapOverlayLayout'
-import { markerRgba } from '@/panels/map/markerColors'
+import { markerColorsFromAsset, markerRgba } from '@/panels/map/markerColors'
 
 const MIN_SCALE = 0.25
 const MAX_SCALE = 8
@@ -20,6 +25,7 @@ const DEFAULT_FILL_OPACITY = 0.32
 const DIM_OPACITY = 0.35
 const HIGHLIGHT_FILL_OPACITY = 1
 const MARKER_DIAMETER_PX = 12
+const FIRST_VERTEX_TOLERANCE_PX = 12
 
 function clamp(n: number, lo: number, hi: number) {
   return Math.min(hi, Math.max(lo, n))
@@ -142,6 +148,238 @@ type MapFloorPlanViewerProps = {
   floorPlanLabel: string
   floorPlanId: FloorPlanId
   floorMarkers: FloorPlanMarker[]
+  floorDrawnGeometries: FloorPlanDrawnGeometry[]
+}
+
+function FloorPlanDrawnGeometryLayer({
+  geometries,
+  naturalSize,
+  linkedFeatureId,
+  openedFeatureId,
+  hoverEnabled,
+  onEnter,
+  onLeave,
+}: {
+  geometries: FloorPlanDrawnGeometry[]
+  naturalSize: { w: number; h: number }
+  linkedFeatureId: string | null
+  openedFeatureId: string | null
+  hoverEnabled: boolean
+  onEnter: (id: string) => void
+  onLeave: () => void
+}) {
+  const { w, h } = naturalSize
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 z-[5] h-full w-full overflow-visible"
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      {geometries.map((g) => {
+        const isOpened = openedFeatureId === g.id
+        const isLinked = linkedFeatureId === g.id
+        const hasOpenFocus = openedFeatureId != null
+        const hasHoverFocus = linkedFeatureId != null && openedFeatureId == null
+        let opacity = 0.55
+        if (hasOpenFocus) opacity = isOpened ? 0.85 : 0.2
+        else if (hasHoverFocus) opacity = isLinked ? 0.85 : 0.25
+
+        const points = g.coordinates.map((c) => `${c.x * w},${c.y * h}`).join(' ')
+        const hoverHandlers = hoverEnabled
+          ? {
+              pointerEvents: 'all' as const,
+              style: { cursor: 'pointer' },
+              onMouseEnter: () => onEnter(g.id),
+              onMouseLeave: onLeave,
+              onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
+            }
+          : { pointerEvents: 'none' as const }
+
+        if (g.geometryType === 'polygon') {
+          return (
+            <polygon
+              key={g.id}
+              points={points}
+              fill={markerRgba(g.color, opacity * 0.35)}
+              stroke={markerRgba(g.strokeColor, opacity)}
+              strokeWidth={2}
+              {...hoverHandlers}
+            />
+          )
+        }
+        return (
+          <g key={g.id}>
+            {hoverEnabled ? (
+              <polyline
+                points={points}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={12}
+                pointerEvents="stroke"
+                style={{ cursor: 'pointer' }}
+                onMouseEnter={() => onEnter(g.id)}
+                onMouseLeave={onLeave}
+                onPointerDown={(e) => e.stopPropagation()}
+              />
+            ) : null}
+            <polyline
+              points={points}
+              fill="none"
+              stroke={markerRgba(g.strokeColor, opacity)}
+              strokeWidth={2}
+              pointerEvents="none"
+            />
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
+function FloorPlanDrawPreview({
+  vertices,
+  geometryType,
+  naturalSize,
+  color,
+  strokeColor,
+}: {
+  vertices: { x: number; y: number }[]
+  geometryType: 'point' | 'line' | 'polygon' | null
+  naturalSize: { w: number; h: number }
+  color: string
+  strokeColor: string
+}) {
+  if (vertices.length === 0) return null
+  const { w, h } = naturalSize
+  const points = vertices.map((v) => `${v.x * w},${v.y * h}`).join(' ')
+
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 z-[6] h-full w-full overflow-visible"
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      {geometryType === 'polygon' && vertices.length >= 3 ? (
+        <polygon
+          points={points}
+          fill={markerRgba(color, 0.25)}
+          stroke={markerRgba(strokeColor, 0.9)}
+          strokeWidth={2}
+        />
+      ) : vertices.length >= 2 ? (
+        <polyline
+          points={points}
+          fill="none"
+          stroke={markerRgba(strokeColor, 0.9)}
+          strokeWidth={2}
+        />
+      ) : null}
+      {vertices.map((v, i) => (
+        <circle
+          key={i}
+          cx={v.x * w}
+          cy={v.y * h}
+          r={6}
+          fill={markerRgba(color, 0.9)}
+          stroke={markerRgba(strokeColor, 1)}
+          strokeWidth={2}
+        />
+      ))}
+    </svg>
+  )
+}
+
+function FloorPlanEditHandles({
+  vertices,
+  naturalSize,
+  view,
+  containerRef,
+  color,
+  strokeColor,
+  onMoveVertex,
+}: {
+  vertices: { x: number; y: number }[]
+  naturalSize: { w: number; h: number }
+  view: ViewState
+  containerRef: React.RefObject<HTMLDivElement | null>
+  color: string
+  strokeColor: string
+  onMoveVertex: (index: number, x: number, y: number) => void
+}) {
+  const dragIndexRef = useRef<number | null>(null)
+
+  const vertexFromClient = useCallback(
+    (clientX: number, clientY: number) => {
+      const el = containerRef.current
+      if (el == null) return null
+      const rect = el.getBoundingClientRect()
+      const localX = clientX - rect.left
+      const localY = clientY - rect.top
+      const ix = (localX - view.panX) / view.scale
+      const iy = (localY - view.panY) / view.scale
+      if (ix < 0 || iy < 0 || ix > naturalSize.w || iy > naturalSize.h) return null
+      return {
+        x: clamp(ix / naturalSize.w, 0, 1),
+        y: clamp(iy / naturalSize.h, 0, 1),
+      }
+    },
+    [containerRef, naturalSize.h, naturalSize.w, view.panX, view.panY, view.scale],
+  )
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const idx = dragIndexRef.current
+      if (idx == null) return
+      const coords = vertexFromClient(e.clientX, e.clientY)
+      if (coords == null) return
+      onMoveVertex(idx, coords.x, coords.y)
+    }
+
+    const onUp = () => {
+      dragIndexRef.current = null
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
+  }, [onMoveVertex, vertexFromClient])
+
+  const { w, h } = naturalSize
+
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 z-[7] h-full w-full overflow-visible"
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      {vertices.map((v, i) => (
+        <circle
+          key={i}
+          cx={v.x * w}
+          cy={v.y * h}
+          r={8}
+          className="pointer-events-auto cursor-grab active:cursor-grabbing"
+          fill={markerRgba(color, 0.95)}
+          stroke={markerRgba(strokeColor, 1)}
+          strokeWidth={2}
+          onPointerDown={(e) => {
+            e.stopPropagation()
+            e.preventDefault()
+            dragIndexRef.current = i
+            ;(e.currentTarget as SVGCircleElement).setPointerCapture(e.pointerId)
+          }}
+        />
+      ))}
+    </svg>
+  )
 }
 
 function MapFloorPlanViewer({
@@ -149,6 +387,7 @@ function MapFloorPlanViewer({
   floorPlanLabel,
   floorPlanId,
   floorMarkers,
+  floorDrawnGeometries,
 }: MapFloorPlanViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null)
@@ -176,6 +415,39 @@ function MapFloorPlanViewer({
     reportFloorPlanLocationPick,
     cancelFloorPlanLocationPick,
   } = useFloorPlanLocationPick()
+
+  const {
+    isDrawing,
+    isEditingFeature,
+    editingFeatureId,
+    drawPhase,
+    floorPlanVertices,
+    geometryType,
+    draftMarkerColor,
+    addFloorPlanVertex,
+    finishLine,
+    closePolygon,
+    cancelDraw,
+    cancelEditFeature,
+    requestEditConfirm,
+    redrawGeometry,
+    updateFloorPlanVertex,
+    isNearFirstFloorPlanVertex,
+  } = useFeatureDraw()
+
+  const { markerStylePreview } = useMarkerStylePreview()
+  const previewColor = markerStylePreview?.color ?? draftMarkerColor
+  const { fill: previewFill, stroke: previewStroke } = markerColorsFromAsset(previewColor)
+
+  const isEditingThisFeature =
+    isEditingFeature && editingFeatureId != null && editingFeatureId === openedFeatureId
+  const isCollectingGeometry =
+    (isDrawing && (drawPhase === 'collecting' || drawPhase === 'awaitingConfirm')) ||
+    (isEditingFeature && drawPhase === 'collecting')
+  const showDrawPreview =
+    (isDrawing || isEditingFeature) && floorPlanVertices.length > 0 && drawPhase !== 'idle'
+  const interactionLocked =
+    isPickingFloorPlanLocation || isDrawing || (isEditingFeature && drawPhase === 'collecting')
 
   const applyView = (next: ViewState) => {
     setView(next)
@@ -252,18 +524,31 @@ function MapFloorPlanViewer({
   }, [openedFeatureId, floorMarkers, naturalSize])
 
   useEffect(() => {
-    if (!isPickingFloorPlanLocation) return
+    if (!isPickingFloorPlanLocation && !isDrawing && !isEditingFeature) return
 
     const onKeyDown = (ev: KeyboardEvent) => {
       if (ev.key === 'Escape') {
         ev.preventDefault()
-        cancelFloorPlanLocationPick()
+        if (isEditingFeature) {
+          cancelEditFeature()
+        } else if (isDrawing) {
+          cancelDraw()
+        } else {
+          cancelFloorPlanLocationPick()
+        }
       }
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [isPickingFloorPlanLocation, cancelFloorPlanLocationPick])
+  }, [
+    isPickingFloorPlanLocation,
+    isDrawing,
+    isEditingFeature,
+    cancelDraw,
+    cancelEditFeature,
+    cancelFloorPlanLocationPick,
+  ])
 
   useEffect(() => {
     const el = containerRef.current
@@ -291,7 +576,7 @@ function MapFloorPlanViewer({
   }, [])
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (isPickingFloorPlanLocation) return
+    if (interactionLocked) return
     if (e.button !== 0) return
     if ((e.target as HTMLElement).closest('[data-floor-marker]')) return
     e.preventDefault()
@@ -349,18 +634,68 @@ function MapFloorPlanViewer({
     applyView(focusViewOnMarker(size.w, size.h, naturalSize.w, naturalSize.h, marker, fit.scale))
   }
 
-  const onPlanClick = (e: React.MouseEvent) => {
-    if (!isPickingFloorPlanLocation || naturalSize == null) return
+  const planCoordsFromEvent = (e: React.MouseEvent) => {
+    if (naturalSize == null) return null
     const el = containerRef.current
-    if (el == null) return
+    if (el == null) return null
     const rect = el.getBoundingClientRect()
     const localX = e.clientX - rect.left
     const localY = e.clientY - rect.top
     const ix = (localX - view.panX) / view.scale
     const iy = (localY - view.panY) / view.scale
-    if (ix < 0 || iy < 0 || ix > naturalSize.w || iy > naturalSize.h) return
-    reportFloorPlanLocationPick(floorPlanId, ix / naturalSize.w, iy / naturalSize.h)
+    if (ix < 0 || iy < 0 || ix > naturalSize.w || iy > naturalSize.h) return null
+    return {
+      x: ix / naturalSize.w,
+      y: iy / naturalSize.h,
+      ix,
+      iy,
+    }
   }
+
+  const onPlanClick = (e: React.MouseEvent) => {
+    if (isPickingFloorPlanLocation) {
+      const coords = planCoordsFromEvent(e)
+      if (coords == null) return
+      reportFloorPlanLocationPick(floorPlanId, coords.x, coords.y)
+      return
+    }
+
+    if (!isCollectingGeometry || naturalSize == null) {
+      return
+    }
+    if (e.detail > 1) return
+
+    const coords = planCoordsFromEvent(e)
+    if (coords == null) return
+
+    const toleranceNorm = FIRST_VERTEX_TOLERANCE_PX / (Math.min(naturalSize.w, naturalSize.h) * view.scale)
+    if (
+      floorPlanVertices.length >= 3 &&
+      isNearFirstFloorPlanVertex(floorPlanId, coords.x, coords.y, toleranceNorm)
+    ) {
+      closePolygon()
+      return
+    }
+
+    addFloorPlanVertex(floorPlanId, coords.x, coords.y)
+  }
+
+  const onPlanDoubleClick = (e: React.MouseEvent) => {
+    if (!isCollectingGeometry || drawPhase !== 'collecting') return
+    e.preventDefault()
+    if (floorPlanVertices.length >= 2) {
+      finishLine()
+    }
+  }
+
+  const visibleDrawnGeometries = floorDrawnGeometries.filter((g) => {
+    if (g.floorPlanId !== floorPlanId) return false
+    if (isEditingThisFeature && g.id === editingFeatureId) return false
+    return true
+  })
+  const visibleFloorMarkers = floorMarkers.filter(
+    (m) => !(isEditingThisFeature && m.id === editingFeatureId),
+  )
 
   const { scale, panX, panY } = view
   const nw = naturalSize?.w
@@ -372,7 +707,7 @@ function MapFloorPlanViewer({
         ref={containerRef}
         className={
           'relative min-h-0 w-full min-w-0 flex-1 touch-none overflow-hidden bg-panel select-none ' +
-          (isPickingFloorPlanLocation
+          (interactionLocked
             ? 'cursor-crosshair'
             : isDragging
               ? 'cursor-grabbing'
@@ -381,6 +716,7 @@ function MapFloorPlanViewer({
         role="region"
         aria-label="Floor plan"
         onClick={onPlanClick}
+        onDoubleClick={onPlanDoubleClick}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
@@ -414,14 +750,47 @@ function MapFloorPlanViewer({
           decoding="async"
           draggable={false}
         />
+        {naturalSize != null ? (
+          <>
+            <FloorPlanDrawnGeometryLayer
+              geometries={visibleDrawnGeometries}
+              naturalSize={naturalSize}
+              linkedFeatureId={linkedFeatureId}
+              openedFeatureId={openedFeatureId}
+              hoverEnabled={!interactionLocked}
+              onEnter={setMapHoveredFeatureId}
+              onLeave={() => setMapHoveredFeatureId(null)}
+            />
+            {showDrawPreview ? (
+              <FloorPlanDrawPreview
+                vertices={floorPlanVertices}
+                geometryType={geometryType}
+                naturalSize={naturalSize}
+                color={previewFill}
+                strokeColor={previewStroke}
+              />
+            ) : null}
+            {isEditingThisFeature && drawPhase === 'editing' ? (
+              <FloorPlanEditHandles
+                vertices={floorPlanVertices}
+                naturalSize={naturalSize}
+                view={view}
+                containerRef={containerRef}
+                color={previewFill}
+                strokeColor={previewStroke}
+                onMoveVertex={updateFloorPlanVertex}
+              />
+            ) : null}
+          </>
+        ) : null}
         {naturalSize != null
-          ? floorMarkers.map((marker) => (
+          ? visibleFloorMarkers.map((marker) => (
               <FloorPlanCaptureMarker
                 key={marker.id}
                 marker={marker}
                 linkedFeatureId={linkedFeatureId}
                 openedFeatureId={openedFeatureId}
-                locationPickActive={isPickingFloorPlanLocation}
+                locationPickActive={interactionLocked}
                 onEnter={setMapHoveredFeatureId}
                 onLeave={() => setMapHoveredFeatureId(null)}
                 onSelect={onMarkerSelect}
@@ -430,6 +799,8 @@ function MapFloorPlanViewer({
           : null}
       </div>
       </div>
+      <MapOverlayControlBar floorPlanId={floorPlanId} />
+      <FeatureDrawConfirmPanel />
       {isPickingFloorPlanLocation ? (
         <div
           className={
@@ -445,6 +816,54 @@ function MapFloorPlanViewer({
             Click the floor plan to set where this photo was taken. Press Esc to cancel.
           </div>
         </div>
+      ) : isEditingThisFeature && drawPhase === 'editing' ? (
+        <div
+          className={
+            'pointer-events-none absolute z-20 flex justify-center ' +
+            mapOverlayInsetXClassName +
+            ' ' +
+            mapOverlayInsetBottomClassName
+          }
+          role="status"
+          aria-live="polite"
+        >
+          <div className="pointer-events-auto flex max-w-xl flex-wrap items-center justify-center gap-2 rounded-panel bg-fg-highlight px-3 py-2 text-center font-sans text-standard text-white shadow-sm">
+            <span>
+              Drag vertices to move. Click Review changes when done, or Redraw to start over. Esc to
+              cancel.
+            </span>
+            <button
+              type="button"
+              onClick={requestEditConfirm}
+              className="rounded-panel bg-white px-3 py-1 font-sans text-standard text-fg-highlight transition-colors hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+            >
+              Review changes
+            </button>
+            <button
+              type="button"
+              onClick={redrawGeometry}
+              className="rounded-panel border border-white/60 px-3 py-1 font-sans text-standard text-white transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+            >
+              Redraw
+            </button>
+          </div>
+        </div>
+      ) : isCollectingGeometry && drawPhase === 'collecting' ? (
+        <div
+          className={
+            'pointer-events-none absolute z-20 flex justify-center ' +
+            mapOverlayInsetXClassName +
+            ' ' +
+            mapOverlayInsetBottomClassName
+          }
+          role="status"
+          aria-live="polite"
+        >
+          <div className="max-w-lg rounded-panel bg-fg-highlight px-3 py-2 text-center font-sans text-standard text-white shadow-sm">
+            Click to add points. Double-click to finish a line. Click the first point to close a polygon.
+            Press Esc to cancel.
+          </div>
+        </div>
       ) : null}
     </div>
   )
@@ -456,6 +875,7 @@ type MapContentProps = {
   floorPlanLabel: string
   floorPlanId: FloorPlanId
   floorPlanMarkers: FloorPlanMarker[]
+  floorDrawnGeometries: FloorPlanDrawnGeometry[]
 }
 
 export function MapContent({
@@ -464,6 +884,7 @@ export function MapContent({
   floorPlanLabel,
   floorPlanId,
   floorPlanMarkers,
+  floorDrawnGeometries,
 }: MapContentProps) {
   const floorMarkers = floorPlanMarkers.filter((m) => m.floorPlanId === floorPlanId)
 
@@ -480,6 +901,7 @@ export function MapContent({
         floorPlanLabel={floorPlanLabel}
         floorPlanId={floorPlanId}
         floorMarkers={floorMarkers}
+        floorDrawnGeometries={floorDrawnGeometries}
       />
     </div>
   )

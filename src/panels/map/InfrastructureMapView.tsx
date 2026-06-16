@@ -3,8 +3,19 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 
 import type { MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
+import { useFeatureDraw } from '@/context/FeatureDrawContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
+import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
+import type { MapDrawnGeometry } from '@/panels/library/assetGeometryHelpers'
+import { FeatureDrawConfirmPanel } from '@/panels/map/FeatureDrawConfirmPanel'
+import { MapOverlayControlBar } from '@/panels/map/MapOverlayControlBar'
+import {
+  DRAWN_FILL_LAYER_ID,
+  DRAWN_LINE_LAYER_ID,
+  resyncAllDrawLayers,
+} from '@/panels/map/mapDrawLayers'
+import { markerColorsFromAsset } from '@/panels/map/markerColors'
 import {
   mapOverlayInsetBottomClassName,
   mapOverlayInsetXClassName,
@@ -171,6 +182,7 @@ type InfrastructureMapViewProps = {
   splitCommitToken: number
   /** Feature capture points (WGS84) shown as blue circles on the map. */
   captureMarkers: MapCaptureMarker[]
+  mapDrawnGeometries: MapDrawnGeometry[]
 }
 
 function mapboxAccessToken(): string | undefined {
@@ -184,6 +196,7 @@ export function InfrastructureMapView({
   styleUrl,
   splitCommitToken,
   captureMarkers,
+  mapDrawnGeometries,
 }: InfrastructureMapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -221,6 +234,64 @@ export function InfrastructureMapView({
 
   const token = mapboxAccessToken()
   const { isPickingLocation, reportLocationPick, cancelLocationPick } = useMapLocationPick()
+  const {
+    isDrawing,
+    isEditingFeature,
+    editingFeatureId,
+    drawPhase,
+    mapVertices,
+    geometryType,
+    draftMarkerColor,
+    addMapVertex,
+    finishLine,
+    closePolygon,
+    cancelDraw,
+    cancelEditFeature,
+    requestEditConfirm,
+    redrawGeometry,
+    updateMapVertex,
+    isNearFirstMapVertex,
+  } = useFeatureDraw()
+  const { markerStylePreview } = useMarkerStylePreview()
+  const previewColor = markerStylePreview?.color ?? draftMarkerColor
+  const { fill: previewFill, stroke: previewStroke } = markerColorsFromAsset(previewColor)
+
+  const isEditingThisFeature =
+    isEditingFeature && editingFeatureId != null && editingFeatureId === openedFeatureId
+  const isCollectingGeometry =
+    (isDrawing && (drawPhase === 'collecting' || drawPhase === 'awaitingConfirm')) ||
+    (isEditingFeature && drawPhase === 'collecting')
+  const showPreviewSession = (isDrawing || isEditingFeature) && mapVertices.length > 0
+  const visibleCaptureMarkers = captureMarkers.filter(
+    (m) => !(isEditingThisFeature && m.id === editingFeatureId),
+  )
+  const visibleMapDrawnGeometries = mapDrawnGeometries.filter(
+    (g) => !(isEditingThisFeature && g.id === editingFeatureId),
+  )
+  const editVertexMarkersRef = useRef<mapboxgl.Marker[]>([])
+
+  const mapDrawnGeometriesRef = useRef(visibleMapDrawnGeometries)
+  const drawPreviewRef = useRef({
+    showPreview: showPreviewSession,
+    mapVertices,
+    geometryType,
+    previewFill,
+    previewStroke,
+  })
+
+  useLayoutEffect(() => {
+    mapDrawnGeometriesRef.current = visibleMapDrawnGeometries
+  }, [visibleMapDrawnGeometries])
+
+  useLayoutEffect(() => {
+    drawPreviewRef.current = {
+      showPreview: showPreviewSession,
+      mapVertices,
+      geometryType,
+      previewFill,
+      previewStroke,
+    }
+  }, [showPreviewSession, mapVertices, geometryType, previewFill, previewStroke])
 
   useEffect(() => {
     if (token == null) return
@@ -246,6 +317,16 @@ export function InfrastructureMapView({
         captureMarkersRef.current,
         linkedFeatureIdRef.current,
         openedFeatureIdRef.current,
+      )
+      const preview = drawPreviewRef.current
+      resyncAllDrawLayers(
+        map,
+        mapDrawnGeometriesRef.current,
+        preview.mapVertices,
+        preview.showPreview,
+        preview.geometryType,
+        preview.previewFill,
+        preview.previewStroke,
       )
     }
 
@@ -287,8 +368,8 @@ export function InfrastructureMapView({
   useEffect(() => {
     const map = mapRef.current
     if (map == null) return
-    syncCaptureMarkersLayer(map, captureMarkers, linkedFeatureId, openedFeatureId)
-  }, [captureMarkers, linkedFeatureId, openedFeatureId])
+    syncCaptureMarkersLayer(map, visibleCaptureMarkers, linkedFeatureId, openedFeatureId)
+  }, [visibleCaptureMarkers, linkedFeatureId, openedFeatureId])
 
   useEffect(() => {
     const map = mapRef.current
@@ -316,7 +397,61 @@ export function InfrastructureMapView({
 
   useEffect(() => {
     const map = mapRef.current
-    if (map == null || isPickingLocation) return
+    if (map == null) return
+    resyncAllDrawLayers(
+      map,
+      visibleMapDrawnGeometries,
+      mapVertices,
+      showPreviewSession,
+      geometryType,
+      previewFill,
+      previewStroke,
+    )
+  }, [
+    visibleMapDrawnGeometries,
+    mapVertices,
+    showPreviewSession,
+    geometryType,
+    previewFill,
+    previewStroke,
+  ])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (map == null || !isEditingThisFeature || drawPhase !== 'editing') {
+      editVertexMarkersRef.current.forEach((m) => m.remove())
+      editVertexMarkersRef.current = []
+      return
+    }
+
+    editVertexMarkersRef.current.forEach((m) => m.remove())
+    editVertexMarkersRef.current = mapVertices.map((v, i) => {
+      const marker = new mapboxgl.Marker({ draggable: true, color: previewFill })
+        .setLngLat([v.lng, v.lat])
+        .addTo(map)
+      marker.on('drag', () => {
+        const ll = marker.getLngLat()
+        updateMapVertex(i, ll.lng, ll.lat)
+      })
+      return marker
+    })
+
+    return () => {
+      editVertexMarkersRef.current.forEach((m) => m.remove())
+      editVertexMarkersRef.current = []
+    }
+  }, [
+    isEditingThisFeature,
+    drawPhase,
+    editingFeatureId,
+    mapVertices.length,
+    previewFill,
+    updateMapVertex,
+  ])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (map == null || isPickingLocation || isDrawing || isEditingFeature) return
 
     const onClick = (e: mapboxgl.MapLayerMouseEvent) => {
       const id = captureMarkerIdFromFeature(e.features?.[0])
@@ -331,19 +466,19 @@ export function InfrastructureMapView({
     return () => {
       map.off('click', CAPTURE_LAYER_ID, onClick)
     }
-  }, [isPickingLocation, openFeatureFromMap, setOpenedFeatureId, styleUrl])
+  }, [isPickingLocation, isDrawing, isEditingFeature, openFeatureFromMap, setOpenedFeatureId, styleUrl])
 
   useEffect(() => {
     const map = mapRef.current
-    if (map == null || isPickingLocation) return
+    if (map == null || isPickingLocation || isDrawing || isEditingFeature) return
 
     const canvas = map.getCanvas()
     let prevCursor = ''
+    const hoverLayerIds = [CAPTURE_LAYER_ID, DRAWN_FILL_LAYER_ID, DRAWN_LINE_LAYER_ID]
 
     const onMouseEnter = (e: mapboxgl.MapLayerMouseEvent) => {
-      const feature = e.features?.[0]
-      const id = feature?.properties?.id
-      if (typeof id !== 'string') return
+      const id = captureMarkerIdFromFeature(e.features?.[0])
+      if (id == null) return
       setMapHoveredFeatureId(id)
       prevCursor = canvas.style.cursor
       canvas.style.cursor = 'pointer'
@@ -354,16 +489,20 @@ export function InfrastructureMapView({
       canvas.style.cursor = prevCursor
     }
 
-    map.on('mouseenter', CAPTURE_LAYER_ID, onMouseEnter)
-    map.on('mouseleave', CAPTURE_LAYER_ID, onMouseLeave)
+    for (const layerId of hoverLayerIds) {
+      map.on('mouseenter', layerId, onMouseEnter)
+      map.on('mouseleave', layerId, onMouseLeave)
+    }
 
     return () => {
-      map.off('mouseenter', CAPTURE_LAYER_ID, onMouseEnter)
-      map.off('mouseleave', CAPTURE_LAYER_ID, onMouseLeave)
+      for (const layerId of hoverLayerIds) {
+        map.off('mouseenter', layerId, onMouseEnter)
+        map.off('mouseleave', layerId, onMouseLeave)
+      }
       setMapHoveredFeatureId(null)
       canvas.style.cursor = prevCursor
     }
-  }, [isPickingLocation, setMapHoveredFeatureId, styleUrl])
+  }, [isPickingLocation, isDrawing, isEditingFeature, setMapHoveredFeatureId, styleUrl])
 
   useEffect(() => {
     if (splitCommitToken === 0) return
@@ -375,6 +514,86 @@ export function InfrastructureMapView({
       map.resize()
     })
   }, [splitCommitToken])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (map == null || !isCollectingGeometry) return
+
+    const canvas = map.getCanvas()
+    const prevCursor = canvas.style.cursor
+    canvas.style.cursor = 'crosshair'
+
+    const onClick = (e: mapboxgl.MapMouseEvent) => {
+      const { lng, lat } = e.lngLat
+
+      if (
+        mapVertices.length >= 3 &&
+        isNearFirstMapVertex(lng, lat, 12, (lngVal, latVal) => {
+          const p = map.project([lngVal, latVal])
+          return { x: p.x, y: p.y }
+        })
+      ) {
+        closePolygon()
+        return
+      }
+
+      addMapVertex(lng, lat)
+    }
+
+    const onDblClick = (e: mapboxgl.MapMouseEvent) => {
+      e.preventDefault()
+      if (drawPhase === 'collecting' && mapVertices.length >= 2) {
+        finishLine()
+      }
+    }
+
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') {
+        ev.preventDefault()
+        if (isEditingFeature) {
+          cancelEditFeature()
+        } else {
+          cancelDraw()
+        }
+      }
+    }
+
+    map.on('click', onClick)
+    map.on('dblclick', onDblClick)
+    window.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      map.off('click', onClick)
+      map.off('dblclick', onDblClick)
+      canvas.style.cursor = prevCursor
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [
+    isCollectingGeometry,
+    isEditingFeature,
+    drawPhase,
+    mapVertices.length,
+    addMapVertex,
+    finishLine,
+    closePolygon,
+    cancelDraw,
+    cancelEditFeature,
+    isNearFirstMapVertex,
+  ])
+
+  useEffect(() => {
+    if (!isEditingFeature || drawPhase !== 'editing') return
+
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') {
+        ev.preventDefault()
+        cancelEditFeature()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isEditingFeature, drawPhase, cancelEditFeature])
 
   useEffect(() => {
     const map = mapRef.current
@@ -428,6 +647,8 @@ export function InfrastructureMapView({
         role="region"
         aria-label="Map"
       />
+      <MapOverlayControlBar />
+      <FeatureDrawConfirmPanel />
       {isPickingLocation ? (
         <div
           className={
@@ -441,6 +662,54 @@ export function InfrastructureMapView({
         >
           <div className="max-w-md rounded-panel bg-fg-highlight px-3 py-2 text-center font-sans text-standard text-white shadow-sm">
             Click the map to set where this photo was taken. Press Esc to cancel.
+          </div>
+        </div>
+      ) : isEditingThisFeature && drawPhase === 'editing' ? (
+        <div
+          className={
+            'pointer-events-none absolute z-20 flex justify-center ' +
+            mapOverlayInsetXClassName +
+            ' ' +
+            mapOverlayInsetBottomClassName
+          }
+          role="status"
+          aria-live="polite"
+        >
+          <div className="pointer-events-auto flex max-w-xl flex-wrap items-center justify-center gap-2 rounded-panel bg-fg-highlight px-3 py-2 text-center font-sans text-standard text-white shadow-sm">
+            <span>
+              Drag vertices to move. Click Review changes when done, or Redraw to start over. Esc to
+              cancel.
+            </span>
+            <button
+              type="button"
+              onClick={requestEditConfirm}
+              className="rounded-panel bg-white px-3 py-1 font-sans text-standard text-fg-highlight transition-colors hover:bg-white/90 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+            >
+              Review changes
+            </button>
+            <button
+              type="button"
+              onClick={redrawGeometry}
+              className="rounded-panel border border-white/60 px-3 py-1 font-sans text-standard text-white transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none"
+            >
+              Redraw
+            </button>
+          </div>
+        </div>
+      ) : isCollectingGeometry ? (
+        <div
+          className={
+            'pointer-events-none absolute z-20 flex justify-center ' +
+            mapOverlayInsetXClassName +
+            ' ' +
+            mapOverlayInsetBottomClassName
+          }
+          role="status"
+          aria-live="polite"
+        >
+          <div className="max-w-lg rounded-panel bg-fg-highlight px-3 py-2 text-center font-sans text-standard text-white shadow-sm">
+            Click to add points. Double-click to finish a line. Click the first point to close a polygon.
+            Press Esc to cancel.
           </div>
         </div>
       ) : null}

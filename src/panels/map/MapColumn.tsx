@@ -46,7 +46,8 @@ type MapColumnProps = {
 
 export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
   const { project, projectId, isNewProject } = useActiveProject()
-  const { captureMarkers, floorPlanMarkers } = useMapCaptureMarkers()
+  const { captureMarkers, floorPlanMarkers, floorPlanDrawnGeometries, mapDrawnGeometries } =
+    useMapCaptureMarkers()
   const { locationPickPreview } = useMapLocationPick()
   const { floorPlanPickPreview } = useFloorPlanLocationPick()
   const { markerStylePreview } = useMarkerStylePreview()
@@ -95,11 +96,17 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
     if (targetFeatureId == null) return
     if (!hasFloorPlans) return
     const marker = displayFloorPlanMarkers.find((m) => m.id === targetFeatureId)
-    if (marker == null) return
-    setFloorPlanId((current) =>
-      marker.floorPlanId !== current ? marker.floorPlanId : current,
-    )
-  }, [openedFeatureId, linkedFeatureId, displayFloorPlanMarkers, hasFloorPlans])
+    const drawn = floorPlanDrawnGeometries.find((g) => g.id === targetFeatureId)
+    const targetFloorId = marker?.floorPlanId ?? drawn?.floorPlanId
+    if (targetFloorId == null) return
+    setFloorPlanId((current) => (targetFloorId !== current ? targetFloorId : current))
+  }, [
+    openedFeatureId,
+    linkedFeatureId,
+    displayFloorPlanMarkers,
+    floorPlanDrawnGeometries,
+    hasFloorPlans,
+  ])
 
   if (isNewProject) {
     return (
@@ -154,6 +161,7 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
                     styleUrl={activeStyleUrl}
                     splitCommitToken={splitCommitToken}
                     captureMarkers={displayCaptureMarkers}
+                    mapDrawnGeometries={mapDrawnGeometries}
                   />
                 </>
               ) : (
@@ -204,6 +212,7 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
                 floorPlanSrc={floorPlanImageSrc(floorPlanId)}
                 floorPlanLabel={floorPlanDisplayLabel(floorPlanId)}
                 floorPlanMarkers={displayFloorPlanMarkers}
+                floorDrawnGeometries={floorPlanDrawnGeometries}
               />
             )}
           </div>

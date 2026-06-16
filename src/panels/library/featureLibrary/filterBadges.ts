@@ -1,8 +1,7 @@
-import { getAssetTypeLabel } from '@/data/sampleAssets'
+import { featureTypeFilterLabel } from '@/data/sampleAssets'
 
 import {
   isDateFilterActive,
-  TYPE_FILTER_OPTIONS,
 } from '@/panels/library/featureLibrary/applyFeatureLibraryFilters'
 import type { ActiveFilter } from '@/panels/library/FeatureLibraryBadges'
 import type {
@@ -34,9 +33,7 @@ export function filtersToBadges(filters: FeatureLibraryFilters): ActiveFilter[] 
   const badges: ActiveFilter[] = []
 
   if (filters.types.length > 0) {
-    const labels = filters.types.map(
-      (k) => TYPE_FILTER_OPTIONS.find((o) => o.kind === k)?.label ?? getAssetTypeLabel(k),
-    )
+    const labels = filters.types.map((id) => featureTypeFilterLabel(id))
     badges.push({ id: 'filter-type', label: `Type: ${labels.join(', ')}` })
   }
 
