@@ -1,7 +1,10 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 
+import type { AssetKind } from '@/data/sampleAssets'
 import type { FloorPlanId } from '@/panels/map/mapFloorPlans'
 import type { FloorPlanDrawnGeometry, MapDrawnGeometry } from '@/panels/library/assetGeometryHelpers'
+
+export type MediaMarkerKind = Extract<AssetKind, 'image' | 'panorama'>
 
 export type MapCaptureMarker = {
   id: string
@@ -9,6 +12,8 @@ export type MapCaptureMarker = {
   lat: number
   color: string
   strokeColor: string
+  kind?: MediaMarkerKind
+  viewDirectionDeg?: number
 }
 
 export type FloorPlanMarker = {
@@ -20,6 +25,8 @@ export type FloorPlanMarker = {
   y: number
   color: string
   strokeColor: string
+  kind?: MediaMarkerKind
+  viewDirectionDeg?: number
 }
 
 type MapCaptureMarkersContextValue = {

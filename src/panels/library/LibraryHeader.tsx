@@ -2,6 +2,8 @@ import { Panel } from '@/components/Panel'
 import { useActiveProject } from '@/context/ActiveProjectContext'
 import { useNewProject } from '@/context/NewProjectContext'
 import { useProjectsDrawer } from '@/context/ProjectsDrawerContext'
+import { ProjectActionsMenu } from '@/pages/projects/ProjectActionsMenu'
+import { ProjectStatusBadge } from '@/pages/projects/ProjectStatusBadge'
 
 function HamburgerIcon() {
   return (
@@ -39,7 +41,13 @@ export function LibraryHeader() {
       >
         <HamburgerIcon />
       </button>
-      <h1 className="min-w-0 truncate font-title text-title font-bold text-fg">{displayName}</h1>
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <h1 className="min-w-0 truncate font-title text-title font-bold text-fg">{displayName}</h1>
+        {!isNewProject ? (
+          <ProjectStatusBadge status={project.status} publishedDate={project.publishedDate} />
+        ) : null}
+      </div>
+      {!isNewProject ? <ProjectActionsMenu project={project} /> : null}
     </Panel>
   )
 }

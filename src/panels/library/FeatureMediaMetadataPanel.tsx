@@ -4,6 +4,7 @@ import { useActiveProject } from '@/context/ActiveProjectContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
+import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 import type { SpatialAsset } from '@/data/sampleAssets'
 import { formatDisplayDateFromIsoDate, parseToIsoDate, todayIsoDate } from '@/lib/formatDisplayDateFromIsoDate'
 import { formatFloorPlanCoord } from '@/lib/formatFloorPlanCoord'
@@ -60,6 +61,12 @@ export function FeatureMediaMetadataPanel({
     cancelFloorPlanLocationPick,
   } = useFloorPlanLocationPick()
   const { setMarkerStylePreview, clearMarkerStylePreview } = useMarkerStylePreview()
+  const {
+    isAdjustingDirection,
+    adjustingFeatureId,
+    startDirectionAdjust,
+    cancelDirectionAdjust,
+  } = useViewDirectionAdjust()
   const [draft, setDraft] = useState(() => draftFromAsset(asset, isBuildingProject))
   const autoPickStartedRef = useRef(false)
 
@@ -71,6 +78,28 @@ export function FeatureMediaMetadataPanel({
   useEffect(() => {
     autoPickStartedRef.current = false
   }, [asset.id])
+
+  useEffect(() => {
+    return () => cancelDirectionAdjust()
+  }, [cancelDirectionAdjust])
+
+  const hasCaptureLocation = isBuildingProject
+    ? draft.xStr.trim() !== '' && draft.yStr.trim() !== ''
+    : draft.latStr.trim() !== '' && draft.lngStr.trim() !== ''
+
+  const isMediaWithDirection = asset.kind === 'image' || asset.kind === 'panorama'
+  const isThisFormDirectionAdjustTarget =
+    isAdjustingDirection && adjustingFeatureId === asset.id
+  const adjustDisabledReason = !isMediaWithDirection
+    ? 'Direction adjustment is only available for images and 360 photos.'
+    : !hasCaptureLocation
+      ? 'Set a capture location before adjusting direction.'
+      : undefined
+  const canAdjustDirection =
+    isMediaWithDirection &&
+    hasCaptureLocation &&
+    !isPickingLocation &&
+    !isPickingFloorPlanLocation
 
   const canPickOnMap = project.projectType === 'Infrastructure' && mapboxTokenPresent()
   const pickDisabledReason =
@@ -216,6 +245,7 @@ export function FeatureMediaMetadataPanel({
             isThisFormMapPickTarget: isPickingLocation,
             isThisFormFloorPlanPickTarget: isPickingFloorPlanLocation,
             onMapPickClick: () => {
+              if (isAdjustingDirection) cancelDirectionAdjust()
               if (isPickingLocation) {
                 cancelLocationPick()
                 return
@@ -229,6 +259,7 @@ export function FeatureMediaMetadataPanel({
               })
             },
             onFloorPlanPickClick: () => {
+              if (isAdjustingDirection) cancelDirectionAdjust()
               if (isPickingFloorPlanLocation) {
                 cancelFloorPlanLocationPick()
                 return
@@ -241,6 +272,28 @@ export function FeatureMediaMetadataPanel({
                   floorPlanId,
                 }))
               })
+            },
+          }}
+          directionAdjust={{
+            canAdjustDirection,
+            adjustDisabledReason,
+            isDirectionAdjustInProgress: isAdjustingDirection,
+            isThisFormDirectionAdjustTarget,
+            onDirectionAdjustClick: () => {
+              if (isThisFormDirectionAdjustTarget) {
+                cancelDirectionAdjust()
+                return
+              }
+              cancelLocationPick()
+              cancelFloorPlanLocationPick()
+              const fileUrl = asset.fileUrl ?? ''
+              if (fileUrl === '') return
+              startDirectionAdjust(
+                asset.id,
+                { fileUrl, kind: asset.kind as 'image' | 'panorama' },
+                asset.viewDirectionDeg ?? 0,
+                (deg) => onSave({ ...asset, viewDirectionDeg: deg }),
+              )
             },
           }}
         />

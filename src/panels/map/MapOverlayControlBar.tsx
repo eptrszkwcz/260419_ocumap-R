@@ -1,6 +1,7 @@
 import { useFeatureDraw } from '@/context/FeatureDrawContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
+import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 import {
   overlayBarInsetStyle,
   overlayBtnClass,
@@ -8,6 +9,7 @@ import {
 } from '@/components/overlayControlButtons'
 import { GearIcon, PencilIcon, RulerIcon } from '@/components/overlayControlIcons'
 import type { FloorPlanId } from '@/panels/map/mapFloorPlans'
+import { useStartFeatureDraw } from '@/panels/map/useStartFeatureDraw'
 
 type MapOverlayControlBarProps = {
   floorPlanId?: FloorPlanId
@@ -15,11 +17,19 @@ type MapOverlayControlBarProps = {
 }
 
 export function MapOverlayControlBar({ floorPlanId, hidden = false }: MapOverlayControlBarProps) {
-  const { isDrawing, isEditingFeature, cancelDraw, startDraw } = useFeatureDraw()
-  const { isPickingLocation, cancelLocationPick } = useMapLocationPick()
-  const { isPickingFloorPlanLocation, cancelFloorPlanLocationPick } = useFloorPlanLocationPick()
+  const { isDrawing, isEditingFeature, cancelDraw } = useFeatureDraw()
+  const { isPickingLocation } = useMapLocationPick()
+  const { isPickingFloorPlanLocation } = useFloorPlanLocationPick()
+  const { isAdjustingDirection } = useViewDirectionAdjust()
+  const startFeatureDraw = useStartFeatureDraw()
 
-  if (hidden || isPickingLocation || isPickingFloorPlanLocation || isEditingFeature) {
+  if (
+    hidden ||
+    isPickingLocation ||
+    isPickingFloorPlanLocation ||
+    isAdjustingDirection ||
+    isEditingFeature
+  ) {
     return null
   }
 
@@ -28,13 +38,7 @@ export function MapOverlayControlBar({ floorPlanId, hidden = false }: MapOverlay
       cancelDraw()
       return
     }
-    cancelLocationPick()
-    cancelFloorPlanLocationPick()
-    if (floorPlanId != null) {
-      startDraw(floorPlanId)
-    } else {
-      startDraw()
-    }
+    startFeatureDraw({ floorPlanId })
   }
 
   return (

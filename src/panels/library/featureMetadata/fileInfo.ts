@@ -21,7 +21,7 @@ export function extensionLabelFromMimeAndKind(
     }
   }
   if (kind === 'video') return 'MP4'
-  if (kind === 'panorama') return 'PNG'
+  if (kind === 'panorama') return 'JPEG'
   return 'JPEG'
 }
 

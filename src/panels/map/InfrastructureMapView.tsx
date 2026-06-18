@@ -1,13 +1,18 @@
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { useEffect, useLayoutEffect, useRef } from 'react'
+import { createRoot, type Root } from 'react-dom/client'
 
 import type { MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
 import { useFeatureDraw } from '@/context/FeatureDrawContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
+import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 import type { MapDrawnGeometry } from '@/panels/library/assetGeometryHelpers'
+import { DirectionAdjustBanner } from '@/panels/map/DirectionAdjustBanner'
+import { DirectionAdjustMarkerOverlay } from '@/panels/map/DirectionAdjustMarkerOverlay'
+import { DirectionBeam, effectiveViewDirectionDeg } from '@/panels/map/DirectionBeam'
 import { FeatureDrawConfirmPanel } from '@/panels/map/FeatureDrawConfirmPanel'
 import { FEATURE_DRAW_INSTRUCTION } from '@/panels/map/featureDrawUtils'
 import { MapOverlayControlBar } from '@/panels/map/MapOverlayControlBar'
@@ -65,17 +70,52 @@ function captureMarkerIdFromFeature(feature: mapboxgl.MapboxGeoJSONFeature | und
   return String(raw)
 }
 
-function zoomToOpenedFeature(map: mapboxgl.Map, markers: MapCaptureMarker[], featureId: string) {
+function zoomToOpenedFeature(
+  map: mapboxgl.Map,
+  markers: MapCaptureMarker[],
+  geometries: MapDrawnGeometry[],
+  featureId: string,
+) {
   const marker = markers.find((m) => m.id === featureId)
-  if (marker == null) return
-  if (map.getMaxZoom() < FEATURE_FOCUS_MAX_ZOOM) {
-    map.setMaxZoom(FEATURE_FOCUS_MAX_ZOOM)
+  if (marker != null) {
+    if (map.getMaxZoom() < FEATURE_FOCUS_MAX_ZOOM) {
+      map.setMaxZoom(FEATURE_FOCUS_MAX_ZOOM)
+    }
+    map.flyTo({
+      center: [marker.lng, marker.lat],
+      zoom: FEATURE_FOCUS_MAX_ZOOM,
+      duration: FLY_DURATION_MS,
+      essential: true,
+    })
+    return
   }
-  map.flyTo({
-    center: [marker.lng, marker.lat],
-    zoom: FEATURE_FOCUS_MAX_ZOOM,
+
+  const geometry = geometries.find((g) => g.id === featureId)
+  if (geometry == null || geometry.coordinates.length === 0) return
+
+  if (geometry.coordinates.length === 1) {
+    const c = geometry.coordinates[0]
+    if (map.getMaxZoom() < FEATURE_FOCUS_MAX_ZOOM) {
+      map.setMaxZoom(FEATURE_FOCUS_MAX_ZOOM)
+    }
+    map.flyTo({
+      center: [c.lng, c.lat],
+      zoom: FEATURE_FOCUS_MAX_ZOOM,
+      duration: FLY_DURATION_MS,
+      essential: true,
+    })
+    return
+  }
+
+  const first = geometry.coordinates[0]
+  const bounds = geometry.coordinates.reduce(
+    (b, c) => b.extend([c.lng, c.lat]),
+    new mapboxgl.LngLatBounds([first.lng, first.lat], [first.lng, first.lat]),
+  )
+  map.fitBounds(bounds, {
+    padding: FIT_ALL_MARKERS_PADDING,
+    maxZoom: FEATURE_FOCUS_MAX_ZOOM,
     duration: FLY_DURATION_MS,
-    essential: true,
   })
 }
 
@@ -226,6 +266,8 @@ export function InfrastructureMapView({
   const {
     linkedFeatureId,
     openedFeatureId,
+    viewDirectionBaseDeg,
+    viewDirectionLiveOffsetDeg,
     setMapHoveredFeatureId,
     setOpenedFeatureId,
     openFeatureFromMap,
@@ -249,6 +291,8 @@ export function InfrastructureMapView({
 
   const token = mapboxAccessToken()
   const { isPickingLocation, reportLocationPick, cancelLocationPick } = useMapLocationPick()
+  const { isAdjustingDirection, adjustingFeatureId, cancelDirectionAdjust } =
+    useViewDirectionAdjust()
   const {
     isDrawing,
     isEditingFeature,
@@ -284,6 +328,8 @@ export function InfrastructureMapView({
   )
   const editVertexMarkersRef = useRef<mapboxgl.Marker[]>([])
   const collectingVertexMarkersRef = useRef<mapboxgl.Marker[]>([])
+  const directionBeamMarkerRef = useRef<mapboxgl.Marker | null>(null)
+  const directionBeamRootRef = useRef<Root | null>(null)
   const suppressMapClickRef = useRef(false)
 
   const mapDrawnGeometriesRef = useRef(visibleMapDrawnGeometries)
@@ -384,6 +430,80 @@ export function InfrastructureMapView({
   useEffect(() => {
     const map = mapRef.current
     if (map == null) return
+
+    const removeDirectionBeam = () => {
+      directionBeamRootRef.current?.unmount()
+      directionBeamRootRef.current = null
+      directionBeamMarkerRef.current?.remove()
+      directionBeamMarkerRef.current = null
+    }
+
+    const beamFeatureId =
+      isAdjustingDirection && adjustingFeatureId != null ? adjustingFeatureId : openedFeatureId
+
+    if (beamFeatureId == null || viewDirectionBaseDeg == null) {
+      removeDirectionBeam()
+      return
+    }
+
+    const captureMarker = visibleCaptureMarkers.find((m) => m.id === beamFeatureId)
+    if (
+      captureMarker == null ||
+      (captureMarker.kind !== 'image' && captureMarker.kind !== 'panorama')
+    ) {
+      removeDirectionBeam()
+      return
+    }
+
+    const isDirectionAdjustTarget =
+      isAdjustingDirection && adjustingFeatureId === beamFeatureId
+
+    const directionDeg = effectiveViewDirectionDeg(
+      viewDirectionBaseDeg,
+      viewDirectionLiveOffsetDeg,
+    )
+
+    if (directionBeamMarkerRef.current == null) {
+      const el = document.createElement('div')
+      el.style.pointerEvents = isDirectionAdjustTarget ? 'auto' : 'none'
+      directionBeamMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([captureMarker.lng, captureMarker.lat])
+        .addTo(map)
+      directionBeamRootRef.current = createRoot(el)
+    } else {
+      directionBeamMarkerRef.current.setLngLat([captureMarker.lng, captureMarker.lat])
+      const el = directionBeamMarkerRef.current.getElement()
+      el.style.pointerEvents = isDirectionAdjustTarget ? 'auto' : 'none'
+    }
+
+    directionBeamRootRef.current?.render(
+      isDirectionAdjustTarget ? (
+        <DirectionAdjustMarkerOverlay />
+      ) : (
+        <DirectionBeam directionDeg={directionDeg} />
+      ),
+    )
+  }, [
+    openedFeatureId,
+    isAdjustingDirection,
+    adjustingFeatureId,
+    viewDirectionBaseDeg,
+    viewDirectionLiveOffsetDeg,
+    visibleCaptureMarkers,
+  ])
+
+  useEffect(() => {
+    return () => {
+      directionBeamRootRef.current?.unmount()
+      directionBeamRootRef.current = null
+      directionBeamMarkerRef.current?.remove()
+      directionBeamMarkerRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (map == null) return
     syncCaptureMarkersLayer(map, visibleCaptureMarkers, linkedFeatureId, openedFeatureId)
   }, [visibleCaptureMarkers, linkedFeatureId, openedFeatureId])
 
@@ -401,7 +521,12 @@ export function InfrastructureMapView({
     prevOpenedFeatureIdRef.current = openedFeatureId
 
     if (openedFeatureId != null) {
-      zoomToOpenedFeature(map, captureMarkersRef.current, openedFeatureId)
+      zoomToOpenedFeature(
+        map,
+        captureMarkersRef.current,
+        mapDrawnGeometriesRef.current,
+        openedFeatureId,
+      )
       return
     }
 
@@ -409,7 +534,7 @@ export function InfrastructureMapView({
     if (prevOpened != null) {
       fitAllCaptureMarkers(map, captureMarkersRef.current)
     }
-  }, [openedFeatureId, captureMarkers])
+  }, [openedFeatureId, captureMarkers, mapDrawnGeometries])
 
   useEffect(() => {
     const map = mapRef.current
@@ -549,26 +674,35 @@ export function InfrastructureMapView({
 
   useEffect(() => {
     const map = mapRef.current
-    if (map == null || isPickingLocation || isDrawing || isEditingFeature) return
+    if (map == null || isPickingLocation || isAdjustingDirection || isDrawing || isEditingFeature) return
 
     const onClick = (e: mapboxgl.MapLayerMouseEvent) => {
       const id = captureMarkerIdFromFeature(e.features?.[0])
       if (id == null) return
       setOpenedFeatureId(id)
-      zoomToOpenedFeature(map, captureMarkersRef.current, id)
+      zoomToOpenedFeature(
+        map,
+        captureMarkersRef.current,
+        mapDrawnGeometriesRef.current,
+        id,
+      )
       openFeatureFromMap(id)
     }
 
     map.on('click', CAPTURE_LAYER_ID, onClick)
+    map.on('click', DRAWN_FILL_LAYER_ID, onClick)
+    map.on('click', DRAWN_LINE_LAYER_ID, onClick)
 
     return () => {
       map.off('click', CAPTURE_LAYER_ID, onClick)
+      map.off('click', DRAWN_FILL_LAYER_ID, onClick)
+      map.off('click', DRAWN_LINE_LAYER_ID, onClick)
     }
-  }, [isPickingLocation, isDrawing, isEditingFeature, openFeatureFromMap, setOpenedFeatureId, styleUrl])
+  }, [isPickingLocation, isAdjustingDirection, isDrawing, isEditingFeature, openFeatureFromMap, setOpenedFeatureId, styleUrl])
 
   useEffect(() => {
     const map = mapRef.current
-    if (map == null || isPickingLocation || isDrawing || isEditingFeature) return
+    if (map == null || isPickingLocation || isAdjustingDirection || isDrawing || isEditingFeature) return
 
     const canvas = map.getCanvas()
     let prevCursor = ''
@@ -600,7 +734,7 @@ export function InfrastructureMapView({
       setMapHoveredFeatureId(null)
       canvas.style.cursor = prevCursor
     }
-  }, [isPickingLocation, isDrawing, isEditingFeature, setMapHoveredFeatureId, styleUrl])
+  }, [isPickingLocation, isAdjustingDirection, isDrawing, isEditingFeature, setMapHoveredFeatureId, styleUrl])
 
   useEffect(() => {
     if (splitCommitToken === 0) return
@@ -700,6 +834,20 @@ export function InfrastructureMapView({
     }
   }, [isPickingLocation, reportLocationPick, cancelLocationPick])
 
+  useEffect(() => {
+    if (!isAdjustingDirection) return
+
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') {
+        ev.preventDefault()
+        cancelDirectionAdjust()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isAdjustingDirection, cancelDirectionAdjust])
+
   if (token == null) {
     return (
       <div
@@ -740,6 +888,8 @@ export function InfrastructureMapView({
             Click the map to set where this photo was taken. Press Esc to cancel.
           </div>
         </div>
+      ) : isAdjustingDirection ? (
+        <DirectionAdjustBanner />
       ) : isEditingThisFeature && drawPhase === 'editing' ? (
         <div
           className={

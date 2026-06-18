@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { PanelTabRow, type TabItem } from '@/components/PanelTabRow'
 import { PanelCenteredPrompt } from '@/components/PanelCenteredPrompt'
 import { TabPanelBody } from '@/components/TabPanelBody'
+import { useActiveFloorPlan } from '@/context/ActiveFloorPlanContext'
 import { useActiveProject } from '@/context/ActiveProjectContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
@@ -17,8 +18,6 @@ import { MapContent } from '@/panels/map/MapContent'
 import { MapControlHeader } from '@/panels/map/MapControlHeader'
 import { MapHeader } from '@/panels/map/MapHeader'
 import {
-  DEFAULT_FLOOR_PLAN_ID,
-  type FloorPlanId,
   floorPlanDisplayLabel,
   floorPlanImageSrc,
   getFloorPlanOptionsForProject,
@@ -53,7 +52,7 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
   const { markerStylePreview } = useMarkerStylePreview()
   const { openedFeatureId, linkedFeatureId } = useFeatureMapHover()
   const [buildingTab, setBuildingTab] = useState('2d')
-  const [floorPlanId, setFloorPlanId] = useState<FloorPlanId>(DEFAULT_FLOOR_PLAN_ID)
+  const { floorPlanId, setFloorPlanId } = useActiveFloorPlan()
   const [baseMapStyleId, setBaseMapStyleId] = useState<MapBaseStyleId>('default')
 
   const floorPlanOptions = useMemo(

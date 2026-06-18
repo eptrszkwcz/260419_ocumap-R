@@ -5,7 +5,7 @@ import { ControlHeaderToolbar } from '@/components/ControlHeaderToolbar'
 import { Panel } from '@/components/Panel'
 import { UserAccountDisplay } from '@/components/UserAccountDisplay'
 import { useProjects } from '@/context/ProjectsContext'
-import { NEW_PROJECT_ID, type ProjectRecord } from '@/data/sampleProjects'
+import { NEW_PROJECT_ID, resolveLibraryProjectId, type ProjectRecord } from '@/data/sampleProjects'
 import type { LibraryViewType } from '@/panels/library/featureLibrary/types'
 import { applyProjectFilters } from '@/pages/projects/applyProjectFilters'
 import {
@@ -39,7 +39,7 @@ export function ProjectsPage() {
   const activeFilters = useMemo(() => projectFiltersToBadges(filters), [filters])
 
   const openProject = (project: ProjectRecord) => {
-    navigate(`/library?project=${encodeURIComponent(project.id)}`)
+    navigate(`/library?project=${encodeURIComponent(resolveLibraryProjectId(project.id))}`)
   }
 
   const handleRemoveFilter = (badgeId: string) => {

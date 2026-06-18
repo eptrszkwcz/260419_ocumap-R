@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { nextSortDirection, type SortDirection } from '@/components/SortableColumnHeader'
-import { type ProjectRecord } from '@/data/sampleProjects'
+import { resolveLibraryProjectId, type ProjectRecord } from '@/data/sampleProjects'
 import { resolveVisibleProjectColumns } from '@/pages/projects/projectListColumns'
 import { ProjectsListHeader, ProjectsListRows } from '@/pages/projectsListPresentation'
 import {
@@ -70,7 +70,7 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
         visibleColumns={visibleColumns}
         rowProps={(project) => ({
           onActivate: () => {
-            navigate(`/library?project=${encodeURIComponent(project.id)}`)
+            navigate(`/library?project=${encodeURIComponent(resolveLibraryProjectId(project.id))}`)
           },
           isCurrent: false,
           ariaLabel: `Open ${project.name} in library`,

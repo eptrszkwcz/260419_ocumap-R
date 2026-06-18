@@ -17,6 +17,12 @@ type FeatureMapHoverContextValue = {
   setOpenedFeatureId: (id: string | null) => void
   setMapFeatureClickHandler: (handler: ((id: string) => void) | null) => void
   openFeatureFromMap: (id: string) => void
+  /** Base viewing direction (degrees) for the opened image/pano; null when no beam. */
+  viewDirectionBaseDeg: number | null
+  setViewDirectionBaseDeg: (deg: number | null) => void
+  /** Live pano yaw offset (degrees) added to base direction. */
+  viewDirectionLiveOffsetDeg: number
+  setViewDirectionLiveOffsetDeg: (deg: number) => void
 }
 
 const FeatureMapHoverContext = createContext<FeatureMapHoverContextValue | null>(null)
@@ -25,6 +31,8 @@ export function FeatureMapHoverProvider({ children }: { children: ReactNode }) {
   const [mapHoveredFeatureId, setMapHoveredFeatureIdState] = useState<string | null>(null)
   const [tableHoveredFeatureId, setTableHoveredFeatureIdState] = useState<string | null>(null)
   const [openedFeatureId, setOpenedFeatureIdState] = useState<string | null>(null)
+  const [viewDirectionBaseDeg, setViewDirectionBaseDegState] = useState<number | null>(null)
+  const [viewDirectionLiveOffsetDeg, setViewDirectionLiveOffsetDegState] = useState(0)
   const mapFeatureClickHandlerRef = useRef<((id: string) => void) | null>(null)
 
   const setMapHoveredFeatureId = useCallback((id: string | null) => {
@@ -40,7 +48,20 @@ export function FeatureMapHoverProvider({ children }: { children: ReactNode }) {
     if (id == null) {
       setMapHoveredFeatureIdState(null)
       setTableHoveredFeatureIdState(null)
+      setViewDirectionBaseDegState(null)
+      setViewDirectionLiveOffsetDegState(0)
     }
+  }, [])
+
+  const setViewDirectionBaseDeg = useCallback((deg: number | null) => {
+    setViewDirectionBaseDegState(deg)
+    if (deg == null) {
+      setViewDirectionLiveOffsetDegState(0)
+    }
+  }, [])
+
+  const setViewDirectionLiveOffsetDeg = useCallback((deg: number) => {
+    setViewDirectionLiveOffsetDegState(deg)
   }, [])
 
   const setMapFeatureClickHandler = useCallback((handler: ((id: string) => void) | null) => {
@@ -62,6 +83,10 @@ export function FeatureMapHoverProvider({ children }: { children: ReactNode }) {
       setOpenedFeatureId,
       setMapFeatureClickHandler,
       openFeatureFromMap,
+      viewDirectionBaseDeg,
+      setViewDirectionBaseDeg,
+      viewDirectionLiveOffsetDeg,
+      setViewDirectionLiveOffsetDeg,
     }),
     [
       linkedFeatureId,
@@ -71,6 +96,10 @@ export function FeatureMapHoverProvider({ children }: { children: ReactNode }) {
       setOpenedFeatureId,
       setMapFeatureClickHandler,
       openFeatureFromMap,
+      viewDirectionBaseDeg,
+      setViewDirectionBaseDeg,
+      viewDirectionLiveOffsetDeg,
+      setViewDirectionLiveOffsetDeg,
     ],
   )
 
@@ -89,6 +118,10 @@ export function useFeatureMapHover(): FeatureMapHoverContextValue {
       setOpenedFeatureId: () => {},
       setMapFeatureClickHandler: () => {},
       openFeatureFromMap: () => {},
+      viewDirectionBaseDeg: null,
+      setViewDirectionBaseDeg: () => {},
+      viewDirectionLiveOffsetDeg: 0,
+      setViewDirectionLiveOffsetDeg: () => {},
     }
   }
   return ctx

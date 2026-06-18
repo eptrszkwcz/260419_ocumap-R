@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 
 import { SortableColumnHeader, type SortDirection } from '@/components/SortableColumnHeader'
-import { type ProjectRecord, type ProjectStatus, type ProjectType } from '@/data/sampleProjects'
+import { type ProjectRecord, type ProjectType } from '@/data/sampleProjects'
 import { formatBytes } from '@/lib/formatBytes'
 import {
   PROJECT_LIST_COLUMN_ORDER,
@@ -10,35 +10,11 @@ import {
   type ProjectListColumnId,
 } from '@/pages/projects/projectListColumns'
 import { ProjectRowMenu } from '@/pages/projects/ProjectRowMenu'
+import { ProjectStatusBadge } from '@/pages/projects/ProjectStatusBadge'
 import type { ProjectListSortColumn } from '@/pages/projects/sortProjects'
 
 const projectStatusBadgeBaseClass =
-  'inline-flex h-badge min-h-badge max-h-badge shrink-0 items-center justify-center rounded-panel px-2 text-badge font-bold leading-none'
-
-function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
-  if (status === 'Published') {
-    return (
-      <span
-        className={
-          projectStatusBadgeBaseClass +
-          ' bg-[#FFAA1D]/20 text-[#B87A12] group-hover:bg-[#FFAA1D]/28'
-        }
-      >
-        Published
-      </span>
-    )
-  }
-  return (
-    <span
-      className={
-        projectStatusBadgeBaseClass +
-        ' text-fg-muted bg-area-highlight group-hover:bg-fg-highlight/12 group-hover:text-fg-highlight'
-      }
-    >
-      Draft
-    </span>
-  )
-}
+  'inline-flex shrink-0 items-center justify-center rounded-panel px-2 py-1 text-badge font-bold leading-none'
 
 export type ProjectsListLayout = 'full' | 'drawer'
 
@@ -147,7 +123,7 @@ function ProjectListColumnCell({
     case 'status':
       return (
         <span className="min-w-0">
-          <ProjectStatusBadge status={project.status} />
+          <ProjectStatusBadge status={project.status} publishedDate={project.publishedDate} />
         </span>
       )
   }

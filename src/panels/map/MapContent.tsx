@@ -5,6 +5,7 @@ import { useFeatureDraw } from '@/context/FeatureDrawContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
+import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 import type { FloorPlanDrawnGeometry } from '@/panels/library/assetGeometryHelpers'
 import { FeatureDrawConfirmPanel } from '@/panels/map/FeatureDrawConfirmPanel'
 import { FEATURE_DRAW_INSTRUCTION } from '@/panels/map/featureDrawUtils'
@@ -15,11 +16,16 @@ import {
   mapOverlayInsetXClassName,
 } from '@/panels/map/mapOverlayLayout'
 import { markerColorsFromAsset, markerRgba } from '@/panels/map/markerColors'
+import { DirectionAdjustBanner } from '@/panels/map/DirectionAdjustBanner'
+import { DirectionAdjustMarkerOverlay } from '@/panels/map/DirectionAdjustMarkerOverlay'
+import { DirectionBeam, effectiveViewDirectionDeg } from '@/panels/map/DirectionBeam'
 
 const MIN_SCALE = 0.25
 const MAX_SCALE = 8
 const FIT_VIEW_PADDING_PX = 56
 const FOCUS_SCALE_MULTIPLIER = 2.8
+/** Minimum bbox span (image px) when fitting lines/polygons so zero-height boxes still zoom sensibly. */
+const MIN_FOCUS_BBOX_SPAN_PX = 48
 const VIEW_ANIMATION_MS = 700
 
 const DEFAULT_FILL_OPACITY = 0.32
@@ -62,6 +68,10 @@ function fitViewToImage(
   }
 }
 
+function maxFocusScale(fitScale: number): number {
+  return clamp(fitScale * FOCUS_SCALE_MULTIPLIER, MIN_SCALE, MAX_SCALE)
+}
+
 function focusViewOnMarker(
   containerW: number,
   containerH: number,
@@ -70,13 +80,55 @@ function focusViewOnMarker(
   marker: { x: number; y: number },
   fitScale: number,
 ): ViewState {
-  const scale = clamp(fitScale * FOCUS_SCALE_MULTIPLIER, MIN_SCALE, MAX_SCALE)
+  const scale = maxFocusScale(fitScale)
   const mx = marker.x * imageW
   const my = marker.y * imageH
   return {
     scale,
     panX: containerW / 2 - mx * scale,
     panY: containerH / 2 - my * scale,
+  }
+}
+
+function focusViewOnGeometry(
+  containerW: number,
+  containerH: number,
+  imageW: number,
+  imageH: number,
+  coordinates: { x: number; y: number }[],
+  fitScale: number,
+  padding: number = FIT_VIEW_PADDING_PX,
+): ViewState {
+  if (coordinates.length === 0) {
+    return fitViewToImage(containerW, containerH, imageW, imageH, padding)
+  }
+  if (coordinates.length === 1) {
+    return focusViewOnMarker(containerW, containerH, imageW, imageH, coordinates[0], fitScale)
+  }
+
+  const xs = coordinates.map((c) => c.x * imageW)
+  const ys = coordinates.map((c) => c.y * imageH)
+  const minX = Math.min(...xs)
+  const maxX = Math.max(...xs)
+  const minY = Math.min(...ys)
+  const maxY = Math.max(...ys)
+  const bboxW = Math.max(maxX - minX, MIN_FOCUS_BBOX_SPAN_PX)
+  const bboxH = Math.max(maxY - minY, MIN_FOCUS_BBOX_SPAN_PX)
+
+  const innerW = containerW - padding * 2
+  const innerH = containerH - padding * 2
+  const fitToBboxScale =
+    innerW > 0 && innerH > 0
+      ? Math.min(innerW / bboxW, innerH / bboxH)
+      : fitScale
+  const scale = clamp(fitToBboxScale, MIN_SCALE, maxFocusScale(fitScale))
+
+  const cx = (minX + maxX) / 2
+  const cy = (minY + maxY) / 2
+  return {
+    scale,
+    panX: containerW / 2 - cx * scale,
+    panY: containerH / 2 - cy * scale,
   }
 }
 
@@ -99,10 +151,22 @@ function FloorPlanCaptureMarker({
   onLeave,
   onSelect,
 }: FloorPlanCaptureMarkerProps) {
+  const { viewDirectionBaseDeg, viewDirectionLiveOffsetDeg } = useFeatureMapHover()
+  const { isAdjustingDirection, adjustingFeatureId } = useViewDirectionAdjust()
   const isOpened = openedFeatureId === marker.id
+  const isDirectionAdjustTarget = isAdjustingDirection && adjustingFeatureId === marker.id
   const isLinked = linkedFeatureId === marker.id
   const hasOpenFocus = openedFeatureId != null
   const hasHoverFocus = linkedFeatureId != null && openedFeatureId == null
+  const showDirectionBeam =
+    isOpened &&
+    viewDirectionBaseDeg != null &&
+    (marker.kind === 'image' || marker.kind === 'panorama') &&
+    !isDirectionAdjustTarget
+  const directionDeg =
+    viewDirectionBaseDeg != null
+      ? effectiveViewDirectionDeg(viewDirectionBaseDeg, viewDirectionLiveOffsetDeg)
+      : 0
 
   let fillOpacity = DEFAULT_FILL_OPACITY
   let strokeOpacity = 1
@@ -116,30 +180,48 @@ function FloorPlanCaptureMarker({
   }
 
   return (
-    <button
-      type="button"
-      data-floor-marker
-      className="absolute z-10 block rounded-full border-2 p-0 transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/40"
+    <div
+      className="absolute z-10 overflow-visible"
       style={{
         left: `${marker.x * 100}%`,
         top: `${marker.y * 100}%`,
-        width: MARKER_DIAMETER_PX,
-        height: MARKER_DIAMETER_PX,
         transform: 'translate(-50%, -50%)',
-        borderColor: markerRgba(marker.strokeColor, strokeOpacity),
-        backgroundColor: markerRgba(marker.color, fillOpacity),
-        cursor: locationPickActive ? 'crosshair' : 'pointer',
-        pointerEvents: locationPickActive ? 'none' : 'auto',
+        pointerEvents: locationPickActive && !isDirectionAdjustTarget ? 'none' : 'auto',
       }}
-      aria-label={`Feature capture point ${marker.id}`}
-      onMouseEnter={() => onEnter(marker.id)}
+      onMouseEnter={() => {
+        if (!locationPickActive && !isDirectionAdjustTarget) onEnter(marker.id)
+      }}
       onMouseLeave={onLeave}
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={(e) => {
-        e.stopPropagation()
-        onSelect(marker.id)
-      }}
-    />
+    >
+      {isDirectionAdjustTarget ? <DirectionAdjustMarkerOverlay /> : null}
+      {showDirectionBeam ? (
+        <div
+          className="pointer-events-none absolute left-1/2 top-1/2 z-0"
+          style={{ transform: 'translate(-50%, -50%)' }}
+        >
+          <DirectionBeam directionDeg={directionDeg} />
+        </div>
+      ) : null}
+      <button
+        type="button"
+        data-floor-marker
+        className="relative z-10 block rounded-full border-2 p-0 transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/40"
+        style={{
+          width: MARKER_DIAMETER_PX,
+          height: MARKER_DIAMETER_PX,
+          borderColor: markerRgba(marker.strokeColor, strokeOpacity),
+          backgroundColor: markerRgba(marker.color, fillOpacity),
+          cursor: locationPickActive ? 'crosshair' : 'pointer',
+        }}
+        aria-label={`Feature capture point ${marker.id}`}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (locationPickActive || isDirectionAdjustTarget) return
+          onSelect(marker.id)
+        }}
+      />
+    </div>
   )
 }
 
@@ -159,6 +241,7 @@ function FloorPlanDrawnGeometryLayer({
   hoverEnabled,
   onEnter,
   onLeave,
+  onSelect,
 }: {
   geometries: FloorPlanDrawnGeometry[]
   naturalSize: { w: number; h: number }
@@ -167,6 +250,7 @@ function FloorPlanDrawnGeometryLayer({
   hoverEnabled: boolean
   onEnter: (id: string) => void
   onLeave: () => void
+  onSelect: (id: string) => void
 }) {
   const { w, h } = naturalSize
   return (
@@ -193,6 +277,10 @@ function FloorPlanDrawnGeometryLayer({
               onMouseEnter: () => onEnter(g.id),
               onMouseLeave: onLeave,
               onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
+              onClick: (e: React.MouseEvent) => {
+                e.stopPropagation()
+                onSelect(g.id)
+              },
             }
           : { pointerEvents: 'none' as const }
 
@@ -221,6 +309,10 @@ function FloorPlanDrawnGeometryLayer({
                 onMouseEnter={() => onEnter(g.id)}
                 onMouseLeave={onLeave}
                 onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onSelect(g.id)
+                }}
               />
             ) : null}
             <polyline
@@ -465,6 +557,8 @@ function MapFloorPlanViewer({
     cancelFloorPlanLocationPick,
   } = useFloorPlanLocationPick()
 
+  const { isAdjustingDirection, cancelDirectionAdjust } = useViewDirectionAdjust()
+
   const {
     isDrawing,
     isEditingFeature,
@@ -495,7 +589,10 @@ function MapFloorPlanViewer({
   const showDrawPreview =
     (isDrawing || isEditingFeature) && floorPlanVertices.length > 0 && drawPhase !== 'idle'
   const interactionLocked =
-    isPickingFloorPlanLocation || isDrawing || (isEditingFeature && drawPhase === 'collecting')
+    isPickingFloorPlanLocation ||
+    isAdjustingDirection ||
+    isDrawing ||
+    (isEditingFeature && drawPhase === 'collecting')
 
   const applyView = (next: ViewState) => {
     setView(next)
@@ -548,17 +645,31 @@ function MapFloorPlanViewer({
     if (prevOpened === undefined) return
 
     if (openedFeatureId != null) {
+      const fit = fitViewToImage(
+        size.w,
+        size.h,
+        naturalSize.w,
+        naturalSize.h,
+        FIT_VIEW_PADDING_PX,
+      )
       const marker = floorMarkers.find((m) => m.id === openedFeatureId)
+      const geometry = floorDrawnGeometries.find(
+        (g) => g.id === openedFeatureId && g.floorPlanId === floorPlanId,
+      )
       if (marker != null) {
-        const fit = fitViewToImage(
-          size.w,
-          size.h,
-          naturalSize.w,
-          naturalSize.h,
-          FIT_VIEW_PADDING_PX,
-        )
         applyView(
           focusViewOnMarker(size.w, size.h, naturalSize.w, naturalSize.h, marker, fit.scale),
+        )
+      } else if (geometry != null) {
+        applyView(
+          focusViewOnGeometry(
+            size.w,
+            size.h,
+            naturalSize.w,
+            naturalSize.h,
+            geometry.coordinates,
+            fit.scale,
+          ),
         )
       }
       return
@@ -569,15 +680,17 @@ function MapFloorPlanViewer({
         fitViewToImage(size.w, size.h, naturalSize.w, naturalSize.h, FIT_VIEW_PADDING_PX),
       )
     }
-  }, [openedFeatureId, floorMarkers, naturalSize])
+  }, [openedFeatureId, floorMarkers, floorDrawnGeometries, floorPlanId, naturalSize])
 
   useEffect(() => {
-    if (!isPickingFloorPlanLocation && !isDrawing && !isEditingFeature) return
+    if (!isPickingFloorPlanLocation && !isAdjustingDirection && !isDrawing && !isEditingFeature) return
 
     const onKeyDown = (ev: KeyboardEvent) => {
       if (ev.key === 'Escape') {
         ev.preventDefault()
-        if (isEditingFeature) {
+        if (isAdjustingDirection) {
+          cancelDirectionAdjust()
+        } else if (isEditingFeature) {
           cancelEditFeature()
         } else if (isDrawing) {
           cancelDraw()
@@ -591,8 +704,10 @@ function MapFloorPlanViewer({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [
     isPickingFloorPlanLocation,
+    isAdjustingDirection,
     isDrawing,
     isEditingFeature,
+    cancelDirectionAdjust,
     cancelDraw,
     cancelEditFeature,
     cancelFloorPlanLocationPick,
@@ -665,13 +780,10 @@ function MapFloorPlanViewer({
     setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight })
   }
 
-  const onMarkerSelect = (id: string) => {
-    setOpenedFeatureId(id)
-    openFeatureFromMap(id)
+  const focusOpenedFeature = (featureId: string) => {
     if (naturalSize == null) return
     const size = containerSize()
-    const marker = floorMarkers.find((m) => m.id === id)
-    if (size == null || marker == null) return
+    if (size == null) return
     const fit = fitViewToImage(
       size.w,
       size.h,
@@ -679,7 +791,30 @@ function MapFloorPlanViewer({
       naturalSize.h,
       FIT_VIEW_PADDING_PX,
     )
-    applyView(focusViewOnMarker(size.w, size.h, naturalSize.w, naturalSize.h, marker, fit.scale))
+    const marker = floorMarkers.find((m) => m.id === featureId)
+    const geometry = floorDrawnGeometries.find(
+      (g) => g.id === featureId && g.floorPlanId === floorPlanId,
+    )
+    if (marker != null) {
+      applyView(focusViewOnMarker(size.w, size.h, naturalSize.w, naturalSize.h, marker, fit.scale))
+    } else if (geometry != null) {
+      applyView(
+        focusViewOnGeometry(
+          size.w,
+          size.h,
+          naturalSize.w,
+          naturalSize.h,
+          geometry.coordinates,
+          fit.scale,
+        ),
+      )
+    }
+  }
+
+  const onFeatureSelect = (id: string) => {
+    setOpenedFeatureId(id)
+    openFeatureFromMap(id)
+    focusOpenedFeature(id)
   }
 
   const planCoordsFromEvent = (e: React.MouseEvent) => {
@@ -794,6 +929,7 @@ function MapFloorPlanViewer({
               hoverEnabled={!interactionLocked}
               onEnter={setMapHoveredFeatureId}
               onLeave={() => setMapHoveredFeatureId(null)}
+              onSelect={onFeatureSelect}
             />
             {showDrawPreview ? (
               <FloorPlanDrawPreview
@@ -843,10 +979,10 @@ function MapFloorPlanViewer({
                 marker={marker}
                 linkedFeatureId={linkedFeatureId}
                 openedFeatureId={openedFeatureId}
-                locationPickActive={interactionLocked}
+                locationPickActive={isPickingFloorPlanLocation}
                 onEnter={setMapHoveredFeatureId}
                 onLeave={() => setMapHoveredFeatureId(null)}
-                onSelect={onMarkerSelect}
+                onSelect={onFeatureSelect}
               />
             ))
           : null}
@@ -869,6 +1005,8 @@ function MapFloorPlanViewer({
             Click the floor plan to set where this photo was taken. Press Esc to cancel.
           </div>
         </div>
+      ) : isAdjustingDirection ? (
+        <DirectionAdjustBanner />
       ) : isEditingThisFeature && drawPhase === 'editing' ? (
         <div
           className={

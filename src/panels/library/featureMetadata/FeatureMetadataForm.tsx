@@ -10,6 +10,7 @@ import {
   featureMetadataSelectClassName,
 } from '@/panels/library/featureMetadata/styles'
 import type {
+  FeatureMetadataDirectionAdjustProps,
   FeatureMetadataDraft,
   FeatureMetadataFileInfo,
   FeatureMetadataLocationPickProps,
@@ -23,6 +24,7 @@ type FeatureMetadataFormProps = {
   preview: FeatureMetadataPreview
   isBuildingProject: boolean
   locationPick: FeatureMetadataLocationPickProps
+  directionAdjust?: FeatureMetadataDirectionAdjustProps
 }
 
 export function FeatureMetadataForm({
@@ -32,6 +34,7 @@ export function FeatureMetadataForm({
   preview,
   isBuildingProject,
   locationPick,
+  directionAdjust,
 }: FeatureMetadataFormProps) {
   const floorPlanLabel =
     draft.floorPlanId != null ? floorPlanDisplayLabel(draft.floorPlanId) : '—'
@@ -46,6 +49,31 @@ export function FeatureMetadataForm({
     onMapPickClick,
     onFloorPlanPickClick,
   } = locationPick
+
+  const showDirectionAdjust =
+    directionAdjust != null && (draft.kind === 'image' || draft.kind === 'panorama')
+  const {
+    canAdjustDirection = false,
+    adjustDisabledReason,
+    isDirectionAdjustInProgress = false,
+    isThisFormDirectionAdjustTarget = false,
+    onDirectionAdjustClick = () => {},
+  } = directionAdjust ?? {}
+
+  const directionAdjustButton = showDirectionAdjust ? (
+    <button
+      type="button"
+      className={featureMetadataSecondaryButtonClass + ' whitespace-nowrap'}
+      disabled={
+        (isDirectionAdjustInProgress && !isThisFormDirectionAdjustTarget) ||
+        (!canAdjustDirection && !isThisFormDirectionAdjustTarget)
+      }
+      title={canAdjustDirection || isThisFormDirectionAdjustTarget ? undefined : adjustDisabledReason}
+      onClick={onDirectionAdjustClick}
+    >
+      {isThisFormDirectionAdjustTarget ? 'Cancel' : 'Adjust Direction'}
+    </button>
+  ) : null
 
   return (
     <div className={featureMetadataFormGridClassName}>
@@ -159,14 +187,20 @@ export function FeatureMetadataForm({
             </label>
           </div>
           <div className="flex min-w-0 flex-col justify-end">
-            <button
-              type="button"
-              className={featureMetadataSecondaryButtonClass + ' w-[156px] whitespace-nowrap'}
-              disabled={isFloorPlanPickInProgress && !isThisFormFloorPlanPickTarget}
-              onClick={onFloorPlanPickClick}
-            >
-              {isThisFormFloorPlanPickTarget ? 'Cancel' : 'Set location on plan'}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className={featureMetadataSecondaryButtonClass + ' w-[156px] whitespace-nowrap'}
+                disabled={
+                (isFloorPlanPickInProgress && !isThisFormFloorPlanPickTarget) ||
+                (isDirectionAdjustInProgress && !isThisFormDirectionAdjustTarget)
+              }
+                onClick={onFloorPlanPickClick}
+              >
+                {isThisFormFloorPlanPickTarget ? 'Cancel' : 'Set location on plan'}
+              </button>
+              {directionAdjustButton}
+            </div>
           </div>
         </>
       ) : (
@@ -206,6 +240,7 @@ export function FeatureMetadataForm({
                 className={featureMetadataSecondaryButtonClass + ' whitespace-nowrap'}
                 disabled={
                   (isMapPickInProgress && !isThisFormMapPickTarget) ||
+                  (isDirectionAdjustInProgress && !isThisFormDirectionAdjustTarget) ||
                   (!canPickOnMap && !isThisFormMapPickTarget)
                 }
                 title={canPickOnMap || isThisFormMapPickTarget ? undefined : pickDisabledReason}
@@ -213,6 +248,7 @@ export function FeatureMetadataForm({
               >
                 {isThisFormMapPickTarget ? 'Cancel' : 'Set location on map'}
               </button>
+              {directionAdjustButton}
             </div>
           </div>
         </div>
