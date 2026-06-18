@@ -61,6 +61,19 @@ function isValidCoord(n: number): boolean {
   return Number.isFinite(n)
 }
 
+function mediaMarkerFields(asset: SpatialAsset): {
+  kind?: 'image' | 'panorama'
+  viewDirectionDeg?: number
+} {
+  if (asset.kind === 'image' || asset.kind === 'panorama') {
+    return {
+      kind: asset.kind,
+      viewDirectionDeg: asset.viewDirectionDeg,
+    }
+  }
+  return {}
+}
+
 export function assetsToCaptureMarkers(assets: SpatialAsset[]): MapCaptureMarker[] {
   return assets
     .filter((a) => {
@@ -80,7 +93,7 @@ export function assetsToCaptureMarkers(assets: SpatialAsset[]): MapCaptureMarker
       const fromGeometry = a.mapGeometry?.coordinates[0]
       const lng = fromGeometry?.lng ?? (a.captureLng as number)
       const lat = fromGeometry?.lat ?? (a.captureLat as number)
-      return { id: a.id, lng, lat, color: fill, strokeColor: stroke }
+      return { id: a.id, lng, lat, color: fill, strokeColor: stroke, ...mediaMarkerFields(a) }
     })
 }
 
@@ -122,6 +135,7 @@ export function assetsToFloorPlanMarkers(assets: SpatialAsset[]): FloorPlanMarke
           y: c.y,
           color: fill,
           strokeColor: stroke,
+          ...mediaMarkerFields(a),
         }
       }
       return {
@@ -131,6 +145,7 @@ export function assetsToFloorPlanMarkers(assets: SpatialAsset[]): FloorPlanMarke
         y: a.floorPlanPosition!.y,
         color: fill,
         strokeColor: stroke,
+        ...mediaMarkerFields(a),
       }
     })
 }

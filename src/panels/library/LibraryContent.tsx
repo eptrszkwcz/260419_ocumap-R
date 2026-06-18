@@ -7,6 +7,7 @@ import { useFeatureDraw } from '@/context/FeatureDrawContext'
 import { useMapCaptureMarkers } from '@/context/MapCaptureMarkersContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
+import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import { getSampleAssetsForProject, isDrawnFeature, type SpatialAsset } from '@/data/sampleAssets'
 import type { DemoProjectDetailsProfile } from '@/data/sampleProjectProfile'
@@ -136,8 +137,10 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   const isBuildingProject = project.projectType === 'Building'
   const { cancelLocationPick, clearLocationPickPreview } = useMapLocationPick()
   const { cancelFloorPlanLocationPick, clearFloorPlanLocationPickPreview } = useFloorPlanLocationPick()
+  const { cancelDirectionAdjust, isAdjustingDirection } = useViewDirectionAdjust()
   const { clearMarkerStylePreview } = useMarkerStylePreview()
-  const { setOpenedFeatureId, setMapFeatureClickHandler } = useFeatureMapHover()
+  const { setOpenedFeatureId, setMapFeatureClickHandler, setViewDirectionBaseDeg, setViewDirectionLiveOffsetDeg } =
+    useFeatureMapHover()
   const {
     isDrawing,
     isEditingFeature,
@@ -245,6 +248,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
     drawSessionOpenedRef.current = draftFeatureId
     cancelLocationPick()
     cancelFloorPlanLocationPick()
+    cancelDirectionAdjust()
     setMetadataAutoStartLocationPick(false)
     setViewMode('browse')
     const draft = createDraftDrawnAsset(draftFeatureId, draftMarkerColor)
@@ -262,6 +266,9 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   const openAsset = (asset: SpatialAsset) => {
     if (isDrawing) closeDrawSession()
     if (isEditingFeature) cancelEditFeature()
+    cancelLocationPick()
+    cancelFloorPlanLocationPick()
+    cancelDirectionAdjust()
     setMetadataAutoStartLocationPick(false)
     setOpenedAsset(asset)
     setOpenedFeatureId(asset.id)
@@ -273,6 +280,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
     if (isEditingFeature) cancelEditFeature()
     cancelLocationPick()
     cancelFloorPlanLocationPick()
+    cancelDirectionAdjust()
     setMetadataAutoStartLocationPick(false)
     setOpenedAsset(asset)
     setOpenedFeatureId(asset.id)
@@ -283,6 +291,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
     if (isDrawing) closeDrawSession()
     cancelLocationPick()
     cancelFloorPlanLocationPick()
+    cancelDirectionAdjust()
     setMetadataAutoStartLocationPick(true)
     setOpenedAsset(asset)
     setOpenedFeatureId(asset.id)
@@ -293,6 +302,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
     if (openedAsset?.id === asset.id) {
       cancelLocationPick()
       cancelFloorPlanLocationPick()
+      cancelDirectionAdjust()
       clearLocationPickPreview()
       clearFloorPlanLocationPickPreview()
       clearMarkerStylePreview()
@@ -309,8 +319,22 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   }, [viewerAsset?.id, setOpenedFeatureId])
 
   useEffect(() => {
+    if (
+      viewerAsset != null &&
+      !isDrawnFeature(viewerAsset) &&
+      (viewerAsset.kind === 'image' || viewerAsset.kind === 'panorama')
+    ) {
+      setViewDirectionBaseDeg(viewerAsset.viewDirectionDeg ?? 0)
+      setViewDirectionLiveOffsetDeg(0)
+    } else {
+      setViewDirectionBaseDeg(null)
+      setViewDirectionLiveOffsetDeg(0)
+    }
+  }, [viewerAsset, setViewDirectionBaseDeg, setViewDirectionLiveOffsetDeg])
+
+  useEffect(() => {
     setMapFeatureClickHandler((id) => {
-      if (isDrawing || isEditingFeature) return
+      if (isDrawing || isEditingFeature || isAdjustingDirection) return
       const asset = assets.find((a) => a.id === id)
       if (asset != null) {
         if (isDrawnFeature(asset)) {
@@ -323,11 +347,12 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
       }
     })
     return () => setMapFeatureClickHandler(null)
-  }, [assets, isDrawing, isEditingFeature, setMapFeatureClickHandler, setOpenedFeatureId])
+  }, [assets, isAdjustingDirection, isDrawing, isEditingFeature, setMapFeatureClickHandler, setOpenedFeatureId])
 
   const closeGeometryViewer = () => {
     cancelLocationPick()
     cancelFloorPlanLocationPick()
+    cancelDirectionAdjust()
     clearMarkerStylePreview()
     cancelEditFeature()
     setOpenedAsset(null)
@@ -363,6 +388,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   const updateAssetInLibrary = (updated: SpatialAsset) => {
     cancelLocationPick()
     cancelFloorPlanLocationPick()
+    cancelDirectionAdjust()
     clearLocationPickPreview()
     clearFloorPlanLocationPickPreview()
     clearMarkerStylePreview()
@@ -383,6 +409,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
           if (isDrawing) closeDrawSession()
           cancelLocationPick()
           cancelFloorPlanLocationPick()
+          cancelDirectionAdjust()
           clearMarkerStylePreview()
           setOpenedAsset(null)
           setOpenedFeatureId(null)
@@ -399,6 +426,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
         onOpenMedia={() => {
           cancelLocationPick()
           cancelFloorPlanLocationPick()
+          cancelDirectionAdjust()
           setViewerPanel('media')
         }}
         onCloseViewer={() => {
@@ -412,6 +440,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
           }
           cancelLocationPick()
           cancelFloorPlanLocationPick()
+          cancelDirectionAdjust()
           clearMarkerStylePreview()
           setOpenedAsset(null)
           setOpenedFeatureId(null)

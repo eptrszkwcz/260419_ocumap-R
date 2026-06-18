@@ -36,3 +36,11 @@ export type FeatureMetadataLocationPickProps = {
   onMapPickClick: () => void
   onFloorPlanPickClick: () => void
 }
+
+export type FeatureMetadataDirectionAdjustProps = {
+  canAdjustDirection: boolean
+  adjustDisabledReason?: string
+  isDirectionAdjustInProgress: boolean
+  isThisFormDirectionAdjustTarget: boolean
+  onDirectionAdjustClick: () => void
+}

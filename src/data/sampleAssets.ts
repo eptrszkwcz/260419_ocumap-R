@@ -67,6 +67,8 @@ export type SpatialAsset = {
   height?: number
   /** Hex fill color for the capture point on the map or floor plan (e.g. `#2563eb`). */
   markerColor?: string
+  /** Viewing direction on the map/plan, degrees clockwise from screen-up (0 = up, 90 = right). */
+  viewDirectionDeg?: number
 }
 
 /** Best-effort kind for an uploaded `File` (user can override in the add form). */
@@ -121,6 +123,7 @@ export const sampleAssetsJefferson: SpatialAsset[] = [
     dateUploaded: 'July 22, 2025',
     fileUrl: `${sampleImagesBase}/360-img-1.png`,
     floorPlanPosition: { floorPlanId: 'SOM-2', x: 0.34, y: 0.41 },
+    viewDirectionDeg: 45,
   },
   {
     id: 'fv-360-2',
@@ -129,6 +132,7 @@ export const sampleAssetsJefferson: SpatialAsset[] = [
     dateUploaded: 'July 21, 2025',
     fileUrl: `${sampleImagesBase}/360-img-2.png`,
     floorPlanPosition: { floorPlanId: 'SOM-2', x: 0.62, y: 0.27 },
+    viewDirectionDeg: 127,
   },
   {
     id: 'fv-360-3',
@@ -137,6 +141,7 @@ export const sampleAssetsJefferson: SpatialAsset[] = [
     dateUploaded: 'July 20, 2025',
     fileUrl: `${sampleImagesBase}/360-img-3.png`,
     floorPlanPosition: { floorPlanId: 'SOM-5', x: 0.48, y: 0.58 },
+    viewDirectionDeg: 218,
   },
   {
     id: 'drawn-jefferson-conference-room',
@@ -183,6 +188,7 @@ export const sampleAssetsJefferson: SpatialAsset[] = [
     fileUrl: `${sampleSphericalPanoBase}/7262%20Panorama.jpg`,
     mimeType: 'image/jpeg',
     floorPlanPosition: { floorPlanId: 'SOM-2', x: 0.28, y: 0.55 },
+    viewDirectionDeg: 312,
   },
   {
     id: 'fv-pano-7292',
@@ -192,6 +198,7 @@ export const sampleAssetsJefferson: SpatialAsset[] = [
     fileUrl: `${sampleSphericalPanoBase}/7292%20Panorama.jpg`,
     mimeType: 'image/jpeg',
     floorPlanPosition: { floorPlanId: 'SOM-4', x: 0.71, y: 0.33 },
+    viewDirectionDeg: 73,
   },
   {
     id: 'fv-pano-7760',
@@ -201,6 +208,7 @@ export const sampleAssetsJefferson: SpatialAsset[] = [
     fileUrl: `${sampleSphericalPanoBase}/7760%20Panorama.jpg`,
     mimeType: 'image/jpeg',
     floorPlanPosition: { floorPlanId: 'SOM-5', x: 0.42, y: 0.74 },
+    viewDirectionDeg: 156,
   },
 ]
 
@@ -214,6 +222,7 @@ export const sampleAssetsKaty: SpatialAsset[] = [
     fileUrl: `${sampleImagesBase}/katy-flyover.png`,
     captureLat: 29.785714,
     captureLng: -95.794082,
+    viewDirectionDeg: 280,
   },
   {
     id: 'fv-katy-on-ramp',
@@ -223,6 +232,7 @@ export const sampleAssetsKaty: SpatialAsset[] = [
     fileUrl: `${sampleImagesBase}/katy-on-ramp.png`,
     captureLat: 29.777846,
     captureLng: -95.818816,
+    viewDirectionDeg: 15,
   },
   {
     id: 'fv-katy-surface-road',
@@ -232,6 +242,7 @@ export const sampleAssetsKaty: SpatialAsset[] = [
     fileUrl: `${sampleImagesBase}/katy-surface-road.png`,
     captureLat: 29.77776,
     captureLng: -95.822758,
+    viewDirectionDeg: 195,
   },
   {
     id: 'drawn-katy-fort-bend-rd',
@@ -257,6 +268,7 @@ export const sampleAssetsKaty: SpatialAsset[] = [
     mimeType: 'image/jpeg',
     captureLat: 29.780299697966534,
     captureLng: -95.80924862619423,
+    viewDirectionDeg: 340,
   },
 ]
 

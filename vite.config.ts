@@ -14,5 +14,11 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    // Photo Sphere Viewer bundles three internally; dedupe avoids a second copy via Vite pre-bundling.
+    dedupe: ['three'],
+  },
+  optimizeDeps: {
+    // Use the package's native ESM — pre-bundling breaks FileLoader for large panorama assets.
+    exclude: ['@photo-sphere-viewer/core'],
   },
 })

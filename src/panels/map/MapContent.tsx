@@ -5,6 +5,7 @@ import { useFeatureDraw } from '@/context/FeatureDrawContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
+import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 import type { FloorPlanDrawnGeometry } from '@/panels/library/assetGeometryHelpers'
 import { FeatureDrawConfirmPanel } from '@/panels/map/FeatureDrawConfirmPanel'
 import { FEATURE_DRAW_INSTRUCTION } from '@/panels/map/featureDrawUtils'
@@ -15,6 +16,9 @@ import {
   mapOverlayInsetXClassName,
 } from '@/panels/map/mapOverlayLayout'
 import { markerColorsFromAsset, markerRgba } from '@/panels/map/markerColors'
+import { DirectionAdjustBanner } from '@/panels/map/DirectionAdjustBanner'
+import { DirectionAdjustMarkerOverlay } from '@/panels/map/DirectionAdjustMarkerOverlay'
+import { DirectionBeam, effectiveViewDirectionDeg } from '@/panels/map/DirectionBeam'
 
 const MIN_SCALE = 0.25
 const MAX_SCALE = 8
@@ -147,10 +151,22 @@ function FloorPlanCaptureMarker({
   onLeave,
   onSelect,
 }: FloorPlanCaptureMarkerProps) {
+  const { viewDirectionBaseDeg, viewDirectionLiveOffsetDeg } = useFeatureMapHover()
+  const { isAdjustingDirection, adjustingFeatureId } = useViewDirectionAdjust()
   const isOpened = openedFeatureId === marker.id
+  const isDirectionAdjustTarget = isAdjustingDirection && adjustingFeatureId === marker.id
   const isLinked = linkedFeatureId === marker.id
   const hasOpenFocus = openedFeatureId != null
   const hasHoverFocus = linkedFeatureId != null && openedFeatureId == null
+  const showDirectionBeam =
+    isOpened &&
+    viewDirectionBaseDeg != null &&
+    (marker.kind === 'image' || marker.kind === 'panorama') &&
+    !isDirectionAdjustTarget
+  const directionDeg =
+    viewDirectionBaseDeg != null
+      ? effectiveViewDirectionDeg(viewDirectionBaseDeg, viewDirectionLiveOffsetDeg)
+      : 0
 
   let fillOpacity = DEFAULT_FILL_OPACITY
   let strokeOpacity = 1
@@ -164,30 +180,48 @@ function FloorPlanCaptureMarker({
   }
 
   return (
-    <button
-      type="button"
-      data-floor-marker
-      className="absolute z-10 block rounded-full border-2 p-0 transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/40"
+    <div
+      className="absolute z-10 overflow-visible"
       style={{
         left: `${marker.x * 100}%`,
         top: `${marker.y * 100}%`,
-        width: MARKER_DIAMETER_PX,
-        height: MARKER_DIAMETER_PX,
         transform: 'translate(-50%, -50%)',
-        borderColor: markerRgba(marker.strokeColor, strokeOpacity),
-        backgroundColor: markerRgba(marker.color, fillOpacity),
-        cursor: locationPickActive ? 'crosshair' : 'pointer',
-        pointerEvents: locationPickActive ? 'none' : 'auto',
+        pointerEvents: locationPickActive && !isDirectionAdjustTarget ? 'none' : 'auto',
       }}
-      aria-label={`Feature capture point ${marker.id}`}
-      onMouseEnter={() => onEnter(marker.id)}
+      onMouseEnter={() => {
+        if (!locationPickActive && !isDirectionAdjustTarget) onEnter(marker.id)
+      }}
       onMouseLeave={onLeave}
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={(e) => {
-        e.stopPropagation()
-        onSelect(marker.id)
-      }}
-    />
+    >
+      {isDirectionAdjustTarget ? <DirectionAdjustMarkerOverlay /> : null}
+      {showDirectionBeam ? (
+        <div
+          className="pointer-events-none absolute left-1/2 top-1/2 z-0"
+          style={{ transform: 'translate(-50%, -50%)' }}
+        >
+          <DirectionBeam directionDeg={directionDeg} />
+        </div>
+      ) : null}
+      <button
+        type="button"
+        data-floor-marker
+        className="relative z-10 block rounded-full border-2 p-0 transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/40"
+        style={{
+          width: MARKER_DIAMETER_PX,
+          height: MARKER_DIAMETER_PX,
+          borderColor: markerRgba(marker.strokeColor, strokeOpacity),
+          backgroundColor: markerRgba(marker.color, fillOpacity),
+          cursor: locationPickActive ? 'crosshair' : 'pointer',
+        }}
+        aria-label={`Feature capture point ${marker.id}`}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (locationPickActive || isDirectionAdjustTarget) return
+          onSelect(marker.id)
+        }}
+      />
+    </div>
   )
 }
 
@@ -523,6 +557,8 @@ function MapFloorPlanViewer({
     cancelFloorPlanLocationPick,
   } = useFloorPlanLocationPick()
 
+  const { isAdjustingDirection, cancelDirectionAdjust } = useViewDirectionAdjust()
+
   const {
     isDrawing,
     isEditingFeature,
@@ -553,7 +589,10 @@ function MapFloorPlanViewer({
   const showDrawPreview =
     (isDrawing || isEditingFeature) && floorPlanVertices.length > 0 && drawPhase !== 'idle'
   const interactionLocked =
-    isPickingFloorPlanLocation || isDrawing || (isEditingFeature && drawPhase === 'collecting')
+    isPickingFloorPlanLocation ||
+    isAdjustingDirection ||
+    isDrawing ||
+    (isEditingFeature && drawPhase === 'collecting')
 
   const applyView = (next: ViewState) => {
     setView(next)
@@ -644,12 +683,14 @@ function MapFloorPlanViewer({
   }, [openedFeatureId, floorMarkers, floorDrawnGeometries, floorPlanId, naturalSize])
 
   useEffect(() => {
-    if (!isPickingFloorPlanLocation && !isDrawing && !isEditingFeature) return
+    if (!isPickingFloorPlanLocation && !isAdjustingDirection && !isDrawing && !isEditingFeature) return
 
     const onKeyDown = (ev: KeyboardEvent) => {
       if (ev.key === 'Escape') {
         ev.preventDefault()
-        if (isEditingFeature) {
+        if (isAdjustingDirection) {
+          cancelDirectionAdjust()
+        } else if (isEditingFeature) {
           cancelEditFeature()
         } else if (isDrawing) {
           cancelDraw()
@@ -663,8 +704,10 @@ function MapFloorPlanViewer({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [
     isPickingFloorPlanLocation,
+    isAdjustingDirection,
     isDrawing,
     isEditingFeature,
+    cancelDirectionAdjust,
     cancelDraw,
     cancelEditFeature,
     cancelFloorPlanLocationPick,
@@ -936,7 +979,7 @@ function MapFloorPlanViewer({
                 marker={marker}
                 linkedFeatureId={linkedFeatureId}
                 openedFeatureId={openedFeatureId}
-                locationPickActive={interactionLocked}
+                locationPickActive={isPickingFloorPlanLocation}
                 onEnter={setMapHoveredFeatureId}
                 onLeave={() => setMapHoveredFeatureId(null)}
                 onSelect={onFeatureSelect}
@@ -962,6 +1005,8 @@ function MapFloorPlanViewer({
             Click the floor plan to set where this photo was taken. Press Esc to cancel.
           </div>
         </div>
+      ) : isAdjustingDirection ? (
+        <DirectionAdjustBanner />
       ) : isEditingThisFeature && drawPhase === 'editing' ? (
         <div
           className={
