@@ -12,6 +12,7 @@ import { PRIMARY_BUTTON_CLASS } from '@/lib/primaryButtonClass'
 import { DEFAULT_FLOOR_PLAN_ID, type FloorPlanId } from '@/panels/map/mapFloorPlans'
 import { normalizeMarkerColor } from '@/panels/map/markerColors'
 import { FeatureMetadataForm } from '@/panels/library/featureMetadata/FeatureMetadataForm'
+import { AddFeatureMethodPicker } from '@/panels/library/addFeature/AddFeatureMethodPicker'
 import {
   extensionLabelFromMimeAndKind,
   fileSizeLabel,
@@ -106,6 +107,7 @@ function pendingToDraft(item: PendingItem): FeatureMetadataDraft {
 type AddFeatureFlowProps = {
   onCancel: () => void
   onSave: (assets: SpatialAsset[]) => void
+  onStartDraw: () => void
 }
 
 type PendingFeatureCardProps = {
@@ -221,9 +223,10 @@ function PendingFeatureCard({
   )
 }
 
-export function AddFeatureFlow({ onCancel, onSave }: AddFeatureFlowProps) {
+export function AddFeatureFlow({ onCancel, onSave, onStartDraw }: AddFeatureFlowProps) {
   const { project } = useActiveProject()
   const isBuildingProject = project.projectType === 'Building'
+  const [step, setStep] = useState<'choose' | 'upload'>('choose')
   const { isPickingLocation, startLocationPick, cancelLocationPick } = useMapLocationPick()
   const {
     isPickingFloorPlanLocation,
@@ -413,6 +416,16 @@ export function AddFeatureFlow({ onCancel, onSave }: AddFeatureFlowProps) {
   }
 
   const canSave = pending.length > 0
+
+  if (step === 'choose') {
+    return (
+      <AddFeatureMethodPicker
+        onChooseUpload={() => setStep('upload')}
+        onChooseDraw={onStartDraw}
+        onCancel={handleCancel}
+      />
+    )
+  }
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">

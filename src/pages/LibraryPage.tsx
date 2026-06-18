@@ -1,3 +1,4 @@
+import { ActiveFloorPlanProvider } from '@/context/ActiveFloorPlanContext'
 import { ActiveProjectProvider } from '@/context/ActiveProjectContext'
 import { FeatureMapHoverProvider } from '@/context/FeatureMapHoverContext'
 import { MarkerStylePreviewProvider } from '@/context/MarkerStylePreviewContext'
@@ -19,10 +20,12 @@ export function LibraryPage() {
               <MarkerStylePreviewProvider>
                 <MapCaptureMarkersProvider>
                   <FeatureMapHoverProvider>
-                    <div className="h-full min-h-0">
-                      <DashboardLayout />
-                    </div>
-                    <ProjectsDrawerFromLibrary />
+                    <ActiveFloorPlanProvider>
+                      <div className="h-full min-h-0">
+                        <DashboardLayout />
+                      </div>
+                      <ProjectsDrawerFromLibrary />
+                    </ActiveFloorPlanProvider>
                   </FeatureMapHoverProvider>
                 </MapCaptureMarkersProvider>
               </MarkerStylePreviewProvider>

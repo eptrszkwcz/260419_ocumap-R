@@ -65,17 +65,52 @@ function captureMarkerIdFromFeature(feature: mapboxgl.MapboxGeoJSONFeature | und
   return String(raw)
 }
 
-function zoomToOpenedFeature(map: mapboxgl.Map, markers: MapCaptureMarker[], featureId: string) {
+function zoomToOpenedFeature(
+  map: mapboxgl.Map,
+  markers: MapCaptureMarker[],
+  geometries: MapDrawnGeometry[],
+  featureId: string,
+) {
   const marker = markers.find((m) => m.id === featureId)
-  if (marker == null) return
-  if (map.getMaxZoom() < FEATURE_FOCUS_MAX_ZOOM) {
-    map.setMaxZoom(FEATURE_FOCUS_MAX_ZOOM)
+  if (marker != null) {
+    if (map.getMaxZoom() < FEATURE_FOCUS_MAX_ZOOM) {
+      map.setMaxZoom(FEATURE_FOCUS_MAX_ZOOM)
+    }
+    map.flyTo({
+      center: [marker.lng, marker.lat],
+      zoom: FEATURE_FOCUS_MAX_ZOOM,
+      duration: FLY_DURATION_MS,
+      essential: true,
+    })
+    return
   }
-  map.flyTo({
-    center: [marker.lng, marker.lat],
-    zoom: FEATURE_FOCUS_MAX_ZOOM,
+
+  const geometry = geometries.find((g) => g.id === featureId)
+  if (geometry == null || geometry.coordinates.length === 0) return
+
+  if (geometry.coordinates.length === 1) {
+    const c = geometry.coordinates[0]
+    if (map.getMaxZoom() < FEATURE_FOCUS_MAX_ZOOM) {
+      map.setMaxZoom(FEATURE_FOCUS_MAX_ZOOM)
+    }
+    map.flyTo({
+      center: [c.lng, c.lat],
+      zoom: FEATURE_FOCUS_MAX_ZOOM,
+      duration: FLY_DURATION_MS,
+      essential: true,
+    })
+    return
+  }
+
+  const first = geometry.coordinates[0]
+  const bounds = geometry.coordinates.reduce(
+    (b, c) => b.extend([c.lng, c.lat]),
+    new mapboxgl.LngLatBounds([first.lng, first.lat], [first.lng, first.lat]),
+  )
+  map.fitBounds(bounds, {
+    padding: FIT_ALL_MARKERS_PADDING,
+    maxZoom: FEATURE_FOCUS_MAX_ZOOM,
     duration: FLY_DURATION_MS,
-    essential: true,
   })
 }
 
@@ -401,7 +436,12 @@ export function InfrastructureMapView({
     prevOpenedFeatureIdRef.current = openedFeatureId
 
     if (openedFeatureId != null) {
-      zoomToOpenedFeature(map, captureMarkersRef.current, openedFeatureId)
+      zoomToOpenedFeature(
+        map,
+        captureMarkersRef.current,
+        mapDrawnGeometriesRef.current,
+        openedFeatureId,
+      )
       return
     }
 
@@ -409,7 +449,7 @@ export function InfrastructureMapView({
     if (prevOpened != null) {
       fitAllCaptureMarkers(map, captureMarkersRef.current)
     }
-  }, [openedFeatureId, captureMarkers])
+  }, [openedFeatureId, captureMarkers, mapDrawnGeometries])
 
   useEffect(() => {
     const map = mapRef.current
@@ -555,14 +595,23 @@ export function InfrastructureMapView({
       const id = captureMarkerIdFromFeature(e.features?.[0])
       if (id == null) return
       setOpenedFeatureId(id)
-      zoomToOpenedFeature(map, captureMarkersRef.current, id)
+      zoomToOpenedFeature(
+        map,
+        captureMarkersRef.current,
+        mapDrawnGeometriesRef.current,
+        id,
+      )
       openFeatureFromMap(id)
     }
 
     map.on('click', CAPTURE_LAYER_ID, onClick)
+    map.on('click', DRAWN_FILL_LAYER_ID, onClick)
+    map.on('click', DRAWN_LINE_LAYER_ID, onClick)
 
     return () => {
       map.off('click', CAPTURE_LAYER_ID, onClick)
+      map.off('click', DRAWN_FILL_LAYER_ID, onClick)
+      map.off('click', DRAWN_LINE_LAYER_ID, onClick)
     }
   }, [isPickingLocation, isDrawing, isEditingFeature, openFeatureFromMap, setOpenedFeatureId, styleUrl])
 

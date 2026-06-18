@@ -16,6 +16,8 @@ export type ProjectRecord = {
   team: string
   /** Display string for “Last modified” (e.g. “May 3, 2026”). */
   lastModified: string
+  /** Display string when status is Published (e.g. “May 1, 2026”). */
+  publishedDate?: string
   /** Feature library file count shown in the projects list. */
   featureFileCount: number
   /** Cumulative project size in megabytes (projects list “Project Size” column). */
@@ -34,6 +36,15 @@ export type ProjectRecord = {
 
 /** 1603 Jefferson St. — default library demo project. */
 export const DEMO_OPENS_LIBRARY_PROJECT_ID = 'p-1'
+
+/** Building list entries that reuse Jefferson library/map demo content. */
+const JEFFERSON_ALIAS_PROJECT_IDS = new Set(['p-2', 'p-4', 'p-7'])
+
+/** Map a projects-list id to the library project that should load. */
+export function resolveLibraryProjectId(id: string): string {
+  if (JEFFERSON_ALIAS_PROJECT_IDS.has(id)) return DEMO_OPENS_LIBRARY_PROJECT_ID
+  return id
+}
 
 export const KATY_FREEWAY_PROJECT_ID = 'p-katy'
 
@@ -66,6 +77,7 @@ export const sampleProjects: ProjectRecord[] = [
     status: publishedProjectIds.has('p-2') ? 'Published' : 'Draft',
     team: 'Cypress Health Partners',
     lastModified: 'April 30, 2026',
+    publishedDate: 'April 28, 2026',
     featureFileCount: 87,
     projectSizeMb: 312,
     createdRelative: '2 weeks ago',
@@ -102,6 +114,7 @@ export const sampleProjects: ProjectRecord[] = [
     status: publishedProjectIds.has(KATY_FREEWAY_PROJECT_ID) ? 'Published' : 'Draft',
     team: 'Build Co.',
     lastModified: 'May 2, 2026',
+    publishedDate: 'May 1, 2026',
     featureFileCount: 56,
     projectSizeMb: 428,
     createdRelative: '4 weeks ago',

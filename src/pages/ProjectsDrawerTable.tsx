@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DEMO_OPENS_LIBRARY_PROJECT_ID,
   NEW_PROJECT_ID,
+  resolveLibraryProjectId,
   type ProjectRecord,
 } from '@/data/sampleProjects'
 import { useProjects } from '@/context/ProjectsContext'
@@ -25,7 +26,7 @@ export function ProjectsDrawerTable({ projects, onCloseDrawer }: ProjectsDrawerT
     paramId != null && paramId !== '' && paramId !== NEW_PROJECT_ID
       ? getProjectById(paramId)
       : undefined
-  const activeProjectId = fromQuery?.id ?? DEMO_OPENS_LIBRARY_PROJECT_ID
+  const activeProjectId = resolveLibraryProjectId(fromQuery?.id ?? DEMO_OPENS_LIBRARY_PROJECT_ID)
 
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-auto bg-page pb-panel-padding">
@@ -34,14 +35,16 @@ export function ProjectsDrawerTable({ projects, onCloseDrawer }: ProjectsDrawerT
         layout="drawer"
         projects={projects}
         rowProps={(project) => {
-          const isCurrent = project.id === activeProjectId
+          const isCurrent = resolveLibraryProjectId(project.id) === activeProjectId
           return {
             onActivate: () => {
               if (isCurrent) {
                 onCloseDrawer()
                 return
               }
-              navigate(`/library?project=${encodeURIComponent(project.id)}`)
+              navigate(
+                `/library?project=${encodeURIComponent(resolveLibraryProjectId(project.id))}`,
+              )
               onCloseDrawer()
             },
             isCurrent,

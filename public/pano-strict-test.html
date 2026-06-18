@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Strict pano test</title>
+    <link rel="stylesheet" href="/node_modules/@photo-sphere-viewer/core/index.css" />
+    <style>
+      html, body { margin: 0; height: 100%; }
+      .host { position: absolute; inset: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="host1" class="host"></div>
+    <script type="module">
+      import { Viewer } from '/node_modules/@photo-sphere-viewer/core/index.module.js'
+      const url = '/samples/feature-viewer/spherical-pano/7262%20Panorama.jpg'
+
+      try {
+        const v1 = new Viewer({ container: document.getElementById('host1'), panorama: url, navbar: false })
+        v1.destroy()
+        console.log('v1 destroyed')
+
+        const host2 = document.createElement('div')
+        host2.className = 'host'
+        host2.id = 'host2'
+        document.body.appendChild(host2)
+
+        const v2 = new Viewer({ container: host2, panorama: url, navbar: false })
+        console.log('v2 created', host2.childElementCount)
+        v2.addEventListener('ready', () => console.log('READY'))
+        v2.addEventListener('panorama-error', (e) => console.error('ERR', e))
+      } catch (e) {
+        console.error('CATCH', e)
+      }
+    </script>
+  </body>
+</html>

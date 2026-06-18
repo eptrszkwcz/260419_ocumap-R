@@ -10,6 +10,7 @@ import {
   RulerIcon,
 } from '@/components/overlayControlIcons'
 import { getAssetTypeLabel, type SpatialAsset } from '@/data/sampleAssets'
+import { Panorama360Viewer } from '@/panels/library/Panorama360Viewer'
 
 type FeatureLibraryMediaViewerProps = {
   asset: SpatialAsset
@@ -50,12 +51,16 @@ export function FeatureLibraryMediaViewer({
       aria-label={`Media viewer: ${asset.title}`}
     >
       <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-panel bg-page">
-        <img
-          src={asset.fileUrl ?? ''}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover"
-          draggable={false}
-        />
+        {asset.kind === 'panorama' ? (
+          <Panorama360Viewer key={asset.id} panoramaUrl={asset.fileUrl ?? ''} />
+        ) : (
+          <img
+            src={asset.fileUrl ?? ''}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            draggable={false}
+          />
+        )}
 
         <div
           className="pointer-events-none absolute flex items-end justify-between"

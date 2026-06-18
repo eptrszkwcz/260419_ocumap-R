@@ -3,7 +3,8 @@ import type { ProjectType } from '@/data/sampleProjects'
 import { floorPlanDisplayLabel } from '@/panels/map/mapFloorPlans'
 
 export function assetLocationLabel(asset: SpatialAsset, projectType: ProjectType): string {
-  const floorPlanId = asset.floorPlanPosition?.floorPlanId
+  const floorPlanId =
+    asset.floorPlanPosition?.floorPlanId ?? asset.floorPlanGeometry?.floorPlanId
   if (floorPlanId != null) {
     return floorPlanDisplayLabel(floorPlanId)
   }

@@ -20,6 +20,7 @@ import {
 } from '@/panels/library/assetGeometryHelpers'
 import { DrawnFeatureMetadataPanel } from '@/panels/library/DrawnFeatureMetadataPanel'
 import { createDraftDrawnAsset } from '@/panels/map/FeatureDrawConfirmPanel'
+import { useStartFeatureDraw } from '@/panels/map/useStartFeatureDraw'
 import { AddFeatureFlow } from '@/panels/library/AddFeatureFlow'
 import { PanelCenteredPrompt } from '@/components/PanelCenteredPrompt'
 import { nextSortDirection, type SortDirection } from '@/components/SortableColumnHeader'
@@ -147,6 +148,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
     cancelDraw,
     cancelEditFeature,
   } = useFeatureDraw()
+  const startFeatureDraw = useStartFeatureDraw()
   const contentsRef = useRef<HTMLDivElement>(null)
   const drawSessionOpenedRef = useRef<string | null>(null)
 
@@ -162,6 +164,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
   const [viewMode, setViewMode] = useState<'browse' | 'add'>('browse')
+  const [addFeatureSessionKey, setAddFeatureSessionKey] = useState(0)
   const [openedAsset, setOpenedAsset] = useState<SpatialAsset | null>(null)
   const [viewerPanel, setViewerPanel] = useState<'media' | 'metadata' | 'draw-metadata'>('media')
   const [metadataAutoStartLocationPick, setMetadataAutoStartLocationPick] = useState(false)
@@ -383,6 +386,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
           clearMarkerStylePreview()
           setOpenedAsset(null)
           setOpenedFeatureId(null)
+          setAddFeatureSessionKey((key) => key + 1)
           setViewMode('add')
         }}
         viewerAsset={viewerAsset}
@@ -533,10 +537,17 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
           )
         ) : (
           <AddFeatureFlow
+            key={addFeatureSessionKey}
             onCancel={() => setViewMode('browse')}
             onSave={(newItems) => {
               setAssets((a) => [...a, ...newItems])
               setViewMode('browse')
+            }}
+            onStartDraw={() => {
+              cancelLocationPick()
+              cancelFloorPlanLocationPick()
+              clearMarkerStylePreview()
+              startFeatureDraw()
             }}
           />
         )}

@@ -1,11 +1,12 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { NewProjectProvider } from '@/context/NewProjectContext'
 import { useProjects } from '@/context/ProjectsContext'
 import {
   DEMO_OPENS_LIBRARY_PROJECT_ID,
   NEW_PROJECT_ID,
+  resolveLibraryProjectId,
   type ProjectRecord,
 } from '@/data/sampleProjects'
 
@@ -20,10 +21,19 @@ type ActiveProjectContextValue = {
 const ActiveProjectContext = createContext<ActiveProjectContextValue | null>(null)
 
 function ActiveProjectInner({ children }: { children: ReactNode }) {
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { getProjectById } = useProjects()
   const raw = searchParams.get(QUERY_KEY)?.trim()
   const isNewProject = raw === NEW_PROJECT_ID
+
+  useEffect(() => {
+    if (isNewProject || raw == null || raw === '') return
+    const resolved = resolveLibraryProjectId(raw)
+    if (resolved !== raw) {
+      navigate(`/library?project=${encodeURIComponent(resolved)}`, { replace: true })
+    }
+  }, [isNewProject, navigate, raw])
 
   const value = useMemo((): ActiveProjectContextValue => {
     if (isNewProject) {
@@ -44,11 +54,11 @@ function ActiveProjectInner({ children }: { children: ReactNode }) {
         },
       }
     }
-    const resolved =
+    const projectId =
       raw != null && raw !== ''
-        ? getProjectById(raw)
-        : getProjectById(DEMO_OPENS_LIBRARY_PROJECT_ID)
-    const project = resolved ?? getProjectById(DEMO_OPENS_LIBRARY_PROJECT_ID)!
+        ? resolveLibraryProjectId(raw)
+        : DEMO_OPENS_LIBRARY_PROJECT_ID
+    const project = getProjectById(projectId) ?? getProjectById(DEMO_OPENS_LIBRARY_PROJECT_ID)!
     return { project, projectId: project.id, isNewProject: false }
   }, [getProjectById, isNewProject, raw])
 

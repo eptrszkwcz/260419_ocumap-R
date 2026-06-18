@@ -2,7 +2,7 @@
  * Placeholder spatial assets for the prototype. Large binaries live under
  * `public/samples/` and are referenced by URL (e.g. `/samples/...`).
  *
- * Building demo (Jefferson): `feature-viewer/spherical-pano/` (360-img-*).
+ * Building demo (Jefferson): `feature-viewer/images/` (MEP-img-*).
  * Katy Freeway: same folder, `katy-*.png`.
  * Floor plans: `map-viewer/floor-plans/` (SOM_*).
  */
@@ -109,32 +109,33 @@ export function featureTypeFilterLabel(id: FeatureTypeFilter): string {
   return getAssetTypeLabel(id)
 }
 
-const sphericalPanoBase = '/samples/feature-viewer/spherical-pano'
+const sampleImagesBase = '/samples/feature-viewer/images'
+const sampleSphericalPanoBase = '/samples/feature-viewer/spherical-pano'
 
-/** Default building project (e.g. 1603 Jefferson): three 360-img panoramas, one per floor. */
+/** Default building project (e.g. 1603 Jefferson): three MEP images, one per floor. */
 export const sampleAssetsJefferson: SpatialAsset[] = [
   {
     id: 'fv-360-1',
-    kind: 'panorama',
-    title: '360-img-1',
+    kind: 'image',
+    title: 'MEP-img-1',
     dateUploaded: 'July 22, 2025',
-    fileUrl: `${sphericalPanoBase}/360-img-1.png`,
+    fileUrl: `${sampleImagesBase}/360-img-1.png`,
     floorPlanPosition: { floorPlanId: 'SOM-2', x: 0.34, y: 0.41 },
   },
   {
     id: 'fv-360-2',
-    kind: 'panorama',
-    title: '360-img-2',
+    kind: 'image',
+    title: 'MEP-img-2',
     dateUploaded: 'July 21, 2025',
-    fileUrl: `${sphericalPanoBase}/360-img-2.png`,
+    fileUrl: `${sampleImagesBase}/360-img-2.png`,
     floorPlanPosition: { floorPlanId: 'SOM-2', x: 0.62, y: 0.27 },
   },
   {
     id: 'fv-360-3',
-    kind: 'panorama',
-    title: '360-img-3',
+    kind: 'image',
+    title: 'MEP-img-3',
     dateUploaded: 'July 20, 2025',
-    fileUrl: `${sphericalPanoBase}/360-img-3.png`,
+    fileUrl: `${sampleImagesBase}/360-img-3.png`,
     floorPlanPosition: { floorPlanId: 'SOM-5', x: 0.48, y: 0.58 },
   },
   {
@@ -174,34 +175,61 @@ export const sampleAssetsJefferson: SpatialAsset[] = [
       ],
     },
   },
+  {
+    id: 'fv-pano-7262',
+    kind: 'panorama',
+    title: '7262 Panorama',
+    dateUploaded: 'June 10, 2026',
+    fileUrl: `${sampleSphericalPanoBase}/7262%20Panorama.jpg`,
+    mimeType: 'image/jpeg',
+    floorPlanPosition: { floorPlanId: 'SOM-2', x: 0.28, y: 0.55 },
+  },
+  {
+    id: 'fv-pano-7292',
+    kind: 'panorama',
+    title: '7292 Panorama',
+    dateUploaded: 'June 11, 2026',
+    fileUrl: `${sampleSphericalPanoBase}/7292%20Panorama.jpg`,
+    mimeType: 'image/jpeg',
+    floorPlanPosition: { floorPlanId: 'SOM-4', x: 0.71, y: 0.33 },
+  },
+  {
+    id: 'fv-pano-7760',
+    kind: 'panorama',
+    title: '7760 Panorama',
+    dateUploaded: 'June 12, 2026',
+    fileUrl: `${sampleSphericalPanoBase}/7760%20Panorama.jpg`,
+    mimeType: 'image/jpeg',
+    floorPlanPosition: { floorPlanId: 'SOM-5', x: 0.42, y: 0.74 },
+  },
 ]
 
-/** Katy Freeway Expansion: three katy-* panoramas in the same folder. */
+/** Katy Freeway Expansion: three katy-* images in the same folder. */
 export const sampleAssetsKaty: SpatialAsset[] = [
   {
     id: 'fv-katy-flyover',
-    kind: 'panorama',
+    kind: 'image',
     title: 'katy-flyover',
     dateUploaded: 'May 1, 2026',
-    fileUrl: `${sphericalPanoBase}/katy-flyover.png`,
+    fileUrl: `${sampleImagesBase}/katy-flyover.png`,
     captureLat: 29.785714,
     captureLng: -95.794082,
   },
   {
     id: 'fv-katy-on-ramp',
-    kind: 'panorama',
+    kind: 'image',
     title: 'katy-on-ramp',
     dateUploaded: 'April 30, 2026',
-    fileUrl: `${sphericalPanoBase}/katy-on-ramp.png`,
+    fileUrl: `${sampleImagesBase}/katy-on-ramp.png`,
     captureLat: 29.777846,
     captureLng: -95.818816,
   },
   {
     id: 'fv-katy-surface-road',
-    kind: 'panorama',
+    kind: 'image',
     title: 'katy-surface-road',
     dateUploaded: 'April 29, 2026',
-    fileUrl: `${sphericalPanoBase}/katy-surface-road.png`,
+    fileUrl: `${sampleImagesBase}/katy-surface-road.png`,
     captureLat: 29.77776,
     captureLng: -95.822758,
   },
@@ -219,6 +247,16 @@ export const sampleAssetsKaty: SpatialAsset[] = [
         { lng: -95.801703, lat: 29.773602 },
       ],
     },
+  },
+  {
+    id: 'fv-pano-katy-ladybug',
+    kind: 'panorama',
+    title: 'Ladybug Panorama',
+    dateUploaded: 'February 4, 2026',
+    fileUrl: `${sampleSphericalPanoBase}/ladybug_20112690_20260204_105122_Panoramic_000110_23678_109-7466_-_Copy.jpg`,
+    mimeType: 'image/jpeg',
+    captureLat: 29.780299697966534,
+    captureLng: -95.80924862619423,
   },
 ]
 
