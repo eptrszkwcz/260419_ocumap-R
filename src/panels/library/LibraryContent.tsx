@@ -319,6 +319,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   }, [viewerAsset?.id, setOpenedFeatureId])
 
   useEffect(() => {
+    if (isAdjustingDirection) return
     if (
       viewerAsset != null &&
       !isDrawnFeature(viewerAsset) &&
@@ -330,7 +331,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
       setViewDirectionBaseDeg(null)
       setViewDirectionLiveOffsetDeg(0)
     }
-  }, [viewerAsset, setViewDirectionBaseDeg, setViewDirectionLiveOffsetDeg])
+  }, [isAdjustingDirection, viewerAsset, setViewDirectionBaseDeg, setViewDirectionLiveOffsetDeg])
 
   useEffect(() => {
     setMapFeatureClickHandler((id) => {

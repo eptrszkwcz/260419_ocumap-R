@@ -14,6 +14,10 @@ import { normalizeMarkerColor } from '@/panels/map/markerColors'
 import { FeatureMetadataForm } from '@/panels/library/featureMetadata/FeatureMetadataForm'
 import { AddFeatureMethodPicker } from '@/panels/library/addFeature/AddFeatureMethodPicker'
 import {
+  featureMetadataFooterActionsClassName,
+  featureMetadataFooterCancelButtonClass,
+} from '@/panels/library/featureMetadata/styles'
+import {
   extensionLabelFromMimeAndKind,
   fileSizeLabel,
   resolutionLabel,
@@ -497,11 +501,11 @@ export function AddFeatureFlow({ onCancel, onSave, onStartDraw }: AddFeatureFlow
       </div>
 
       <div className="border-t border-stroke bg-panel px-panel-padding py-3">
-        <div className="flex w-full min-w-0 items-center justify-between gap-2">
+        <div className={featureMetadataFooterActionsClassName}>
           <button
             type="button"
             onClick={handleCancel}
-            className="text-fg-muted text-standard cursor-pointer rounded-panel px-3 py-1.5 hover:text-fg hover:underline focus-visible:ring-2 focus-visible:ring-fg-highlight/40 focus-visible:outline-none"
+            className={featureMetadataFooterCancelButtonClass}
           >
             Cancel
           </button>
@@ -511,7 +515,7 @@ export function AddFeatureFlow({ onCancel, onSave, onStartDraw }: AddFeatureFlow
             disabled={!canSave}
             className={
               PRIMARY_BUTTON_CLASS +
-              ' h-8 rounded-panel px-4 text-standard disabled:cursor-not-allowed disabled:opacity-40'
+              ' h-8 rounded-panel px-4 text-standard focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40'
             }
           >
             Save

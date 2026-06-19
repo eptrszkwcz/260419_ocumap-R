@@ -990,7 +990,9 @@ function MapFloorPlanViewer({
       </div>
       <MapOverlayControlBar floorPlanId={floorPlanId} />
       <FeatureDrawConfirmPanel />
-      {isPickingFloorPlanLocation ? (
+      {isAdjustingDirection ? (
+        <DirectionAdjustBanner />
+      ) : isPickingFloorPlanLocation ? (
         <div
           className={
             'pointer-events-none absolute z-20 flex justify-center ' +
@@ -1005,8 +1007,6 @@ function MapFloorPlanViewer({
             Click the floor plan to set where this photo was taken. Press Esc to cancel.
           </div>
         </div>
-      ) : isAdjustingDirection ? (
-        <DirectionAdjustBanner />
       ) : isEditingThisFeature && drawPhase === 'editing' ? (
         <div
           className={

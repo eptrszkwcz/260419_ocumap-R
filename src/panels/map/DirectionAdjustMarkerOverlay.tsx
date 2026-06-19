@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 import { DirectionAdjustMapThumbnail } from '@/panels/map/DirectionAdjustMapThumbnail'
@@ -10,10 +11,46 @@ export function DirectionAdjustMarkerOverlay() {
     adjustAssetMeta,
     referenceDirectionDeg,
     draftDirectionDeg,
+    isAdjustingDirection,
     setDraftDirectionDeg,
   } = useViewDirectionAdjust()
   const centerRef = useRef<HTMLDivElement>(null)
   const draggingRef = useRef(false)
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null)
+
+  const updateAnchorRect = useCallback(() => {
+    const el = centerRef.current
+    if (el == null) {
+      setAnchorRect(null)
+      return
+    }
+    setAnchorRect(el.getBoundingClientRect())
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!isAdjustingDirection || adjustAssetMeta == null) {
+      setAnchorRect(null)
+      return
+    }
+    updateAnchorRect()
+  }, [adjustAssetMeta, draftDirectionDeg, isAdjustingDirection, updateAnchorRect])
+
+  useEffect(() => {
+    if (!isAdjustingDirection || adjustAssetMeta == null) return
+
+    let raf = 0
+    const tick = () => {
+      updateAnchorRect()
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+
+    window.addEventListener('resize', updateAnchorRect)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('resize', updateAnchorRect)
+    }
+  }, [adjustAssetMeta, isAdjustingDirection, updateAnchorRect])
 
   const updateDirectionFromPointer = useCallback(
     (clientX: number, clientY: number) => {
@@ -52,22 +89,41 @@ export function DirectionAdjustMarkerOverlay() {
     updateDirectionFromPointer(e.clientX, e.clientY)
   }
 
+  const thumbnailPortal =
+    anchorRect != null
+      ? createPortal(
+          <div
+            className="pointer-events-none fixed z-[1000]"
+            style={{
+              left: anchorRect.left + anchorRect.width / 2,
+              top: anchorRect.top,
+              transform: 'translate(-50%, calc(-100% - 12px))',
+            }}
+          >
+            <DirectionAdjustMapThumbnail
+              fileUrl={adjustAssetMeta.fileUrl}
+              kind={adjustAssetMeta.kind}
+              referenceDirectionDeg={referenceDirectionDeg}
+            />
+          </div>,
+          document.body,
+        )
+      : null
+
   return (
-    <div ref={centerRef} className="pointer-events-none absolute left-1/2 top-1/2 z-0 overflow-visible">
-      <div className="relative" style={{ transform: 'translate(-50%, -50%)' }}>
-        <DirectionAdjustMapThumbnail
-          fileUrl={adjustAssetMeta.fileUrl}
-          kind={adjustAssetMeta.kind}
-          referenceDirectionDeg={referenceDirectionDeg}
-        />
-        <div className="pointer-events-auto">
-          <DirectionBeam
-            directionDeg={draftDirectionDeg}
-            interactive
-            onPointerDown={handlePointerDown}
-          />
+    <>
+      {thumbnailPortal}
+      <div ref={centerRef} className="pointer-events-none absolute left-1/2 top-1/2 z-0 overflow-visible">
+        <div className="relative" style={{ transform: 'translate(-50%, -50%)' }}>
+          <div className="pointer-events-auto">
+            <DirectionBeam
+              directionDeg={draftDirectionDeg}
+              interactive
+              onPointerDown={handlePointerDown}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

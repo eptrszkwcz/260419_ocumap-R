@@ -2,6 +2,7 @@ import { InformationCircleIcon, PhotoIcon } from '@heroicons/react/24/outline'
 import type { ReactNode } from 'react'
 
 import { ControlHeaderToolbar } from '@/components/ControlHeaderToolbar'
+import { DelayedTooltip } from '@/components/DelayedTooltip'
 
 import { getFeatureTypeLabel, isDrawnFeature, type SpatialAsset } from '@/data/sampleAssets'
 
@@ -83,14 +84,16 @@ export function FeatureLibraryToolbar({
         <div className="flex min-w-0 flex-1 items-center gap-1">
           <h2 className="min-w-0 flex-1 truncate font-title text-title font-bold text-fg">{viewerAsset.title}</h2>
           {!isGeometry && viewerPanel === 'media' ? (
-            <button
-              type="button"
-              className={iconBtnClass}
-              aria-label="Feature information and metadata"
-              onClick={() => onOpenMetadata?.()}
-            >
-              <InformationCircleIcon className="size-5" aria-hidden />
-            </button>
+            <DelayedTooltip label="Feature information">
+              <button
+                type="button"
+                className={iconBtnClass}
+                aria-label="Feature information and metadata"
+                onClick={() => onOpenMetadata?.()}
+              >
+                <InformationCircleIcon className="size-5" aria-hidden />
+              </button>
+            </DelayedTooltip>
           ) : !isGeometry && viewerPanel === 'metadata' ? (
             <button
               type="button"
