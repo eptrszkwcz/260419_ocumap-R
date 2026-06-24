@@ -9,6 +9,7 @@
   --color-fg-disabled: #acb0ca;
   --color-fg-highlight: #3a4abf;
   --color-area-highlight: #f3f3fa;
+  --color-area-highlight-selected: #e8e8f2;
 
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   /* --font-title: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif; */

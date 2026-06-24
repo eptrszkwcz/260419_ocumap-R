@@ -1,8 +1,11 @@
+import { useRef } from 'react'
+
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import type { SpatialAsset } from '@/data/sampleAssets'
 import type { ProjectType } from '@/data/sampleProjects'
 
 import { columnDefinitions } from '@/panels/library/featureLibrary/columnDefinitions'
+import { useDeferredRowClick } from '@/panels/library/featureLibrary/useDeferredRowClick'
 import type { OptionalColumnId } from '@/panels/library/featureLibrary/types'
 import { FeatureLibraryRowMenu } from '@/panels/library/FeatureLibraryRowMenu'
 
@@ -10,6 +13,9 @@ export type FeatureLibraryTableRowProps = {
   asset: SpatialAsset
   projectType: ProjectType
   visibleColumns: OptionalColumnId[]
+  isSelected?: boolean
+  onSelect?: (shiftKey: boolean) => void
+  onToggleSelection?: () => void
   onOpen?: () => void
   onSetLocation?: () => void
   onDownload?: () => void
@@ -22,6 +28,9 @@ export function FeatureLibraryTableRow({
   asset,
   projectType,
   visibleColumns,
+  isSelected = false,
+  onSelect,
+  onToggleSelection,
   onOpen,
   onSetLocation,
   onDownload,
@@ -30,32 +39,62 @@ export function FeatureLibraryTableRow({
 }: FeatureLibraryTableRowProps) {
   const { linkedFeatureId, setTableHoveredFeatureId } = useFeatureMapHover()
   const isLinked = linkedFeatureId === asset.id
+  const isInteractive = onSelect != null || onOpen != null
+  const pendingShiftRef = useRef(false)
 
-  const cellTextClass = isLinked
+  const { handleClick: deferClick, handleDoubleClick } = useDeferredRowClick(
+    () => onSelect?.(pendingShiftRef.current),
+    () => onOpen?.(),
+  )
+
+  const isHighlighted = isSelected || isLinked
+  const cellTextClass = isHighlighted
     ? 'text-fg-highlight'
     : 'text-fg-muted group-hover:text-fg-highlight'
 
+  const rowClassName =
+    'group h-10 border-b-[0.5px] border-solid border-stroke font-normal transition-colors ' +
+    (isSelected
+      ? 'bg-area-highlight-selected font-semibold hover:bg-area-highlight-selected '
+      : isLinked
+        ? 'bg-area-highlight font-semibold '
+        : 'hover:bg-area-highlight hover:font-semibold ') +
+    (isInteractive
+      ? 'cursor-pointer outline-none focus:outline-none focus-visible:outline-none'
+      : '')
+
   return (
     <tr
-      className={
-        'group h-10 border-b-[0.5px] border-solid border-stroke font-normal transition-colors ' +
-        (isLinked
-          ? 'bg-area-highlight font-semibold '
-          : 'hover:bg-area-highlight hover:font-semibold ') +
-        (onOpen != null
-          ? 'cursor-pointer focus-visible:bg-area-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:ring-inset'
-          : '')
-      }
-      tabIndex={onOpen != null ? 0 : undefined}
+      className={rowClassName}
+      tabIndex={isInteractive ? 0 : undefined}
+      aria-selected={isSelected || undefined}
       onMouseEnter={() => setTableHoveredFeatureId(asset.id)}
       onMouseLeave={() => setTableHoveredFeatureId(null)}
-      onClick={onOpen != null ? onOpen : undefined}
-      onKeyDown={
-        onOpen != null
+      onMouseDown={
+        isInteractive
           ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (e.shiftKey) e.preventDefault()
+            }
+          : undefined
+      }
+      onClick={
+        isInteractive
+          ? (e) => {
+              pendingShiftRef.current = e.shiftKey
+              deferClick()
+            }
+          : undefined
+      }
+      onDoubleClick={onOpen != null ? handleDoubleClick : undefined}
+      onKeyDown={
+        isInteractive
+          ? (e) => {
+              if (e.key === 'Enter') {
                 e.preventDefault()
-                onOpen()
+                onOpen?.()
+              } else if (e.key === ' ') {
+                e.preventDefault()
+                onToggleSelection?.()
               }
             }
           : undefined
@@ -79,7 +118,7 @@ export function FeatureLibraryTableRow({
         onFeatureProperties != null ? (
           <FeatureLibraryRowMenu
             asset={asset}
-            isLinked={isLinked}
+            isLinked={isLinked || isSelected}
             onSetLocation={onSetLocation}
             onDownload={onDownload}
             onDelete={onDelete}

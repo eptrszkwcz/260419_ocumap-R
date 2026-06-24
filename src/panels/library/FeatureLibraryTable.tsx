@@ -17,7 +17,10 @@ type FeatureLibraryTableProps = {
   visibleColumns: OptionalColumnId[]
   sortColumn: FeatureLibrarySortColumn
   sortDirection: SortDirection
+  selectedFeatureIds: Set<string>
   onSortColumn: (column: FeatureLibrarySortColumn) => void
+  onSelectFeature?: (asset: SpatialAsset, index: number, shiftKey: boolean) => void
+  onToggleFeatureSelection?: (asset: SpatialAsset, index: number) => void
   onOpenAsset?: (asset: SpatialAsset) => void
   onSetLocation?: (asset: SpatialAsset) => void
   onDownloadAsset?: (asset: SpatialAsset) => void
@@ -34,7 +37,10 @@ export function FeatureLibraryTable({
   visibleColumns,
   sortColumn,
   sortDirection,
+  selectedFeatureIds,
   onSortColumn,
+  onSelectFeature,
+  onToggleFeatureSelection,
   onOpenAsset,
   onSetLocation,
   onDownloadAsset,
@@ -85,13 +91,24 @@ export function FeatureLibraryTable({
             </th>
           </tr>
         </thead>
-        <tbody>
-          {assets.map((asset) => (
+        <tbody className="select-none">
+          {assets.map((asset, index) => (
             <FeatureLibraryTableRow
               key={asset.id}
               asset={asset}
               projectType={projectType}
               visibleColumns={visibleColumns}
+              isSelected={selectedFeatureIds.has(asset.id)}
+              onSelect={
+                onSelectFeature != null
+                  ? (shiftKey) => onSelectFeature(asset, index, shiftKey)
+                  : undefined
+              }
+              onToggleSelection={
+                onToggleFeatureSelection != null
+                  ? () => onToggleFeatureSelection(asset, index)
+                  : undefined
+              }
               onOpen={onOpenAsset != null ? () => onOpenAsset(asset) : undefined}
               onSetLocation={onSetLocation != null ? () => onSetLocation(asset) : undefined}
               onDownload={onDownloadAsset != null ? () => onDownloadAsset(asset) : undefined}
