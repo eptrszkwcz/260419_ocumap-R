@@ -13,7 +13,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
 
   if (user != null) {
-    return <Navigate to="/library" replace />
+    return <Navigate to="/projects" replace />
   }
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -23,7 +23,7 @@ export function LoginPage() {
     login(displayName, password)
 
     const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname
-    navigate(from ?? '/library', { replace: true })
+    navigate(from ?? '/projects', { replace: true })
   }
 
   return (
