@@ -65,13 +65,14 @@ function assetsForProject(projectId: string, isNewProject: boolean): SpatialAsse
 }
 
 export function LibraryContent({ activeTabId }: LibraryContentProps) {
-  const { projectId, isNewProject } = useActiveProject()
+  const { projectId, isNewProject, project } = useActiveProject()
   const { getProjectProfile, updateProjectProfile } = useProjects()
   const { setCaptureMarkers, setFloorPlanMarkers, setFloorPlanDrawnGeometries, setMapDrawnGeometries } =
     useMapCaptureMarkers()
   const [assets, setAssets] = useState<SpatialAsset[]>(() =>
     assetsForProject(projectId, isNewProject),
   )
+  const [filters, setFilters] = useState<FeatureLibraryFilters>(() => createEmptyFilters())
 
   useEffect(() => {
     setAssets(assetsForProject(projectId, isNewProject))
@@ -83,18 +84,29 @@ export function LibraryContent({ activeTabId }: LibraryContentProps) {
     updateProjectProfile(projectId, profile)
   }
 
+  const mapVisibleAssets = useMemo(
+    () => applyFeatureLibraryFilters(assets, filters, project.projectType),
+    [assets, filters, project.projectType],
+  )
+
   useEffect(() => {
-    setCaptureMarkers(assetsToCaptureMarkers(assets))
-    setFloorPlanMarkers(assetsToFloorPlanMarkers(assets))
-    setFloorPlanDrawnGeometries(assetsToFloorPlanDrawnGeometries(assets))
-    setMapDrawnGeometries(assetsToMapDrawnGeometries(assets))
+    setCaptureMarkers(assetsToCaptureMarkers(mapVisibleAssets))
+    setFloorPlanMarkers(assetsToFloorPlanMarkers(mapVisibleAssets))
+    setFloorPlanDrawnGeometries(assetsToFloorPlanDrawnGeometries(mapVisibleAssets))
+    setMapDrawnGeometries(assetsToMapDrawnGeometries(mapVisibleAssets))
     return () => {
       setCaptureMarkers([])
       setFloorPlanMarkers([])
       setFloorPlanDrawnGeometries([])
       setMapDrawnGeometries([])
     }
-  }, [assets, setCaptureMarkers, setFloorPlanMarkers, setFloorPlanDrawnGeometries, setMapDrawnGeometries])
+  }, [
+    mapVisibleAssets,
+    setCaptureMarkers,
+    setFloorPlanMarkers,
+    setFloorPlanDrawnGeometries,
+    setMapDrawnGeometries,
+  ])
 
   if (isNewProject) {
     return <NewProjectDetailsForm />
@@ -124,6 +136,8 @@ export function LibraryContent({ activeTabId }: LibraryContentProps) {
     <FeatureLibraryView
       assets={assets}
       setAssets={setAssets}
+      filters={filters}
+      onFiltersChange={setFilters}
     />
   )
 }
@@ -131,9 +145,11 @@ export function LibraryContent({ activeTabId }: LibraryContentProps) {
 type FeatureLibraryViewProps = {
   assets: SpatialAsset[]
   setAssets: Dispatch<SetStateAction<SpatialAsset[]>>
+  filters: FeatureLibraryFilters
+  onFiltersChange: Dispatch<SetStateAction<FeatureLibraryFilters>>
 }
 
-function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
+function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: FeatureLibraryViewProps) {
   const { project } = useActiveProject()
   const isBuildingProject = project.projectType === 'Building'
   const { cancelLocationPick, clearLocationPickPreview } = useMapLocationPick()
@@ -156,7 +172,6 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
   const contentsRef = useRef<HTMLDivElement>(null)
   const drawSessionOpenedRef = useRef<string | null>(null)
 
-  const [filters, setFilters] = useState<FeatureLibraryFilters>(() => createEmptyFilters())
   const [libraryViewType, setLibraryViewType] = useState<LibraryViewType>('list')
   const [columnOrder, setColumnOrder] = useState<OptionalColumnId[]>(() => createDefaultColumnOrder())
   const [columnVisibility, setColumnVisibility] = useState<Record<OptionalColumnId, boolean>>(() =>
@@ -484,7 +499,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
               setColumnVisibility((prev) => ({ ...prev, [id]: visible }))
             }
             filters={filters}
-            onFiltersChange={setFilters}
+            onFiltersChange={onFiltersChange}
             openDropdown={openDropdown}
             onOpenDropdownChange={setOpenDropdown}
           />
@@ -559,7 +574,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
                 <FeatureLibraryFilterRow
                   featureCount={visibleCount}
                   activeFilters={activeFilters}
-                  onRemoveFilter={(id) => setFilters((prev) => removeFilterByBadgeId(prev, id))}
+                  onRemoveFilter={(id) => onFiltersChange((prev) => removeFilterByBadgeId(prev, id))}
                   selectedCount={selectedCount}
                   onClearSelection={clearSelection}
                   onShareSelected={() => undefined}

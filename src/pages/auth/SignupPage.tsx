@@ -14,7 +14,7 @@ export function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
 
   if (user != null) {
-    return <Navigate to="/library" replace />
+    return <Navigate to="/projects" replace />
   }
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -29,7 +29,7 @@ export function SignupPage() {
     }
 
     signup(displayName, email, password)
-    navigate('/library', { replace: true })
+    navigate('/projects', { replace: true })
   }
 
   return (
