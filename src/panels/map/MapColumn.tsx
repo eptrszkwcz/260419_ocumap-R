@@ -10,6 +10,7 @@ import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext
 import { useMapCaptureMarkers } from '@/context/MapCaptureMarkersContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
+import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 
 import { NewProjectOrganizationPicker } from '@/panels/library/newProject/NewProjectOrganizationPicker'
 import { InfrastructureMapStyleHeader } from '@/panels/map/InfrastructureMapStyleHeader'
@@ -50,6 +51,7 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
   const { locationPickPreview } = useMapLocationPick()
   const { floorPlanPickPreview } = useFloorPlanLocationPick()
   const { markerStylePreview } = useMarkerStylePreview()
+  const { adjustingFeatureId, isAdjustingDirection } = useViewDirectionAdjust()
   const { openedFeatureId, linkedFeatureId } = useFeatureMapHover()
   const [buildingTab, setBuildingTab] = useState('2d')
   const { floorPlanId, setFloorPlanId } = useActiveFloorPlan()
@@ -91,7 +93,8 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
   }, [floorPlanPickPreview, hasFloorPlans])
 
   useEffect(() => {
-    const targetFeatureId = openedFeatureId ?? linkedFeatureId
+    const targetFeatureId =
+      openedFeatureId ?? linkedFeatureId ?? (isAdjustingDirection ? adjustingFeatureId : null)
     if (targetFeatureId == null) return
     if (!hasFloorPlans) return
     const marker = displayFloorPlanMarkers.find((m) => m.id === targetFeatureId)
@@ -100,6 +103,8 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
     if (targetFloorId == null) return
     setFloorPlanId((current) => (targetFloorId !== current ? targetFloorId : current))
   }, [
+    adjustingFeatureId,
+    isAdjustingDirection,
     openedFeatureId,
     linkedFeatureId,
     displayFloorPlanMarkers,

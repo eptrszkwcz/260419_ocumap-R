@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { FeatureMarkerColorField } from '@/components/FeatureMarkerColorField'
 import { useFeatureDraw } from '@/context/FeatureDrawContext'
@@ -9,6 +9,8 @@ import { getGeometryTypeLabel, type FeatureGeometryType, type SpatialAsset } fro
 import { PRIMARY_BUTTON_CLASS } from '@/lib/primaryButtonClass'
 import { DrawnFeatureGeometryFields } from '@/panels/library/featureMetadata/DrawnFeatureGeometryFields'
 import {
+  featureMetadataFooterActionsClassName,
+  featureMetadataFooterCancelButtonClass,
   featureMetadataFormGridClassName,
   featureMetadataInputClassName,
   featureMetadataSecondaryButtonClass,
@@ -109,9 +111,42 @@ export function DrawnFeatureMetadataPanel({
   }, [asset, cancelFloorPlanLocationPick, cancelLocationPick, startEditFeature])
 
   const handleCancel = useCallback(() => {
+    cancelLocationPick()
+    cancelFloorPlanLocationPick()
     if (isEditingThis) cancelEditFeature()
-    onCancel()
-  }, [cancelEditFeature, isEditingThis, onCancel])
+    if (!isSaved) {
+      onCancel()
+      return
+    }
+    setDraft({
+      title: asset.title,
+      markerColor: normalizeMarkerColor(asset.markerColor ?? draftMarkerColor),
+      notes: asset.notes ?? '',
+    })
+  }, [
+    asset,
+    cancelEditFeature,
+    cancelFloorPlanLocationPick,
+    cancelLocationPick,
+    draftMarkerColor,
+    isEditingThis,
+    isSaved,
+    onCancel,
+  ])
+
+  const isFieldDirty = useMemo(() => {
+    const savedMarkerColor = normalizeMarkerColor(asset.markerColor)
+    const draftMarkerColor = normalizeMarkerColor(draft.markerColor)
+    const savedNotes = asset.notes?.trim() ?? ''
+    const draftNotes = draft.notes.trim()
+    return (
+      draft.title !== asset.title ||
+      draftMarkerColor !== savedMarkerColor ||
+      draftNotes !== savedNotes
+    )
+  }, [asset.markerColor, asset.notes, asset.title, draft.markerColor, draft.notes, draft.title])
+
+  const isDirty = !isSaved || isEditingThis || isFieldDirty
 
   const handleSave = useCallback(() => {
     if (!geometryConfirmed || geometryType == null) return
@@ -242,28 +277,30 @@ export function DrawnFeatureMetadataPanel({
         ) : null}
       </div>
 
-      <div className="border-t border-stroke bg-panel px-panel-padding py-3">
-        <div className="flex w-full min-w-0 justify-end gap-2">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="text-fg-muted hover:text-fg-highlight h-8 rounded-panel px-4 font-sans text-standard transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none"
-          >
-            {isSaved ? 'Close' : 'Cancel'}
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!geometryConfirmed || geometryType == null}
-            className={
-              PRIMARY_BUTTON_CLASS +
-              ' h-8 rounded-panel px-4 text-standard focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40'
-            }
-          >
-            Save
-          </button>
+      {isDirty ? (
+        <div className="border-t border-stroke bg-panel px-panel-padding py-3">
+          <div className={featureMetadataFooterActionsClassName}>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className={featureMetadataFooterCancelButtonClass}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!geometryConfirmed || geometryType == null}
+              className={
+                PRIMARY_BUTTON_CLASS +
+                ' h-8 rounded-panel px-4 text-standard focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40'
+              }
+            >
+              Save
+            </button>
+          </div>
         </div>
-      </div>
+      ) : null}
     </div>
   )
 }

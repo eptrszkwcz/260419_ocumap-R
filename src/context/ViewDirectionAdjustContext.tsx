@@ -10,6 +10,8 @@ import {
 
 import type { AssetKind } from '@/data/sampleAssets'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
+import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
+import { useMapLocationPick } from '@/context/MapLocationPickContext'
 
 export type DirectionAdjustAssetMeta = {
   fileUrl: string
@@ -42,6 +44,8 @@ function normalizeDeg(deg: number): number {
 
 export function ViewDirectionAdjustProvider({ children }: { children: ReactNode }) {
   const { setViewDirectionBaseDeg, setViewDirectionLiveOffsetDeg } = useFeatureMapHover()
+  const { cancelLocationPick } = useMapLocationPick()
+  const { cancelFloorPlanLocationPick } = useFloorPlanLocationPick()
   const [isAdjustingDirection, setIsAdjustingDirection] = useState(false)
   const [adjustingFeatureId, setAdjustingFeatureId] = useState<string | null>(null)
   const [referenceDirectionDeg, setReferenceDirectionDeg] = useState(0)
@@ -75,6 +79,9 @@ export function ViewDirectionAdjustProvider({ children }: { children: ReactNode 
       currentDirectionDeg: number,
       onSave: (deg: number) => void,
     ) => {
+      cancelLocationPick()
+      cancelFloorPlanLocationPick()
+
       const normalized = normalizeDeg(currentDirectionDeg)
       restoreBaseDegRef.current = normalized
       onSaveRef.current = onSave
@@ -87,7 +94,12 @@ export function ViewDirectionAdjustProvider({ children }: { children: ReactNode 
       setViewDirectionBaseDeg(normalized)
       setViewDirectionLiveOffsetDeg(0)
     },
-    [setViewDirectionBaseDeg, setViewDirectionLiveOffsetDeg],
+    [
+      cancelFloorPlanLocationPick,
+      cancelLocationPick,
+      setViewDirectionBaseDeg,
+      setViewDirectionLiveOffsetDeg,
+    ],
   )
 
   const saveDirectionAdjust = useCallback(() => {

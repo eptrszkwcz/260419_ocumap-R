@@ -1,16 +1,21 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useActiveProject } from '@/context/ActiveProjectContext'
+import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 import type { SpatialAsset } from '@/data/sampleAssets'
-import { formatDisplayDateFromIsoDate, parseToIsoDate, todayIsoDate } from '@/lib/formatDisplayDateFromIsoDate'
+import { formatDisplayDateFromIsoDate } from '@/lib/formatDisplayDateFromIsoDate'
 import { formatFloorPlanCoord } from '@/lib/formatFloorPlanCoord'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/primaryButtonClass'
 import { DEFAULT_FLOOR_PLAN_ID } from '@/panels/map/mapFloorPlans'
 import { normalizeMarkerColor } from '@/panels/map/markerColors'
+import {
+  draftFromAsset,
+  isFeatureMetadataDraftDirty,
+} from '@/panels/library/featureMetadata/draftUtils'
 import { FeatureMetadataForm } from '@/panels/library/featureMetadata/FeatureMetadataForm'
 import {
   extensionLabelFromMimeAndKind,
@@ -18,27 +23,10 @@ import {
   resolutionLabel,
 } from '@/panels/library/featureMetadata/fileInfo'
 import { mapboxTokenPresent } from '@/panels/library/featureMetadata/mapboxToken'
-import type { FeatureMetadataDraft } from '@/panels/library/featureMetadata/types'
-
-function coordInputValue(n: number | undefined): string {
-  if (n == null || !Number.isFinite(n)) return ''
-  return n.toFixed(6)
-}
-
-function draftFromAsset(asset: SpatialAsset, isBuildingProject: boolean): FeatureMetadataDraft {
-  return {
-    title: asset.title,
-    kind: asset.kind,
-    dateCapturedIso: asset.dateCaptured ? parseToIsoDate(asset.dateCaptured) : '',
-    dateUploadedIso: parseToIsoDate(asset.dateUploaded) || todayIsoDate(),
-    xStr: isBuildingProject ? formatFloorPlanCoord(asset.floorPlanPosition?.x) : '',
-    yStr: isBuildingProject ? formatFloorPlanCoord(asset.floorPlanPosition?.y) : '',
-    floorPlanId: isBuildingProject ? asset.floorPlanPosition?.floorPlanId : undefined,
-    latStr: isBuildingProject ? '' : coordInputValue(asset.captureLat),
-    lngStr: isBuildingProject ? '' : coordInputValue(asset.captureLng),
-    markerColor: normalizeMarkerColor(asset.markerColor),
-  }
-}
+import {
+  featureMetadataFooterActionsClassName,
+  featureMetadataFooterCancelButtonClass,
+} from '@/panels/library/featureMetadata/styles'
 
 type FeatureMediaMetadataPanelProps = {
   asset: SpatialAsset
@@ -54,6 +42,7 @@ export function FeatureMediaMetadataPanel({
 }: FeatureMediaMetadataPanelProps) {
   const { project } = useActiveProject()
   const isBuildingProject = project.projectType === 'Building'
+  const { setOpenedFeatureId } = useFeatureMapHover()
   const { isPickingLocation, startLocationPick, cancelLocationPick } = useMapLocationPick()
   const {
     isPickingFloorPlanLocation,
@@ -69,6 +58,10 @@ export function FeatureMediaMetadataPanel({
   } = useViewDirectionAdjust()
   const [draft, setDraft] = useState(() => draftFromAsset(asset, isBuildingProject))
   const autoPickStartedRef = useRef(false)
+  const isDirty = useMemo(
+    () => isFeatureMetadataDraftDirty(draft, asset, isBuildingProject),
+    [asset, draft, isBuildingProject],
+  )
 
   useEffect(() => {
     setMarkerStylePreview({ featureId: asset.id, color: draft.markerColor })
@@ -80,8 +73,10 @@ export function FeatureMediaMetadataPanel({
   }, [asset.id])
 
   useEffect(() => {
-    return () => cancelDirectionAdjust()
-  }, [cancelDirectionAdjust])
+    return () => {
+      cancelDirectionAdjust()
+    }
+  }, [asset.id, cancelDirectionAdjust])
 
   const hasCaptureLocation = isBuildingProject
     ? draft.xStr.trim() !== '' && draft.yStr.trim() !== ''
@@ -218,6 +213,19 @@ export function FeatureMediaMetadataPanel({
     })
   }, [asset, draft, isBuildingProject, onSave])
 
+  const handleCancel = useCallback(() => {
+    cancelLocationPick()
+    cancelFloorPlanLocationPick()
+    cancelDirectionAdjust()
+    setDraft(draftFromAsset(asset, isBuildingProject))
+  }, [
+    asset,
+    cancelDirectionAdjust,
+    cancelFloorPlanLocationPick,
+    cancelLocationPick,
+    isBuildingProject,
+  ])
+
   const isVideo =
     asset.kind === 'video' || asset.mimeType?.startsWith('video/') === true
 
@@ -288,6 +296,7 @@ export function FeatureMediaMetadataPanel({
               cancelFloorPlanLocationPick()
               const fileUrl = asset.fileUrl ?? ''
               if (fileUrl === '') return
+              setOpenedFeatureId(asset.id)
               startDirectionAdjust(
                 asset.id,
                 { fileUrl, kind: asset.kind as 'image' | 'panorama' },
@@ -299,20 +308,29 @@ export function FeatureMediaMetadataPanel({
         />
       </div>
 
-      <div className="border-t border-stroke bg-panel px-panel-padding py-3">
-        <div className="flex w-full min-w-0 justify-end">
-          <button
-            type="button"
-            onClick={handleSave}
-            className={
-              PRIMARY_BUTTON_CLASS +
-              ' h-8 rounded-panel px-4 text-standard focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
-            }
-          >
-            Save
-          </button>
+      {isDirty ? (
+        <div className="border-t border-stroke bg-panel px-panel-padding py-3">
+          <div className={featureMetadataFooterActionsClassName}>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className={featureMetadataFooterCancelButtonClass}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className={
+                PRIMARY_BUTTON_CLASS +
+                ' h-8 rounded-panel px-4 text-standard focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
+              }
+            >
+              Save
+            </button>
+          </div>
         </div>
-      </div>
+      ) : null}
     </div>
   )
 }

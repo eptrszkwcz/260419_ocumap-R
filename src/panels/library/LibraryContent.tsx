@@ -34,6 +34,7 @@ import { FeatureLibraryToolbar } from '@/panels/library/FeatureLibraryToolbar'
 import { applyFeatureLibraryFilters } from '@/panels/library/featureLibrary/applyFeatureLibraryFilters'
 import { FeatureLibraryControlActions } from '@/panels/library/featureLibrary/FeatureLibraryControlActions'
 import { FeatureLibraryThumbnailGrid } from '@/panels/library/featureLibrary/FeatureLibraryThumbnailGrid'
+import { useFeatureLibrarySelection } from '@/panels/library/featureLibrary/useFeatureLibrarySelection'
 import { filtersToBadges, removeFilterByBadgeId } from '@/panels/library/featureLibrary/filterBadges'
 import { resolveVisibleColumns } from '@/panels/library/featureLibrary/resolveVisibleColumns'
 import {
@@ -212,6 +213,15 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
     [filteredAssets, sortColumn, sortDirection, project.projectType],
   )
 
+  const {
+    selectedFeatureIds,
+    selectedAssets,
+    selectedCount,
+    selectFeature,
+    toggleFeatureSelection,
+    clearSelection,
+  } = useFeatureLibrarySelection({ sortedAssets })
+
   const handleSortColumn = (column: FeatureLibrarySortColumn) => {
     setSortDirection(nextSortDirection(sortColumn, column, sortDirection))
     setSortColumn(column)
@@ -270,6 +280,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
     cancelFloorPlanLocationPick()
     cancelDirectionAdjust()
     setMetadataAutoStartLocationPick(false)
+    clearSelection()
     setOpenedAsset(asset)
     setOpenedFeatureId(asset.id)
     setViewerPanel(isDrawnFeature(asset) ? 'metadata' : 'media')
@@ -314,11 +325,25 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
     setAssets((list) => list.filter((a) => a.id !== asset.id))
   }
 
+  const deleteSelectedAssets = () => {
+    for (const asset of selectedAssets) {
+      deleteAsset(asset)
+    }
+    clearSelection()
+  }
+
+  const downloadSelectedAssets = () => {
+    for (const asset of selectedAssets) {
+      downloadSpatialAsset(asset)
+    }
+  }
+
   useEffect(() => {
     setOpenedFeatureId(viewerAsset?.id ?? null)
   }, [viewerAsset?.id, setOpenedFeatureId])
 
   useEffect(() => {
+    if (isAdjustingDirection) return
     if (
       viewerAsset != null &&
       !isDrawnFeature(viewerAsset) &&
@@ -330,7 +355,7 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
       setViewDirectionBaseDeg(null)
       setViewDirectionLiveOffsetDeg(0)
     }
-  }, [viewerAsset, setViewDirectionBaseDeg, setViewDirectionLiveOffsetDeg])
+  }, [isAdjustingDirection, viewerAsset, setViewDirectionBaseDeg, setViewDirectionLiveOffsetDeg])
 
   useEffect(() => {
     setMapFeatureClickHandler((id) => {
@@ -535,6 +560,11 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
                   featureCount={visibleCount}
                   activeFilters={activeFilters}
                   onRemoveFilter={(id) => setFilters((prev) => removeFilterByBadgeId(prev, id))}
+                  selectedCount={selectedCount}
+                  onClearSelection={clearSelection}
+                  onShareSelected={() => undefined}
+                  onDownloadSelected={downloadSelectedAssets}
+                  onDeleteSelected={deleteSelectedAssets}
                 />
               </div>
               {visibleCount === 0 ? (
@@ -543,6 +573,9 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
                 <FeatureLibraryThumbnailGrid
                   assets={sortedAssets}
                   projectType={project.projectType}
+                  selectedFeatureIds={selectedFeatureIds}
+                  onSelectFeature={selectFeature}
+                  onToggleFeatureSelection={toggleFeatureSelection}
                   onOpenAsset={openAsset}
                 />
               ) : (
@@ -553,7 +586,10 @@ function FeatureLibraryView({ assets, setAssets }: FeatureLibraryViewProps) {
                     visibleColumns={visibleColumns}
                     sortColumn={sortColumn}
                     sortDirection={sortDirection}
+                    selectedFeatureIds={selectedFeatureIds}
                     onSortColumn={handleSortColumn}
+                    onSelectFeature={selectFeature}
+                    onToggleFeatureSelection={toggleFeatureSelection}
                     onOpenAsset={openAsset}
                     onSetLocation={openSetLocation}
                     onDownloadAsset={downloadSpatialAsset}

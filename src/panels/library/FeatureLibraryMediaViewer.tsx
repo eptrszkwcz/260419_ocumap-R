@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 
+import { DelayedTooltip } from '@/components/DelayedTooltip'
 import { overlayBarInsetStyle, overlayBtnClass, overlayBtnPrimaryClass } from '@/components/overlayControlButtons'
 import {
   ChatIcon,
@@ -73,39 +74,51 @@ export function FeatureLibraryMediaViewer({
           style={overlayBarInsetStyle}
         >
           <div className="pointer-events-auto flex gap-2">
-            <button
-              type="button"
-              className={overlayBtnClass + (!canGoBack ? ' opacity-40' : '')}
-              aria-label="Previous feature"
-              disabled={!canGoBack}
-              onClick={goPrev}
-            >
-              <ChevronLeftIcon />
-            </button>
-            <button
-              type="button"
-              className={overlayBtnClass + (!canGoForward ? ' opacity-40' : '')}
-              aria-label="Next feature"
-              disabled={!canGoForward}
-              onClick={goNext}
-            >
-              <ChevronRightIcon />
-            </button>
+            <DelayedTooltip label="Previous feature">
+              <button
+                type="button"
+                className={overlayBtnClass + (!canGoBack ? ' opacity-40' : '')}
+                aria-label="Previous feature"
+                disabled={!canGoBack}
+                onClick={goPrev}
+              >
+                <ChevronLeftIcon />
+              </button>
+            </DelayedTooltip>
+            <DelayedTooltip label="Next feature">
+              <button
+                type="button"
+                className={overlayBtnClass + (!canGoForward ? ' opacity-40' : '')}
+                aria-label="Next feature"
+                disabled={!canGoForward}
+                onClick={goNext}
+              >
+                <ChevronRightIcon />
+              </button>
+            </DelayedTooltip>
           </div>
 
           <div className="pointer-events-auto flex gap-2">
-            <button type="button" className={overlayBtnClass} aria-label="Measure">
-              <RulerIcon />
-            </button>
-            <button type="button" className={overlayBtnClass} aria-label="Grid overlay">
-              <GridIcon />
-            </button>
-            <button type="button" className={overlayBtnClass} aria-label="Viewer settings">
-              <GearIcon />
-            </button>
-            <button type="button" className={overlayBtnPrimaryClass} aria-label="Comments">
-              <ChatIcon />
-            </button>
+            <DelayedTooltip label="Measure on photo">
+              <button type="button" className={overlayBtnClass} aria-label="Measure">
+                <RulerIcon />
+              </button>
+            </DelayedTooltip>
+            <DelayedTooltip label="Show grid overlay">
+              <button type="button" className={overlayBtnClass} aria-label="Grid overlay">
+                <GridIcon />
+              </button>
+            </DelayedTooltip>
+            <DelayedTooltip label="Viewer settings">
+              <button type="button" className={overlayBtnClass} aria-label="Viewer settings">
+                <GearIcon />
+              </button>
+            </DelayedTooltip>
+            <DelayedTooltip label="View comments">
+              <button type="button" className={overlayBtnPrimaryClass} aria-label="Comments">
+                <ChatIcon />
+              </button>
+            </DelayedTooltip>
           </div>
         </div>
       </div>

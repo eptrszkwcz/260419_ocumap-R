@@ -2,6 +2,7 @@ import { useFeatureDraw } from '@/context/FeatureDrawContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
+import { DelayedTooltip } from '@/components/DelayedTooltip'
 import {
   overlayBarInsetStyle,
   overlayBtnClass,
@@ -41,27 +42,39 @@ export function MapOverlayControlBar({ floorPlanId, hidden = false }: MapOverlay
     startFeatureDraw({ floorPlanId })
   }
 
+  const pencilTooltip = isDrawing
+    ? 'Stop adding feature'
+    : floorPlanId != null
+      ? 'Add feature to plan'
+      : 'Add feature to map'
+
   return (
     <div
       className="pointer-events-none absolute z-20 flex items-end justify-end"
       style={overlayBarInsetStyle}
     >
       <div className="pointer-events-auto flex gap-2" role="toolbar" aria-label="Map controls">
-        <button type="button" className={overlayBtnClass} aria-label="Measure distance">
-          <RulerIcon />
-        </button>
-        <button type="button" className={overlayBtnClass} aria-label="Map settings">
-          <GearIcon />
-        </button>
-        <button
-          type="button"
-          className={overlayBtnPrimaryClass}
-          aria-label={isDrawing ? 'Stop drawing feature' : 'Draw a feature'}
-          aria-pressed={isDrawing}
-          onClick={handlePencilClick}
-        >
-          <PencilIcon />
-        </button>
+        <DelayedTooltip label="Measure distance">
+          <button type="button" className={overlayBtnClass} aria-label="Measure distance">
+            <RulerIcon />
+          </button>
+        </DelayedTooltip>
+        <DelayedTooltip label="Map settings">
+          <button type="button" className={overlayBtnClass} aria-label="Map settings">
+            <GearIcon />
+          </button>
+        </DelayedTooltip>
+        <DelayedTooltip label={pencilTooltip}>
+          <button
+            type="button"
+            className={overlayBtnPrimaryClass}
+            aria-label={isDrawing ? 'Stop drawing feature' : 'Draw a feature'}
+            aria-pressed={isDrawing}
+            onClick={handlePencilClick}
+          >
+            <PencilIcon />
+          </button>
+        </DelayedTooltip>
       </div>
     </div>
   )

@@ -466,6 +466,7 @@ export function InfrastructureMapView({
     if (directionBeamMarkerRef.current == null) {
       const el = document.createElement('div')
       el.style.pointerEvents = isDirectionAdjustTarget ? 'auto' : 'none'
+      el.style.overflow = 'visible'
       directionBeamMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: 'center' })
         .setLngLat([captureMarker.lng, captureMarker.lat])
         .addTo(map)
@@ -474,6 +475,7 @@ export function InfrastructureMapView({
       directionBeamMarkerRef.current.setLngLat([captureMarker.lng, captureMarker.lat])
       const el = directionBeamMarkerRef.current.getElement()
       el.style.pointerEvents = isDirectionAdjustTarget ? 'auto' : 'none'
+      el.style.overflow = 'visible'
     }
 
     directionBeamRootRef.current?.render(
@@ -873,7 +875,9 @@ export function InfrastructureMapView({
       />
       <MapOverlayControlBar />
       <FeatureDrawConfirmPanel />
-      {isPickingLocation ? (
+      {isAdjustingDirection ? (
+        <DirectionAdjustBanner />
+      ) : isPickingLocation ? (
         <div
           className={
             'pointer-events-none absolute z-20 flex justify-center ' +
@@ -888,8 +892,6 @@ export function InfrastructureMapView({
             Click the map to set where this photo was taken. Press Esc to cancel.
           </div>
         </div>
-      ) : isAdjustingDirection ? (
-        <DirectionAdjustBanner />
       ) : isEditingThisFeature && drawPhase === 'editing' ? (
         <div
           className={
