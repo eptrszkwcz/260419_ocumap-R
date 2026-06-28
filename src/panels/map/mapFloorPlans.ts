@@ -1,6 +1,8 @@
 import { sampleProjects } from '@/data/sampleProjects'
 
-export type FloorPlanId = 'SOM-2' | 'SOM-4' | 'SOM-5'
+import type { ProjectFloorPlan } from '@/context/ProjectFloorPlansContext'
+
+export type FloorPlanId = string
 
 export type FloorPlanOption = { id: FloorPlanId; label: string }
 
@@ -18,15 +20,41 @@ const legacyBuildingFloorPlanProjectIds = new Set(
   sampleProjects.filter((p) => p.projectType === 'Building').map((p) => p.id),
 )
 
-export function getFloorPlanOptionsForProject(projectId: string): FloorPlanOption[] {
+function legacyFloorPlanOptionsForProject(projectId: string): FloorPlanOption[] {
   if (!legacyBuildingFloorPlanProjectIds.has(projectId)) return []
   return FLOOR_PLAN_OPTIONS
 }
 
-export function floorPlanDisplayLabel(id: FloorPlanId): string {
-  return FLOOR_PLAN_OPTIONS.find((o) => o.id === id)?.label ?? id
+function userFloorPlanOptions(userPlans: ProjectFloorPlan[]): FloorPlanOption[] {
+  return userPlans.map((plan) => ({ id: plan.id, label: plan.label }))
 }
 
-export function floorPlanImageSrc(id: FloorPlanId): string {
+export function getFloorPlanOptionsForProject(
+  projectId: string,
+  userPlans: ProjectFloorPlan[] = [],
+): FloorPlanOption[] {
+  return [...legacyFloorPlanOptionsForProject(projectId), ...userFloorPlanOptions(userPlans)]
+}
+
+export function getDefaultFloorPlanIdForProject(
+  projectId: string,
+  userPlans: ProjectFloorPlan[] = [],
+): FloorPlanId | null {
+  const options = getFloorPlanOptionsForProject(projectId, userPlans)
+  return options[0]?.id ?? null
+}
+
+export function floorPlanDisplayLabel(
+  id: FloorPlanId,
+  userPlans: ProjectFloorPlan[] = [],
+): string {
+  const legacy = FLOOR_PLAN_OPTIONS.find((o) => o.id === id)
+  if (legacy != null) return legacy.label
+  return userPlans.find((p) => p.id === id)?.label ?? id
+}
+
+export function floorPlanImageSrc(id: FloorPlanId, userPlans: ProjectFloorPlan[] = []): string {
+  const userPlan = userPlans.find((p) => p.id === id)
+  if (userPlan != null) return userPlan.imageUrl
   return `/samples/map-viewer/floor-plans/${id}.jpg`
 }

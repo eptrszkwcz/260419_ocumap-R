@@ -55,6 +55,29 @@ export function VideoTypeIcon({ className }: IconProps) {
   )
 }
 
+export function PdfTypeIcon({ className }: IconProps) {
+  return (
+    <IconFrame className={className}>
+      <path
+        d="M8 6h10l6 6v14a1.5 1.5 0 01-1.5 1.5H8A1.5 1.5 0 016.5 26V7.5A1.5 1.5 0 018 6z"
+        fill="currentColor"
+      />
+      <path d="M18 6v6h6" fill="none" stroke="white" strokeWidth="1.25" strokeLinejoin="round" />
+      <text
+        x="16"
+        y="21"
+        textAnchor="middle"
+        fill="white"
+        fontSize="7"
+        fontWeight="700"
+        fontFamily="system-ui, sans-serif"
+      >
+        PDF
+      </text>
+    </IconFrame>
+  )
+}
+
 export function Model3DTypeIcon({ className }: IconProps) {
   return (
     <IconFrame className={className}>

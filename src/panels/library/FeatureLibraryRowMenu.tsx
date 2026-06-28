@@ -1,5 +1,7 @@
 import {
   ArrowDownTrayIcon,
+  ArrowsRightLeftIcon,
+  DocumentDuplicateIcon,
   InformationCircleIcon,
   MapPinIcon,
   TrashIcon,
@@ -32,6 +34,8 @@ type FeatureLibraryRowMenuProps = {
   isLinked: boolean
   onSetLocation: () => void
   onDownload: () => void
+  onCopy: () => void
+  onMove: () => void
   onDelete: () => void
   onFeatureProperties: () => void
 }
@@ -41,6 +45,8 @@ export function FeatureLibraryRowMenu({
   isLinked,
   onSetLocation,
   onDownload,
+  onCopy,
+  onMove,
   onDelete,
   onFeatureProperties,
 }: FeatureLibraryRowMenuProps) {
@@ -59,20 +65,32 @@ export function FeatureLibraryRowMenu({
           onSelect: onSetLocation,
         },
         {
+          id: 'download',
+          label: 'Download',
+          icon: <ArrowDownTrayIcon className={menuItemIconClass} aria-hidden />,
+          onSelect: onDownload,
+        },
+        {
+          id: 'copy',
+          label: 'Copy',
+          icon: <DocumentDuplicateIcon className={menuItemIconClass} aria-hidden />,
+          onSelect: onCopy,
+        },
+        {
+          id: 'move',
+          label: 'Move',
+          icon: <ArrowsRightLeftIcon className={menuItemIconClass} aria-hidden />,
+          onSelect: onMove,
+        },
+        {
           id: 'properties',
           label: 'Details',
           icon: <InformationCircleIcon className={menuItemIconClass} aria-hidden />,
           onSelect: onFeatureProperties,
         },
         {
-          id: 'download',
-          label: 'Download feature',
-          icon: <ArrowDownTrayIcon className={menuItemIconClass} aria-hidden />,
-          onSelect: onDownload,
-        },
-        {
           id: 'delete',
-          label: 'Delete feature',
+          label: 'Delete',
           icon: <TrashIcon className={menuItemIconClass} aria-hidden />,
           onSelect: onDelete,
         },

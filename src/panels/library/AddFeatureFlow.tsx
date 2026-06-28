@@ -13,6 +13,7 @@ import { DEFAULT_FLOOR_PLAN_ID, type FloorPlanId } from '@/panels/map/mapFloorPl
 import { normalizeMarkerColor } from '@/panels/map/markerColors'
 import { FeatureMetadataForm } from '@/panels/library/featureMetadata/FeatureMetadataForm'
 import { AddFeatureMethodPicker } from '@/panels/library/addFeature/AddFeatureMethodPicker'
+import { FileUploadDropZone } from '@/components/FileUploadDropZone'
 import {
   featureMetadataFooterActionsClassName,
   featureMetadataFooterCancelButtonClass,
@@ -408,17 +409,6 @@ export function AddFeatureFlow({ onCancel, onSave, onStartDraw }: AddFeatureFlow
     onSave(out)
   }, [cancelAllPicks, isBuildingProject, onSave, pending])
 
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    addFiles(e.dataTransfer.files)
-  }
-
-  const onDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-  }
-
   const canSave = pending.length > 0
 
   if (step === 'choose') {
@@ -435,38 +425,18 @@ export function AddFeatureFlow({ onCancel, onSave, onStartDraw }: AddFeatureFlow
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="min-h-0 min-w-0 flex-1 overflow-auto" aria-label="Add new features">
         <div className="p-panel-padding">
-          <label
-            htmlFor={fileInputId}
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-            className="text-fg-muted focus-within:border-fg-highlight focus-within:ring-fg-highlight/35 block cursor-pointer rounded-panel border-2 border-dashed border-stroke bg-panel p-6 text-center transition-[border-color,box-shadow] focus-within:ring-1"
-            role="button"
-            tabIndex={0}
-            aria-label="Add feature files. Drop files here or browse."
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                document.getElementById(fileInputId)?.click()
-              }
-            }}
+          <FileUploadDropZone
+            inputId={fileInputId}
+            accept="image/*,video/*"
+            ariaLabel="Add feature files. Drop files here or browse."
+            onFilesAdded={addFiles}
           >
-            <input
-              id={fileInputId}
-              type="file"
-              className="sr-only"
-              accept="image/*,video/*"
-              multiple
-              onChange={(e) => {
-                addFiles(e.target.files)
-                e.target.value = ''
-              }}
-            />
             <p className="text-standard text-fg">
               Drag and drop images or video here, or{' '}
               <span className="text-fg-highlight font-bold underline">browse to upload</span>
             </p>
             <p className="mt-2 text-fg-muted text-badge">You can select multiple features at once.</p>
-          </label>
+          </FileUploadDropZone>
         </div>
 
         {pending.length > 0 ? (

@@ -5,6 +5,7 @@ import { PanelCenteredPrompt } from '@/components/PanelCenteredPrompt'
 import { TabPanelBody } from '@/components/TabPanelBody'
 import { useActiveFloorPlan } from '@/context/ActiveFloorPlanContext'
 import { useActiveProject } from '@/context/ActiveProjectContext'
+import { useProjectFloorPlans } from '@/context/ProjectFloorPlansContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapCaptureMarkers } from '@/context/MapCaptureMarkersContext'
@@ -13,6 +14,7 @@ import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 
 import { NewProjectOrganizationPicker } from '@/panels/library/newProject/NewProjectOrganizationPicker'
+import { AddFloorPlanFlow } from '@/panels/map/addFloorPlan/AddFloorPlanFlow'
 import { InfrastructureMapStyleHeader } from '@/panels/map/InfrastructureMapStyleHeader'
 import { InfrastructureMapView } from '@/panels/map/InfrastructureMapView'
 import { MapContent } from '@/panels/map/MapContent'
@@ -46,6 +48,8 @@ type MapColumnProps = {
 
 export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
   const { project, projectId, isNewProject } = useActiveProject()
+  const { getFloorPlans } = useProjectFloorPlans()
+  const userFloorPlans = getFloorPlans(projectId)
   const { captureMarkers, floorPlanMarkers, floorPlanDrawnGeometries, mapDrawnGeometries } =
     useMapCaptureMarkers()
   const { locationPickPreview } = useMapLocationPick()
@@ -54,17 +58,19 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
   const { adjustingFeatureId, isAdjustingDirection } = useViewDirectionAdjust()
   const { openedFeatureId, linkedFeatureId } = useFeatureMapHover()
   const [buildingTab, setBuildingTab] = useState('2d')
+  const [floorPlanViewMode, setFloorPlanViewMode] = useState<'view' | 'add'>('view')
   const { floorPlanId, setFloorPlanId } = useActiveFloorPlan()
   const [baseMapStyleId, setBaseMapStyleId] = useState<MapBaseStyleId>('default')
 
   const floorPlanOptions = useMemo(
-    () => getFloorPlanOptionsForProject(projectId),
-    [projectId],
+    () => getFloorPlanOptionsForProject(projectId, userFloorPlans),
+    [projectId, userFloorPlans],
   )
   const hasFloorPlans = floorPlanOptions.length > 0
 
   useEffect(() => {
     setBaseMapStyleId('default')
+    setFloorPlanViewMode('view')
   }, [projectId])
 
   useEffect(() => {
@@ -202,9 +208,18 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
                 floorPlanOptions={floorPlanOptions}
                 selectedFloorId={hasFloorPlans ? floorPlanId : null}
                 onFloorChange={setFloorPlanId}
+                onAddFloorPlan={() => setFloorPlanViewMode('add')}
               />
             ) : null}
-            {buildingTab === '2d' && !hasFloorPlans ? (
+            {buildingTab === '2d' && floorPlanViewMode === 'add' ? (
+              <AddFloorPlanFlow
+                onCancel={() => setFloorPlanViewMode('view')}
+                onComplete={(firstAddedPlanId) => {
+                  setFloorPlanViewMode('view')
+                  setFloorPlanId(firstAddedPlanId)
+                }}
+              />
+            ) : buildingTab === '2d' && !hasFloorPlans ? (
               <PanelCenteredPrompt aria-label="Floor plan viewer">
                 Add a floor plan to document this building. Use Add Floor Plan to upload PDF
                 drawings.
@@ -213,8 +228,8 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
               <MapContent
                 activeTab={buildingTab}
                 floorPlanId={floorPlanId}
-                floorPlanSrc={floorPlanImageSrc(floorPlanId)}
-                floorPlanLabel={floorPlanDisplayLabel(floorPlanId)}
+                floorPlanSrc={floorPlanImageSrc(floorPlanId, userFloorPlans)}
+                floorPlanLabel={floorPlanDisplayLabel(floorPlanId, userFloorPlans)}
                 floorPlanMarkers={displayFloorPlanMarkers}
                 floorDrawnGeometries={floorPlanDrawnGeometries}
               />

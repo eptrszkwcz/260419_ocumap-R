@@ -19,6 +19,8 @@ export type FeatureLibraryTableRowProps = {
   onOpen?: () => void
   onSetLocation?: () => void
   onDownload?: () => void
+  onCopy?: () => void
+  onMove?: () => void
   onDelete?: () => void
   onFeatureProperties?: () => void
 }
@@ -34,6 +36,8 @@ export function FeatureLibraryTableRow({
   onOpen,
   onSetLocation,
   onDownload,
+  onCopy,
+  onMove,
   onDelete,
   onFeatureProperties,
 }: FeatureLibraryTableRowProps) {
@@ -114,6 +118,8 @@ export function FeatureLibraryTableRow({
       <td className="pl-0 pr-panel-padding text-right align-middle" onClick={(e) => e.stopPropagation()}>
         {onSetLocation != null &&
         onDownload != null &&
+        onCopy != null &&
+        onMove != null &&
         onDelete != null &&
         onFeatureProperties != null ? (
           <FeatureLibraryRowMenu
@@ -121,6 +127,8 @@ export function FeatureLibraryTableRow({
             isLinked={isLinked || isSelected}
             onSetLocation={onSetLocation}
             onDownload={onDownload}
+            onCopy={onCopy}
+            onMove={onMove}
             onDelete={onDelete}
             onFeatureProperties={onFeatureProperties}
           />

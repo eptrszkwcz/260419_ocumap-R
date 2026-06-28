@@ -577,8 +577,9 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
                   onRemoveFilter={(id) => onFiltersChange((prev) => removeFilterByBadgeId(prev, id))}
                   selectedCount={selectedCount}
                   onClearSelection={clearSelection}
-                  onShareSelected={() => undefined}
                   onDownloadSelected={downloadSelectedAssets}
+                  onCopySelected={() => undefined}
+                  onMoveSelected={() => undefined}
                   onDeleteSelected={deleteSelectedAssets}
                 />
               </div>
@@ -608,6 +609,8 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
                     onOpenAsset={openAsset}
                     onSetLocation={openSetLocation}
                     onDownloadAsset={downloadSpatialAsset}
+                    onCopyAsset={() => undefined}
+                    onMoveAsset={() => undefined}
                     onDeleteAsset={deleteAsset}
                     onFeatureProperties={openFeatureProperties}
                   />

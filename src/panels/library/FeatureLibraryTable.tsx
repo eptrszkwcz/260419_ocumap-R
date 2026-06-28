@@ -24,6 +24,8 @@ type FeatureLibraryTableProps = {
   onOpenAsset?: (asset: SpatialAsset) => void
   onSetLocation?: (asset: SpatialAsset) => void
   onDownloadAsset?: (asset: SpatialAsset) => void
+  onCopyAsset?: (asset: SpatialAsset) => void
+  onMoveAsset?: (asset: SpatialAsset) => void
   onDeleteAsset?: (asset: SpatialAsset) => void
   onFeatureProperties?: (asset: SpatialAsset) => void
 }
@@ -44,6 +46,8 @@ export function FeatureLibraryTable({
   onOpenAsset,
   onSetLocation,
   onDownloadAsset,
+  onCopyAsset,
+  onMoveAsset,
   onDeleteAsset,
   onFeatureProperties,
 }: FeatureLibraryTableProps) {
@@ -112,6 +116,8 @@ export function FeatureLibraryTable({
               onOpen={onOpenAsset != null ? () => onOpenAsset(asset) : undefined}
               onSetLocation={onSetLocation != null ? () => onSetLocation(asset) : undefined}
               onDownload={onDownloadAsset != null ? () => onDownloadAsset(asset) : undefined}
+              onCopy={onCopyAsset != null ? () => onCopyAsset(asset) : undefined}
+              onMove={onMoveAsset != null ? () => onMoveAsset(asset) : undefined}
               onDelete={onDeleteAsset != null ? () => onDeleteAsset(asset) : undefined}
               onFeatureProperties={
                 onFeatureProperties != null ? () => onFeatureProperties(asset) : undefined
