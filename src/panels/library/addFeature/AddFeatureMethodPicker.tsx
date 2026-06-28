@@ -7,6 +7,7 @@ import {
   LineGeometryIcon,
   Model3DTypeIcon,
   Panorama360TypeIcon,
+  PdfTypeIcon,
   PhotoTypeIcon,
   PointGeometryIcon,
   PolygonGeometryIcon,
@@ -69,6 +70,7 @@ export function AddFeatureMethodPicker({
                 <TypeIconItem label="Photo" icon={<PhotoTypeIcon />} />
                 <TypeIconItem label="360 Photo" icon={<Panorama360TypeIcon />} />
                 <TypeIconItem label="Video" icon={<VideoTypeIcon />} />
+                <TypeIconItem label="PDF" icon={<PdfTypeIcon />} />
               </div>
               <div className="flex flex-wrap items-start justify-center gap-x-4 gap-y-3">
                 <TypeIconItem label="3D Model" icon={<Model3DTypeIcon />} />

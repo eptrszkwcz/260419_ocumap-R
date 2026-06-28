@@ -1,4 +1,9 @@
-import { ArrowDownTrayIcon, ShareIcon, TrashIcon } from '@heroicons/react/24/outline'
+import {
+  ArrowDownTrayIcon,
+  ArrowsRightLeftIcon,
+  DocumentDuplicateIcon,
+  TrashIcon,
+} from '@heroicons/react/24/outline'
 
 const actionBarClassName =
   'text-fg-muted flex h-[24px] w-full min-w-0 items-stretch gap-0 overflow-hidden rounded-panel bg-area-highlight p-0 text-[12.5px] font-bold leading-[18px]'
@@ -11,8 +16,9 @@ const iconClassName = 'size-3.5 shrink-0'
 type FeatureLibraryActionBarProps = {
   selectedCount: number
   onClearSelection: () => void
-  onShare: () => void
   onDownload: () => void
+  onCopy: () => void
+  onMove: () => void
   onDelete: () => void
 }
 
@@ -20,8 +26,9 @@ type FeatureLibraryActionBarProps = {
 export function FeatureLibraryActionBar({
   selectedCount,
   onClearSelection,
-  onShare,
   onDownload,
+  onCopy,
+  onMove,
   onDelete,
 }: FeatureLibraryActionBarProps) {
   const label = selectedCount === 1 ? 'Feature selected' : 'Features selected'
@@ -62,10 +69,6 @@ export function FeatureLibraryActionBar({
           </span>
         </div>
         <div className="flex h-full shrink-0 items-stretch">
-          <button type="button" onClick={onShare} className={actionSegmentClassName} aria-label="Share selected features">
-            <ShareIcon className={iconClassName} aria-hidden />
-            Share
-          </button>
           <button
             type="button"
             onClick={onDownload}
@@ -74,6 +77,14 @@ export function FeatureLibraryActionBar({
           >
             <ArrowDownTrayIcon className={iconClassName} aria-hidden />
             Download
+          </button>
+          <button type="button" onClick={onCopy} className={actionSegmentClassName} aria-label="Copy selected features">
+            <DocumentDuplicateIcon className={iconClassName} aria-hidden />
+            Copy
+          </button>
+          <button type="button" onClick={onMove} className={actionSegmentClassName} aria-label="Move selected features">
+            <ArrowsRightLeftIcon className={iconClassName} aria-hidden />
+            Move
           </button>
           <button type="button" onClick={onDelete} className={actionSegmentClassName} aria-label="Delete selected features">
             <TrashIcon className={iconClassName} aria-hidden />

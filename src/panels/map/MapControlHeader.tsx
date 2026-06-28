@@ -2,7 +2,6 @@ import { PrimaryAddButton } from '@/components/ControlHeaderToolbar'
 import { DropdownMenu } from '@/components/DropdownMenu'
 
 import type { FloorPlanId, FloorPlanOption } from '@/panels/map/mapFloorPlans'
-import { floorPlanDisplayLabel } from '@/panels/map/mapFloorPlans'
 import {
   mapOverlayInsetTopClassName,
   mapOverlayInsetXClassName,
@@ -50,7 +49,9 @@ export function MapControlHeader({
   onAddFloorPlan,
 }: MapControlHeaderProps) {
   const selectedLabel =
-    selectedFloorId != null ? floorPlanDisplayLabel(selectedFloorId) : 'No floor plans'
+    selectedFloorId != null
+      ? (floorPlanOptions.find((o) => o.id === selectedFloorId)?.label ?? selectedFloorId)
+      : 'No floor plans'
 
   return (
     <div

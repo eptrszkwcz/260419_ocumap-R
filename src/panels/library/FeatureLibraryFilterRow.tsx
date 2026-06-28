@@ -11,8 +11,9 @@ type FeatureLibraryFilterRowProps = {
   onRemoveFilter: (id: string) => void
   selectedCount?: number
   onClearSelection?: () => void
-  onShareSelected?: () => void
   onDownloadSelected?: () => void
+  onCopySelected?: () => void
+  onMoveSelected?: () => void
   onDeleteSelected?: () => void
 }
 
@@ -26,8 +27,9 @@ export function FeatureLibraryFilterRow({
   onRemoveFilter,
   selectedCount = 0,
   onClearSelection,
-  onShareSelected,
   onDownloadSelected,
+  onCopySelected,
+  onMoveSelected,
   onDeleteSelected,
 }: FeatureLibraryFilterRowProps) {
   if (selectedCount > 0) {
@@ -39,8 +41,9 @@ export function FeatureLibraryFilterRow({
         <FeatureLibraryActionBar
           selectedCount={selectedCount}
           onClearSelection={onClearSelection ?? (() => undefined)}
-          onShare={onShareSelected ?? (() => undefined)}
           onDownload={onDownloadSelected ?? (() => undefined)}
+          onCopy={onCopySelected ?? (() => undefined)}
+          onMove={onMoveSelected ?? (() => undefined)}
           onDelete={onDeleteSelected ?? (() => undefined)}
         />
       </div>
