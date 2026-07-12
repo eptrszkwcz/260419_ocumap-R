@@ -1,12 +1,16 @@
 import {
   ArchiveBoxIcon,
+  ArrowTopRightOnSquareIcon,
   ArrowUpTrayIcon,
   InformationCircleIcon,
+  LinkIcon,
   ShareIcon,
 } from '@heroicons/react/24/outline'
 
 import { DropdownMenu } from '@/components/DropdownMenu'
+import { usePublishProject } from '@/context/PublishProjectContext'
 import type { ProjectRecord } from '@/data/sampleProjects'
+import { publishedProjectUrl, openPublishedProjectInNewTab } from '@/lib/publishedProjectUrl'
 import { MoreVerticalIcon } from '@/pages/projectsListPresentation'
 
 const menuItemIconClass = 'size-4'
@@ -22,6 +26,7 @@ export function ProjectActionsMenu({
   includeDetails = false,
   stopTriggerPropagation = false,
 }: ProjectActionsMenuProps) {
+  const { openPublishModal } = usePublishProject()
   const publishLabel = project.status === 'Published' ? 'Republish' : 'Publish'
   const iconClass = 'text-fg-muted group-hover:text-fg-highlight'
 
@@ -40,7 +45,7 @@ export function ProjectActionsMenu({
       id: 'publish',
       label: publishLabel,
       icon: <ArrowUpTrayIcon className={menuItemIconClass} aria-hidden />,
-      onSelect: () => undefined,
+      onSelect: () => openPublishModal(project),
     },
     {
       id: 'share',
@@ -54,6 +59,26 @@ export function ProjectActionsMenu({
       icon: <ArchiveBoxIcon className={menuItemIconClass} aria-hidden />,
       onSelect: () => undefined,
     },
+    ...(project.status === 'Published'
+      ? [
+          {
+            id: 'copy-published-link',
+            label: 'Copy Published Link',
+            icon: <LinkIcon className={menuItemIconClass} aria-hidden />,
+            onSelect: () => {
+              void navigator.clipboard.writeText(publishedProjectUrl(project.id))
+            },
+          },
+          {
+            id: 'go-to-published',
+            label: 'Go to Published Project',
+            icon: <ArrowTopRightOnSquareIcon className={menuItemIconClass} aria-hidden />,
+            onSelect: () => {
+              openPublishedProjectInNewTab(project.id)
+            },
+          },
+        ]
+      : []),
   ]
 
   return (
@@ -61,7 +86,7 @@ export function ProjectActionsMenu({
       menuAriaLabel={`Actions for ${project.name}`}
       align="right"
       stopTriggerPropagation={stopTriggerPropagation}
-      panelWidth="11.5rem"
+      panelWidth="15rem"
       items={items}
       renderTrigger={({ open, menuId, onToggle }) => (
         <button

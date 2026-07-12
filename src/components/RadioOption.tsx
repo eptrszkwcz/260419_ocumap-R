@@ -1,33 +1,43 @@
 import { CheckIcon } from '@heroicons/react/16/solid'
 
-type CheckboxProps = {
+type RadioOptionProps = {
   checked: boolean
-  onChange: (checked: boolean) => void
+  onChange: () => void
   label: string
+  name: string
   id?: string
   disabled?: boolean
-  dense?: boolean
+  compact?: boolean
 }
 
 const boxBaseClass =
   'flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-fg-highlight/35 peer-focus-visible:outline-none'
 
-export function Checkbox({ checked, onChange, label, id, disabled = false, dense = false }: CheckboxProps) {
+export function RadioOption({
+  checked,
+  onChange,
+  label,
+  name,
+  id,
+  disabled = false,
+  compact = false,
+}: RadioOptionProps) {
   return (
     <label
       htmlFor={id}
       className={
-        'flex cursor-pointer items-center gap-2.5 rounded-panel px-[16px] text-left font-sans text-standard leading-none ' +
-        (dense ? 'py-[6px] ' : 'py-[10px] ') +
+        'flex cursor-pointer items-center gap-2.5 rounded-panel text-left font-sans text-standard leading-none ' +
+        (compact ? 'px-0 py-0' : 'px-[16px] py-[10px] ') +
         (disabled ? 'cursor-not-allowed opacity-50' : 'hover:bg-area-highlight')
       }
     >
       <input
         id={id}
-        type="checkbox"
+        type="radio"
+        name={name}
         checked={checked}
         disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
+        onChange={onChange}
         className="peer sr-only"
       />
       <span

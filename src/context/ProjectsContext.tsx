@@ -23,6 +23,7 @@ type ProjectsContextValue = {
   getProjectProfile: (id: string) => DemoProjectDetailsProfile
   createProject: (input: CreateProjectInput) => ProjectRecord
   updateProjectProfile: (id: string, profile: DemoProjectDetailsProfile) => void
+  publishProject: (id: string) => void
 }
 
 const ProjectsContext = createContext<ProjectsContextValue | null>(null)
@@ -96,6 +97,15 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     setProfilesById((prev) => ({ ...prev, [id]: profile }))
   }, [])
 
+  const publishProject = useCallback((id: string) => {
+    const today = todayDisplayDate()
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, status: 'Published' as const, publishedDate: today, lastModified: today } : p,
+      ),
+    )
+  }, [])
+
   const value = useMemo(
     (): ProjectsContextValue => ({
       projects,
@@ -103,8 +113,9 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
       getProjectProfile,
       createProject,
       updateProjectProfile,
+      publishProject,
     }),
-    [projects, getProjectById, getProjectProfile, createProject, updateProjectProfile],
+    [projects, getProjectById, getProjectProfile, createProject, updateProjectProfile, publishProject],
   )
 
   return <ProjectsContext.Provider value={value}>{children}</ProjectsContext.Provider>

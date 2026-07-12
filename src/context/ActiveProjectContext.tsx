@@ -18,7 +18,9 @@ type ActiveProjectContextValue = {
   isNewProject: boolean
 }
 
-const ActiveProjectContext = createContext<ActiveProjectContextValue | null>(null)
+export type { ActiveProjectContextValue }
+
+export const ActiveProjectContext = createContext<ActiveProjectContextValue | null>(null)
 
 function ActiveProjectInner({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
