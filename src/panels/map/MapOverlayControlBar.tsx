@@ -15,9 +15,14 @@ import { useStartFeatureDraw } from '@/panels/map/useStartFeatureDraw'
 type MapOverlayControlBarProps = {
   floorPlanId?: FloorPlanId
   hidden?: boolean
+  readOnly?: boolean
 }
 
-export function MapOverlayControlBar({ floorPlanId, hidden = false }: MapOverlayControlBarProps) {
+export function MapOverlayControlBar({
+  floorPlanId,
+  hidden = false,
+  readOnly = false,
+}: MapOverlayControlBarProps) {
   const { isDrawing, isEditingFeature, cancelDraw } = useFeatureDraw()
   const { isPickingLocation } = useMapLocationPick()
   const { isPickingFloorPlanLocation } = useFloorPlanLocationPick()
@@ -64,17 +69,19 @@ export function MapOverlayControlBar({ floorPlanId, hidden = false }: MapOverlay
             <GearIcon />
           </button>
         </DelayedTooltip>
-        <DelayedTooltip label={pencilTooltip}>
-          <button
-            type="button"
-            className={overlayBtnPrimaryClass}
-            aria-label={isDrawing ? 'Stop drawing feature' : 'Draw a feature'}
-            aria-pressed={isDrawing}
-            onClick={handlePencilClick}
-          >
-            <PencilIcon />
-          </button>
-        </DelayedTooltip>
+        {readOnly ? null : (
+          <DelayedTooltip label={pencilTooltip}>
+            <button
+              type="button"
+              className={overlayBtnPrimaryClass}
+              aria-label={isDrawing ? 'Stop drawing feature' : 'Draw a feature'}
+              aria-pressed={isDrawing}
+              onClick={handlePencilClick}
+            >
+              <PencilIcon />
+            </button>
+          </DelayedTooltip>
+        )}
       </div>
     </div>
   )

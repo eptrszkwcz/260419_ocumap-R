@@ -238,6 +238,7 @@ type InfrastructureMapViewProps = {
   /** Feature capture points (WGS84) shown as blue circles on the map. */
   captureMarkers: MapCaptureMarker[]
   mapDrawnGeometries: MapDrawnGeometry[]
+  readOnly?: boolean
 }
 
 function mapboxAccessToken(): string | undefined {
@@ -252,6 +253,7 @@ export function InfrastructureMapView({
   splitCommitToken,
   captureMarkers,
   mapDrawnGeometries,
+  readOnly = false,
 }: InfrastructureMapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -873,7 +875,7 @@ export function InfrastructureMapView({
         role="region"
         aria-label="Map"
       />
-      <MapOverlayControlBar />
+      <MapOverlayControlBar readOnly={readOnly} />
       <FeatureDrawConfirmPanel />
       {isAdjustingDirection ? (
         <DirectionAdjustBanner />

@@ -6,6 +6,7 @@ import {
   ChatIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  CloseIcon,
   GearIcon,
   GridIcon,
   RulerIcon,
@@ -18,12 +19,24 @@ type FeatureLibraryMediaViewerProps = {
   asset: SpatialAsset
   libraryAssets: SpatialAsset[]
   onAssetChange: (asset: SpatialAsset) => void
+  onClose?: () => void
+  /** Hide the bottom-left close button (e.g. when published view uses a top header close). */
+  hideOverlayClose?: boolean
+  /** Hide chevron prev/next controls (e.g. when published view uses labeled nav buttons). */
+  hideOverlayNavigation?: boolean
+}
+
+function isVideoAsset(asset: SpatialAsset): boolean {
+  return asset.kind === 'video' || asset.mimeType?.startsWith('video/') === true
 }
 
 export function FeatureLibraryMediaViewer({
   asset,
   libraryAssets,
   onAssetChange,
+  onClose,
+  hideOverlayClose = false,
+  hideOverlayNavigation = false,
 }: FeatureLibraryMediaViewerProps) {
   const { setViewDirectionLiveOffsetDeg } = useFeatureMapHover()
   const index = Math.max(
@@ -60,6 +73,14 @@ export function FeatureLibraryMediaViewer({
             panoramaUrl={asset.fileUrl ?? ''}
             onYawChange={setViewDirectionLiveOffsetDeg}
           />
+        ) : isVideoAsset(asset) ? (
+          <video
+            key={asset.id}
+            src={asset.fileUrl ?? ''}
+            className="absolute inset-0 h-full w-full object-cover"
+            controls
+            playsInline
+          />
         ) : (
           <img
             src={asset.fileUrl ?? ''}
@@ -74,28 +95,44 @@ export function FeatureLibraryMediaViewer({
           style={overlayBarInsetStyle}
         >
           <div className="pointer-events-auto flex gap-2">
-            <DelayedTooltip label="Previous feature">
-              <button
-                type="button"
-                className={overlayBtnClass + (!canGoBack ? ' opacity-40' : '')}
-                aria-label="Previous feature"
-                disabled={!canGoBack}
-                onClick={goPrev}
-              >
-                <ChevronLeftIcon />
-              </button>
-            </DelayedTooltip>
-            <DelayedTooltip label="Next feature">
-              <button
-                type="button"
-                className={overlayBtnClass + (!canGoForward ? ' opacity-40' : '')}
-                aria-label="Next feature"
-                disabled={!canGoForward}
-                onClick={goNext}
-              >
-                <ChevronRightIcon />
-              </button>
-            </DelayedTooltip>
+            {onClose != null && !hideOverlayClose ? (
+              <DelayedTooltip label="Close media">
+                <button
+                  type="button"
+                  className={overlayBtnClass}
+                  aria-label="Close media"
+                  onClick={onClose}
+                >
+                  <CloseIcon />
+                </button>
+              </DelayedTooltip>
+            ) : null}
+            {!hideOverlayNavigation ? (
+              <>
+                <DelayedTooltip label="Previous feature">
+                  <button
+                    type="button"
+                    className={overlayBtnClass + (!canGoBack ? ' opacity-40' : '')}
+                    aria-label="Previous feature"
+                    disabled={!canGoBack}
+                    onClick={goPrev}
+                  >
+                    <ChevronLeftIcon />
+                  </button>
+                </DelayedTooltip>
+                <DelayedTooltip label="Next feature">
+                  <button
+                    type="button"
+                    className={overlayBtnClass + (!canGoForward ? ' opacity-40' : '')}
+                    aria-label="Next feature"
+                    disabled={!canGoForward}
+                    onClick={goNext}
+                  >
+                    <ChevronRightIcon />
+                  </button>
+                </DelayedTooltip>
+              </>
+            ) : null}
           </div>
 
           <div className="pointer-events-auto flex gap-2">
