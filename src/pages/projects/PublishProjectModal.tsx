@@ -147,10 +147,15 @@ function FileSelectionSection({
         />
         <div className="rounded-panel border border-stroke bg-[#FAFAFD] p-3">
           <Checkbox
-            id="publish-deselect-all"
-            label="Deselect All"
+            id="publish-all"
+            label="All"
             checked={allSelectableSelected}
             onChange={toggleDeselectAll}
+          />
+          <div
+            className="mx-[16px] border-t border-stroke/40"
+            role="separator"
+            aria-hidden
           />
           <div className="mt-1 grid gap-0 sm:grid-cols-2">
             {activeGroup.items.map((item) => (

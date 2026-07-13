@@ -33,8 +33,11 @@ function dropdownMenuItemClass(selected: boolean | undefined): string {
 type DropdownMenuProps = {
   items: DropdownMenuItemConfig[]
   menuAriaLabel: string
-  align?: 'left' | 'right'
+  align?: 'left' | 'right' | 'center'
+  placement?: 'bottom' | 'top'
   panelWidth?: string
+  panelMaxHeight?: string
+  closeOnMouseLeave?: boolean
   stopTriggerPropagation?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
@@ -45,7 +48,10 @@ export function DropdownMenu({
   items,
   menuAriaLabel,
   align = 'right',
+  placement = 'bottom',
   panelWidth,
+  panelMaxHeight,
+  closeOnMouseLeave = true,
   stopTriggerPropagation = false,
   open: openControlled,
   onOpenChange,
@@ -70,8 +76,10 @@ export function DropdownMenu({
     <DropdownPanel
       panelAriaLabel={menuAriaLabel}
       align={align}
+      placement={placement}
       panelWidth={panelWidth}
-      closeOnMouseLeave
+      panelMaxHeight={panelMaxHeight}
+      closeOnMouseLeave={closeOnMouseLeave}
       stopTriggerPropagation={stopTriggerPropagation}
       open={open}
       onOpenChange={setOpen}

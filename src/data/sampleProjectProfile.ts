@@ -76,7 +76,7 @@ export const sampleProjectProfile = {
   createdOn: 'March 4, 2024',
   createdOnIso: '2024-03-04',
   location: {
-    addressLines: ['1603 Jefferson Street', 'Suite 200'],
+    addressLines: ['1603 Jefferson Street'],
     cityStateZip: 'Oakland, CA 94612',
     notes: 'Primary loading dock on 16th St; visitor parking in structure B (levels 2–3).',
   },

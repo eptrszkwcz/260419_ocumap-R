@@ -95,6 +95,10 @@ export function isDrawnFeature(asset: SpatialAsset): boolean {
   return asset.geometryType != null
 }
 
+export function hasDisplayableMedia(asset: SpatialAsset): boolean {
+  return !isDrawnFeature(asset) && (asset.fileUrl ?? '') !== ''
+}
+
 export type FeatureTypeFilter = AssetKind | FeatureGeometryType
 
 export function getFeatureTypeFilterKey(asset: SpatialAsset): FeatureTypeFilter {

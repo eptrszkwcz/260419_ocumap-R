@@ -3,6 +3,7 @@ import { DropdownMenu } from '@/components/DropdownMenu'
 
 import type { FloorPlanId, FloorPlanOption } from '@/panels/map/mapFloorPlans'
 import {
+  mapOverlayInsetBottomClassName,
   mapOverlayInsetTopClassName,
   mapOverlayInsetXClassName,
 } from '@/panels/map/mapOverlayLayout'
@@ -32,11 +33,35 @@ function ChevronDownIcon({ className = '' }: { className?: string }) {
   )
 }
 
+function ChevronUpIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      className={'shrink-0 ' + className}
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      <path
+        d="M3 7.5 6 4.5 9 7.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 type MapControlHeaderProps = {
   floorPlanOptions: FloorPlanOption[]
   selectedFloorId: FloorPlanId | null
   onFloorChange: (id: FloorPlanId) => void
   onAddFloorPlan?: () => void
+  showAddFloorPlan?: boolean
+  variant?: 'editor' | 'published'
 }
 
 /**
@@ -47,7 +72,10 @@ export function MapControlHeader({
   selectedFloorId,
   onFloorChange,
   onAddFloorPlan,
+  showAddFloorPlan = true,
+  variant = 'editor',
 }: MapControlHeaderProps) {
+  const isPublished = variant === 'published'
   const selectedLabel =
     selectedFloorId != null
       ? (floorPlanOptions.find((o) => o.id === selectedFloorId)?.label ?? selectedFloorId)
@@ -57,10 +85,12 @@ export function MapControlHeader({
     <div
       id="control-header-map"
       className={
-        'pointer-events-none absolute z-10 flex items-center justify-between gap-3 bg-transparent ' +
-        mapOverlayInsetXClassName +
-        ' ' +
-        mapOverlayInsetTopClassName
+        isPublished
+          ? 'pointer-events-none absolute left-panel-padding z-10 ' + mapOverlayInsetBottomClassName
+          : 'pointer-events-none absolute z-10 flex items-center justify-between gap-3 bg-transparent ' +
+            mapOverlayInsetXClassName +
+            ' ' +
+            mapOverlayInsetTopClassName
       }
       role="toolbar"
       aria-label="Map floor plan"
@@ -70,6 +100,7 @@ export function MapControlHeader({
           <DropdownMenu
             menuAriaLabel="Floor plan"
             align="left"
+            placement={isPublished ? 'top' : 'bottom'}
             panelWidth="7.5rem"
             items={floorPlanOptions.map((opt) => ({
               id: opt.id,
@@ -88,20 +119,22 @@ export function MapControlHeader({
                 aria-label={`Floor plan: ${selectedLabel}`}
               >
                 <span className="truncate">{selectedLabel}</span>
-                <ChevronDownIcon />
+                {isPublished ? <ChevronUpIcon /> : <ChevronDownIcon />}
               </button>
             )}
           />
         ) : null}
       </div>
-      <div className="pointer-events-auto shrink-0">
-        <PrimaryAddButton
-          onAddClick={onAddFloorPlan}
-          visibleLabel="Add Floor Plan"
-          ariaLabel="Add floor plan"
-          labelMaxWidthClass="max-w-[9rem]"
-        />
-      </div>
+      {showAddFloorPlan ? (
+        <div className="pointer-events-auto shrink-0">
+          <PrimaryAddButton
+            onAddClick={onAddFloorPlan}
+            visibleLabel="Add Floor Plan"
+            ariaLabel="Add floor plan"
+            labelMaxWidthClass="max-w-[9rem]"
+          />
+        </div>
+      ) : null}
     </div>
   )
 }

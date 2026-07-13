@@ -44,9 +44,19 @@ const buildingTabs: TabItem[] = [
 type MapColumnProps = {
   /** Incremented when the library/map splitter drag ends; infrastructure Mapbox runs a final `resize()`. */
   splitCommitToken?: number
+  variant?: 'editor' | 'published'
+  layoutMode?: 'full' | 'mini'
+  layoutModeToken?: number
+  hideHeader?: boolean
 }
 
-export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
+export function MapColumn({
+  splitCommitToken = 0,
+  variant = 'editor',
+  layoutMode: _layoutMode = 'full',
+  layoutModeToken = 0,
+  hideHeader = false,
+}: MapColumnProps) {
   const { project, projectId, isNewProject } = useActiveProject()
   const { getFloorPlans } = useProjectFloorPlans()
   const userFloorPlans = getFloorPlans(projectId)
@@ -118,13 +128,30 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
     hasFloorPlans,
   ])
 
+  const isPublished = variant === 'published'
+  const readOnly = isPublished
+  const shellClass = isPublished
+    ? 'flex h-full min-h-0 min-w-0 flex-col'
+    : 'flex h-full min-h-[680px] min-w-0 flex-col'
+  const resizeToken = isPublished ? layoutModeToken : splitCommitToken
+
+  const columnHeader = hideHeader ? null : (
+    <>
+      <MapHeader hideUserSection={isPublished} />
+      {!isPublished ? <div className="h-4 shrink-0" aria-hidden /> : null}
+    </>
+  )
+
+  const tabRowSpacer = isPublished ? null : (
+    <div className="h-tab-row shrink-0 bg-page" aria-hidden />
+  )
+
   if (isNewProject) {
     return (
-      <div className="flex h-full min-h-[680px] min-w-0 flex-col">
-        <MapHeader />
-        <div className="h-4 shrink-0" aria-hidden />
+      <div className={shellClass}>
+        {columnHeader}
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="h-tab-row shrink-0 bg-page" aria-hidden />
+          {tabRowSpacer ?? <div className="h-tab-row shrink-0 bg-page" aria-hidden />}
           <TabPanelBody>
             <NewProjectOrganizationPicker />
           </TabPanelBody>
@@ -135,11 +162,10 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
 
   if (project.projectType === 'FilesOnly') {
     return (
-      <div className="flex h-full min-h-[680px] min-w-0 flex-col">
-        <MapHeader />
-        <div className="h-4 shrink-0" aria-hidden />
+      <div className={shellClass}>
+        {columnHeader}
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="h-tab-row shrink-0 bg-page" aria-hidden />
+          {tabRowSpacer ?? <div className="h-tab-row shrink-0 bg-page" aria-hidden />}
           <TabPanelBody>
             <div className="min-h-0 flex-1 bg-panel" role="region" aria-label="Project files workspace" />
           </TabPanelBody>
@@ -152,48 +178,96 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
     const styleUrl = project.mapboxStyleUrl
     const activeStyleUrl =
       styleUrl != null ? resolveMapBaseStyleUrl(baseMapStyleId, styleUrl) : null
+    const infrastructureMapBody = (
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        {activeStyleUrl != null ? (
+          <>
+            <InfrastructureMapStyleHeader
+              selectedStyleId={baseMapStyleId}
+              onStyleChange={setBaseMapStyleId}
+            />
+            <InfrastructureMapView
+              styleUrl={activeStyleUrl}
+              splitCommitToken={resizeToken}
+              captureMarkers={displayCaptureMarkers}
+              mapDrawnGeometries={mapDrawnGeometries}
+              readOnly={readOnly}
+            />
+          </>
+        ) : (
+          <div
+            className="flex min-h-0 flex-1 items-center justify-center bg-panel p-panel-padding font-sans text-standard text-fg-muted"
+            role="region"
+            aria-label="Map"
+          >
+            No map style configured for this project.
+          </div>
+        )}
+      </div>
+    )
+
+    if (isPublished) {
+      return <div className={shellClass}>{infrastructureMapBody}</div>
+    }
+
     return (
-      <div className="flex h-full min-h-[680px] min-w-0 flex-col">
-        <MapHeader />
-        <div className="h-4 shrink-0" aria-hidden />
+      <div className={shellClass}>
+        {columnHeader}
         <div className="flex min-h-0 flex-1 flex-col">
-          {/* Reserve tab-row height so the map panel lines up with building projects (tabs above body). */}
-          <div className="h-tab-row shrink-0 bg-page" aria-hidden />
-          <TabPanelBody>
-            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-              {activeStyleUrl != null ? (
-                <>
-                  <InfrastructureMapStyleHeader
-                    selectedStyleId={baseMapStyleId}
-                    onStyleChange={setBaseMapStyleId}
-                  />
-                  <InfrastructureMapView
-                    styleUrl={activeStyleUrl}
-                    splitCommitToken={splitCommitToken}
-                    captureMarkers={displayCaptureMarkers}
-                    mapDrawnGeometries={mapDrawnGeometries}
-                  />
-                </>
-              ) : (
-                <div
-                  className="flex min-h-0 flex-1 items-center justify-center bg-panel p-panel-padding font-sans text-standard text-fg-muted"
-                  role="region"
-                  aria-label="Map"
-                >
-                  No map style configured for this project.
-                </div>
-              )}
-            </div>
-          </TabPanelBody>
+          {tabRowSpacer}
+          <TabPanelBody>{infrastructureMapBody}</TabPanelBody>
         </div>
       </div>
     )
   }
 
+  const buildingMapBody = (
+    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+      {(isPublished || buildingTab === '2d') ? (
+        <MapControlHeader
+          floorPlanOptions={floorPlanOptions}
+          selectedFloorId={hasFloorPlans ? floorPlanId : null}
+          onFloorChange={setFloorPlanId}
+          onAddFloorPlan={() => setFloorPlanViewMode('add')}
+          showAddFloorPlan={!isPublished}
+          variant={isPublished ? 'published' : 'editor'}
+        />
+      ) : null}
+      {!isPublished && buildingTab === '2d' && floorPlanViewMode === 'add' ? (
+        <AddFloorPlanFlow
+          onCancel={() => setFloorPlanViewMode('view')}
+          onComplete={(firstAddedPlanId) => {
+            setFloorPlanViewMode('view')
+            setFloorPlanId(firstAddedPlanId)
+          }}
+        />
+      ) : (isPublished || buildingTab === '2d') && !hasFloorPlans ? (
+        <PanelCenteredPrompt aria-label="Floor plan viewer">
+          {isPublished
+            ? 'No floor plans are available for this published project.'
+            : 'Add a floor plan to document this building. Use Add Floor Plan to upload PDF drawings.'}
+        </PanelCenteredPrompt>
+      ) : (
+        <MapContent
+          activeTab={isPublished ? '2d' : buildingTab}
+          floorPlanId={floorPlanId}
+          floorPlanSrc={floorPlanImageSrc(floorPlanId, userFloorPlans)}
+          floorPlanLabel={floorPlanDisplayLabel(floorPlanId, userFloorPlans)}
+          floorPlanMarkers={displayFloorPlanMarkers}
+          floorDrawnGeometries={floorPlanDrawnGeometries}
+          readOnly={readOnly}
+        />
+      )}
+    </div>
+  )
+
+  if (isPublished) {
+    return <div className={shellClass}>{buildingMapBody}</div>
+  }
+
   return (
-    <div className="flex h-full min-h-[680px] min-w-0 flex-col">
-      <MapHeader />
-      <div className="h-4 shrink-0" aria-hidden />
+    <div className={shellClass}>
+      {columnHeader}
       <div className="flex min-h-0 flex-1 flex-col">
         <PanelTabRow
           tabs={buildingTabs}
@@ -201,41 +275,7 @@ export function MapColumn({ splitCommitToken = 0 }: MapColumnProps) {
           onSelect={setBuildingTab}
           aria-label="Map view mode"
         />
-        <TabPanelBody>
-          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-            {buildingTab === '2d' ? (
-              <MapControlHeader
-                floorPlanOptions={floorPlanOptions}
-                selectedFloorId={hasFloorPlans ? floorPlanId : null}
-                onFloorChange={setFloorPlanId}
-                onAddFloorPlan={() => setFloorPlanViewMode('add')}
-              />
-            ) : null}
-            {buildingTab === '2d' && floorPlanViewMode === 'add' ? (
-              <AddFloorPlanFlow
-                onCancel={() => setFloorPlanViewMode('view')}
-                onComplete={(firstAddedPlanId) => {
-                  setFloorPlanViewMode('view')
-                  setFloorPlanId(firstAddedPlanId)
-                }}
-              />
-            ) : buildingTab === '2d' && !hasFloorPlans ? (
-              <PanelCenteredPrompt aria-label="Floor plan viewer">
-                Add a floor plan to document this building. Use Add Floor Plan to upload PDF
-                drawings.
-              </PanelCenteredPrompt>
-            ) : (
-              <MapContent
-                activeTab={buildingTab}
-                floorPlanId={floorPlanId}
-                floorPlanSrc={floorPlanImageSrc(floorPlanId, userFloorPlans)}
-                floorPlanLabel={floorPlanDisplayLabel(floorPlanId, userFloorPlans)}
-                floorPlanMarkers={displayFloorPlanMarkers}
-                floorDrawnGeometries={floorPlanDrawnGeometries}
-              />
-            )}
-          </div>
-        </TabPanelBody>
+        <TabPanelBody>{buildingMapBody}</TabPanelBody>
       </div>
     </div>
   )

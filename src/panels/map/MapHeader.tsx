@@ -1,7 +1,11 @@
 import { Panel } from '@/components/Panel'
 import { UserAccountDisplay } from '@/components/UserAccountDisplay'
 
-export function MapHeader() {
+type MapHeaderProps = {
+  hideUserSection?: boolean
+}
+
+export function MapHeader({ hideUserSection = false }: MapHeaderProps) {
   return (
     <Panel className="flex h-header w-full min-w-0 shrink-0 items-center justify-between gap-4 border-0 bg-transparent">
       <div className="flex shrink-0 items-center">
@@ -13,7 +17,7 @@ export function MapHeader() {
           height={40}
         />
       </div>
-      <UserAccountDisplay />
+      {hideUserSection ? null : <UserAccountDisplay />}
     </Panel>
   )
 }

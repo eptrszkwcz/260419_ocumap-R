@@ -8,7 +8,7 @@ import { FeatureDrawProvider } from '@/context/FeatureDrawContext'
 import { FloorPlanLocationPickProvider } from '@/context/FloorPlanLocationPickContext'
 import { MapLocationPickProvider } from '@/context/MapLocationPickContext'
 import { ViewDirectionAdjustProvider } from '@/context/ViewDirectionAdjustContext'
-import { DashboardLayout } from '@/layout/DashboardLayout'
+import { PublishedDashboardLayout } from '@/layout/PublishedDashboardLayout'
 
 export function PublishedProjectPage() {
   return (
@@ -23,7 +23,7 @@ export function PublishedProjectPage() {
                     <ProjectFloorPlansProvider>
                       <ActiveFloorPlanProvider>
                         <div className="h-full min-h-0">
-                          <DashboardLayout />
+                          <PublishedDashboardLayout />
                         </div>
                       </ActiveFloorPlanProvider>
                     </ProjectFloorPlansProvider>

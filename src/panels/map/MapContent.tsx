@@ -231,6 +231,7 @@ type MapFloorPlanViewerProps = {
   floorPlanId: FloorPlanId
   floorMarkers: FloorPlanMarker[]
   floorDrawnGeometries: FloorPlanDrawnGeometry[]
+  readOnly?: boolean
 }
 
 function FloorPlanDrawnGeometryLayer({
@@ -528,6 +529,7 @@ function MapFloorPlanViewer({
   floorPlanId,
   floorMarkers,
   floorDrawnGeometries,
+  readOnly = false,
 }: MapFloorPlanViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null)
@@ -988,7 +990,7 @@ function MapFloorPlanViewer({
           : null}
       </div>
       </div>
-      <MapOverlayControlBar floorPlanId={floorPlanId} />
+      <MapOverlayControlBar floorPlanId={floorPlanId} readOnly={readOnly} />
       <FeatureDrawConfirmPanel />
       {isAdjustingDirection ? (
         <DirectionAdjustBanner />
@@ -1066,6 +1068,7 @@ type MapContentProps = {
   floorPlanId: FloorPlanId
   floorPlanMarkers: FloorPlanMarker[]
   floorDrawnGeometries: FloorPlanDrawnGeometry[]
+  readOnly?: boolean
 }
 
 export function MapContent({
@@ -1075,6 +1078,7 @@ export function MapContent({
   floorPlanId,
   floorPlanMarkers,
   floorDrawnGeometries,
+  readOnly = false,
 }: MapContentProps) {
   const floorMarkers = floorPlanMarkers.filter((m) => m.floorPlanId === floorPlanId)
 
@@ -1092,6 +1096,7 @@ export function MapContent({
         floorPlanId={floorPlanId}
         floorMarkers={floorMarkers}
         floorDrawnGeometries={floorDrawnGeometries}
+        readOnly={readOnly}
       />
     </div>
   )
