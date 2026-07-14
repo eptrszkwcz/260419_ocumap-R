@@ -7,6 +7,7 @@ import { DropdownMenu } from '@/components/DropdownMenu'
 import { RadioOption } from '@/components/RadioOption'
 import type { ProjectRecord } from '@/data/sampleProjects'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/primaryButtonClass'
+import { formatDisplayDateFromIsoDate } from '@/lib/formatDisplayDateFromIsoDate'
 import {
   featureMetadataFooterActionsClassName,
   featureMetadataFooterCancelButtonClass,
@@ -22,7 +23,7 @@ import {
 type AccessMode = 'link' | 'emails'
 type PasswordMode = 'no' | 'yes'
 type ExpirationMode = 'none' | 'expires'
-type AccessType = 'view' | 'comment' | 'edit'
+type ListOnDiscoverMode = 'yes' | 'no'
 
 type PublishProjectModalProps = {
   project: ProjectRecord
@@ -35,8 +36,21 @@ const textareaClass =
 
 const publishModalOptionsRowClassName = 'flex flex-wrap items-center'
 
+function formatExpirationDateFromDays(daysInput: string): string {
+  const days = Number.parseInt(daysInput, 10)
+  if (!Number.isFinite(days) || days < 1) return ''
+  const d = new Date()
+  d.setHours(12, 0, 0, 0)
+  d.setDate(d.getDate() + days)
+  const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return formatDisplayDateFromIsoDate(iso)
+}
+
 const publishDropdownTriggerClassName =
   'text-fg hover:text-fg-highlight flex h-8 w-full cursor-pointer items-center justify-between gap-2 rounded-panel border border-stroke bg-panel px-2.5 font-sans text-standard font-normal leading-none focus-visible:border-fg-highlight focus-visible:ring-1 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
+
+const matterportDiscoverLinkClassName =
+  'text-fg-highlight underline decoration-fg-highlight/30 underline-offset-2 hover:decoration-fg-highlight'
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return <h2 className="font-sans text-[14px] font-bold leading-[1.25rem] text-fg">{children}</h2>
@@ -191,9 +205,20 @@ export function PublishProjectModal({ project, onClose, onConfirm }: PublishProj
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [expirationMode, setExpirationMode] = useState<ExpirationMode>('none')
   const [expirationDays, setExpirationDays] = useState('30')
-  const [accessType, setAccessType] = useState<AccessType>('view')
+  const [listOnDiscover, setListOnDiscover] = useState<ListOnDiscoverMode>('no')
   const [activeGroupId, setActiveGroupId] = useState<PublishFileGroupId>(fileGroups[0]?.id ?? 'image')
   const [selectedFileIds, setSelectedFileIds] = useState(() => allPublishFileIds(fileGroups))
+
+  const formattedExpirationDate = useMemo(
+    () => formatExpirationDateFromDays(expirationDays),
+    [expirationDays],
+  )
+
+  useEffect(() => {
+    if (passwordMode === 'yes') {
+      setListOnDiscover('no')
+    }
+  }, [passwordMode])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -251,6 +276,56 @@ export function PublishProjectModal({ project, onClose, onConfirm }: PublishProj
                     aria-label="Allowed email addresses"
                   />
                 ) : null}
+              </div>
+            </ModalSectionCard>
+
+            <ModalSectionCard>
+              <div className="flex flex-col gap-3">
+                <SectionHeading>Published Link Expiration.</SectionHeading>
+                <div className={publishModalOptionsRowClassName}>
+                  <RadioOption
+                    id="expiration-none"
+                    name="expiration-mode"
+                    label="No Expiration Date"
+                    checked={expirationMode === 'none'}
+                    onChange={() => setExpirationMode('none')}
+                  />
+                  <div className="flex flex-nowrap items-center">
+                    <div className="[&>label]:pr-[8px]">
+                      <RadioOption
+                        id="expiration-days"
+                        name="expiration-mode"
+                        label="Expires in"
+                        checked={expirationMode === 'expires'}
+                        onChange={() => setExpirationMode('expires')}
+                      />
+                    </div>
+                    {expirationMode === 'expires' ? (
+                      <>
+                        <div className="w-16 shrink-0">
+                          <input
+                            type="number"
+                            min={1}
+                            className={featureMetadataInputClassName + ' w-full'}
+                            value={expirationDays}
+                            onChange={(e) => setExpirationDays(e.target.value)}
+                            aria-label="Expiration days"
+                          />
+                        </div>
+                        <div className="shrink-0 py-[10px] pl-[8px] pr-[16px]">
+                          <span className="font-sans text-standard text-fg">days</span>
+                        </div>
+                        {formattedExpirationDate ? (
+                          <div className="shrink-0 py-[10px] pl-2">
+                            <span className="font-sans text-standard text-fg-muted">
+                              {formattedExpirationDate}
+                            </span>
+                          </div>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             </ModalSectionCard>
 
@@ -314,70 +389,41 @@ export function PublishProjectModal({ project, onClose, onConfirm }: PublishProj
 
             <ModalSectionCard>
               <div className="flex flex-col gap-3">
-                <SectionHeading>Published Link Expiration.</SectionHeading>
+                <SectionHeading>
+                  Would you like to list this project on the <em>Realityimt</em> page on{' '}
+                  <a
+                    href="https://discover.matterport.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={matterportDiscoverLinkClassName}
+                  >
+                    Matterport Discover
+                  </a>
+                  ? (project will be indexed by search engines)
+                </SectionHeading>
                 <div className={publishModalOptionsRowClassName}>
                   <RadioOption
-                    id="expiration-none"
-                    name="expiration-mode"
-                    label="No Expiration Date"
-                    checked={expirationMode === 'none'}
-                    onChange={() => setExpirationMode('none')}
+                    id="discover-no"
+                    name="list-on-discover"
+                    label="No"
+                    checked={listOnDiscover === 'no'}
+                    onChange={() => setListOnDiscover('no')}
                   />
-                  <div className="flex flex-nowrap items-center">
+                  <div className="flex items-center">
                     <RadioOption
-                      id="expiration-days"
-                      name="expiration-mode"
-                      label="Expires in"
-                      checked={expirationMode === 'expires'}
-                      onChange={() => setExpirationMode('expires')}
+                      id="discover-yes"
+                      name="list-on-discover"
+                      label="Yes"
+                      checked={listOnDiscover === 'yes'}
+                      disabled={passwordMode === 'yes'}
+                      onChange={() => setListOnDiscover('yes')}
                     />
-                    {expirationMode === 'expires' ? (
-                      <>
-                        <div className="w-16 shrink-0">
-                          <input
-                            type="number"
-                            min={1}
-                            className={featureMetadataInputClassName + ' w-full'}
-                            value={expirationDays}
-                            onChange={(e) => setExpirationDays(e.target.value)}
-                            aria-label="Expiration days"
-                          />
-                        </div>
-                        <div className="shrink-0 px-[16px] py-[10px]">
-                          <span className="font-sans text-standard text-fg">days</span>
-                        </div>
-                      </>
+                    {passwordMode === 'yes' ? (
+                      <span className="text-fg-muted pl-2 font-sans text-badge">
+                        Disable password protection to list project
+                      </span>
                     ) : null}
                   </div>
-                </div>
-              </div>
-            </ModalSectionCard>
-
-            <ModalSectionCard>
-              <div className="flex flex-col gap-3">
-                <SectionHeading>What type of access?</SectionHeading>
-                <div className={publishModalOptionsRowClassName}>
-                  <RadioOption
-                    id="access-view"
-                    name="access-type"
-                    label="View Content"
-                    checked={accessType === 'view'}
-                    onChange={() => setAccessType('view')}
-                  />
-                  <RadioOption
-                    id="access-comment"
-                    name="access-type"
-                    label="Comment"
-                    checked={accessType === 'comment'}
-                    onChange={() => setAccessType('comment')}
-                  />
-                  <RadioOption
-                    id="access-edit"
-                    name="access-type"
-                    label="Edit Project Details"
-                    checked={accessType === 'edit'}
-                    onChange={() => setAccessType('edit')}
-                  />
                 </div>
               </div>
             </ModalSectionCard>
