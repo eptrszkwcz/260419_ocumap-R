@@ -232,6 +232,8 @@ type MapFloorPlanViewerProps = {
   floorMarkers: FloorPlanMarker[]
   floorDrawnGeometries: FloorPlanDrawnGeometry[]
   readOnly?: boolean
+  /** Bumped when the published map container changes size (e.g. media/map swap). */
+  viewResizeToken?: number
 }
 
 function FloorPlanDrawnGeometryLayer({
@@ -530,6 +532,7 @@ function MapFloorPlanViewer({
   floorMarkers,
   floorDrawnGeometries,
   readOnly = false,
+  viewResizeToken = 0,
 }: MapFloorPlanViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null)
@@ -608,6 +611,53 @@ function MapFloorPlanViewer({
     return { w: r.width, h: r.height }
   }
 
+  const applyViewForContext = useCallback(
+    (featureId?: string | null) => {
+      if (naturalSize == null) return false
+      const size = containerSize()
+      if (size == null) return false
+
+      const targetId = featureId !== undefined ? featureId : openedFeatureId
+      const fit = fitViewToImage(
+        size.w,
+        size.h,
+        naturalSize.w,
+        naturalSize.h,
+        FIT_VIEW_PADDING_PX,
+      )
+
+      if (targetId != null) {
+        const marker = floorMarkers.find((m) => m.id === targetId)
+        const geometry = floorDrawnGeometries.find(
+          (g) => g.id === targetId && g.floorPlanId === floorPlanId,
+        )
+        if (marker != null) {
+          applyView(
+            focusViewOnMarker(size.w, size.h, naturalSize.w, naturalSize.h, marker, fit.scale),
+          )
+          return true
+        }
+        if (geometry != null) {
+          applyView(
+            focusViewOnGeometry(
+              size.w,
+              size.h,
+              naturalSize.w,
+              naturalSize.h,
+              geometry.coordinates,
+              fit.scale,
+            ),
+          )
+          return true
+        }
+      }
+
+      applyView(fit)
+      return true
+    },
+    [openedFeatureId, floorMarkers, floorDrawnGeometries, floorPlanId, naturalSize],
+  )
+
   useEffect(() => {
     setNaturalSize(null)
     setView({ scale: 1, panX: 0, panY: 0 })
@@ -618,71 +668,40 @@ function MapFloorPlanViewer({
     const el = containerRef.current
     if (el == null) return
 
-    const runFit = () => {
-      const size = containerSize()
-      if (size == null || naturalSize == null) return false
-      applyView(
-        fitViewToImage(size.w, size.h, naturalSize.w, naturalSize.h, FIT_VIEW_PADDING_PX),
-      )
-      return true
+    const apply = () => applyViewForContext()
+
+    if (!apply()) {
+      const ro = new ResizeObserver(() => {
+        apply()
+      })
+      ro.observe(el)
+      return () => ro.disconnect()
     }
 
-    if (runFit()) return
-
     const ro = new ResizeObserver(() => {
-      if (runFit()) ro.disconnect()
+      apply()
     })
     ro.observe(el)
     return () => ro.disconnect()
-  }, [naturalSize, floorPlanSrc])
+  }, [naturalSize, floorPlanSrc, applyViewForContext])
 
   useEffect(() => {
     if (naturalSize == null) return
-    const size = containerSize()
-    if (size == null) return
 
     const prevOpened = prevOpenedFeatureIdRef.current
     prevOpenedFeatureIdRef.current = openedFeatureId
 
     if (prevOpened === undefined) return
 
-    if (openedFeatureId != null) {
-      const fit = fitViewToImage(
-        size.w,
-        size.h,
-        naturalSize.w,
-        naturalSize.h,
-        FIT_VIEW_PADDING_PX,
-      )
-      const marker = floorMarkers.find((m) => m.id === openedFeatureId)
-      const geometry = floorDrawnGeometries.find(
-        (g) => g.id === openedFeatureId && g.floorPlanId === floorPlanId,
-      )
-      if (marker != null) {
-        applyView(
-          focusViewOnMarker(size.w, size.h, naturalSize.w, naturalSize.h, marker, fit.scale),
-        )
-      } else if (geometry != null) {
-        applyView(
-          focusViewOnGeometry(
-            size.w,
-            size.h,
-            naturalSize.w,
-            naturalSize.h,
-            geometry.coordinates,
-            fit.scale,
-          ),
-        )
-      }
-      return
+    if (openedFeatureId != null || prevOpened != null) {
+      applyViewForContext()
     }
+  }, [openedFeatureId, naturalSize, applyViewForContext])
 
-    if (prevOpened != null) {
-      applyView(
-        fitViewToImage(size.w, size.h, naturalSize.w, naturalSize.h, FIT_VIEW_PADDING_PX),
-      )
-    }
-  }, [openedFeatureId, floorMarkers, floorDrawnGeometries, floorPlanId, naturalSize])
+  useEffect(() => {
+    if (viewResizeToken === 0) return
+    applyViewForContext()
+  }, [viewResizeToken, applyViewForContext])
 
   useEffect(() => {
     if (!isPickingFloorPlanLocation && !isAdjustingDirection && !isDrawing && !isEditingFeature) return
@@ -783,34 +802,7 @@ function MapFloorPlanViewer({
   }
 
   const focusOpenedFeature = (featureId: string) => {
-    if (naturalSize == null) return
-    const size = containerSize()
-    if (size == null) return
-    const fit = fitViewToImage(
-      size.w,
-      size.h,
-      naturalSize.w,
-      naturalSize.h,
-      FIT_VIEW_PADDING_PX,
-    )
-    const marker = floorMarkers.find((m) => m.id === featureId)
-    const geometry = floorDrawnGeometries.find(
-      (g) => g.id === featureId && g.floorPlanId === floorPlanId,
-    )
-    if (marker != null) {
-      applyView(focusViewOnMarker(size.w, size.h, naturalSize.w, naturalSize.h, marker, fit.scale))
-    } else if (geometry != null) {
-      applyView(
-        focusViewOnGeometry(
-          size.w,
-          size.h,
-          naturalSize.w,
-          naturalSize.h,
-          geometry.coordinates,
-          fit.scale,
-        ),
-      )
-    }
+    applyViewForContext(featureId)
   }
 
   const onFeatureSelect = (id: string) => {
@@ -1069,6 +1061,7 @@ type MapContentProps = {
   floorPlanMarkers: FloorPlanMarker[]
   floorDrawnGeometries: FloorPlanDrawnGeometry[]
   readOnly?: boolean
+  viewResizeToken?: number
 }
 
 export function MapContent({
@@ -1079,6 +1072,7 @@ export function MapContent({
   floorPlanMarkers,
   floorDrawnGeometries,
   readOnly = false,
+  viewResizeToken = 0,
 }: MapContentProps) {
   const floorMarkers = floorPlanMarkers.filter((m) => m.floorPlanId === floorPlanId)
 
@@ -1097,6 +1091,7 @@ export function MapContent({
         floorMarkers={floorMarkers}
         floorDrawnGeometries={floorDrawnGeometries}
         readOnly={readOnly}
+        viewResizeToken={viewResizeToken}
       />
     </div>
   )

@@ -3,7 +3,8 @@ import { DropdownMenu } from '@/components/DropdownMenu'
 
 import type { FloorPlanId, FloorPlanOption } from '@/panels/map/mapFloorPlans'
 import {
-  mapOverlayInsetBottomClassName,
+  mapOverlayInsetLeftClassName,
+  mapOverlayInsetRightClassName,
   mapOverlayInsetTopClassName,
   mapOverlayInsetXClassName,
 } from '@/panels/map/mapOverlayLayout'
@@ -33,28 +34,6 @@ function ChevronDownIcon({ className = '' }: { className?: string }) {
   )
 }
 
-function ChevronUpIcon({ className = '' }: { className?: string }) {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 12 12"
-      className={'shrink-0 ' + className}
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <path
-        d="M3 7.5 6 4.5 9 7.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
 type MapControlHeaderProps = {
   floorPlanOptions: FloorPlanOption[]
   selectedFloorId: FloorPlanId | null
@@ -62,6 +41,7 @@ type MapControlHeaderProps = {
   onAddFloorPlan?: () => void
   showAddFloorPlan?: boolean
   variant?: 'editor' | 'published'
+  layoutMode?: 'full' | 'mini'
 }
 
 /**
@@ -74,8 +54,10 @@ export function MapControlHeader({
   onAddFloorPlan,
   showAddFloorPlan = true,
   variant = 'editor',
+  layoutMode = 'full',
 }: MapControlHeaderProps) {
   const isPublished = variant === 'published'
+  const isPublishedMini = isPublished && layoutMode === 'mini'
   const selectedLabel =
     selectedFloorId != null
       ? (floorPlanOptions.find((o) => o.id === selectedFloorId)?.label ?? selectedFloorId)
@@ -86,7 +68,10 @@ export function MapControlHeader({
       id="control-header-map"
       className={
         isPublished
-          ? 'pointer-events-none absolute left-panel-padding z-10 ' + mapOverlayInsetBottomClassName
+          ? 'pointer-events-none absolute z-10 ' +
+            mapOverlayInsetTopClassName +
+            ' ' +
+            (isPublishedMini ? mapOverlayInsetLeftClassName : mapOverlayInsetRightClassName)
           : 'pointer-events-none absolute z-10 flex items-center justify-between gap-3 bg-transparent ' +
             mapOverlayInsetXClassName +
             ' ' +
@@ -99,8 +84,8 @@ export function MapControlHeader({
         {floorPlanOptions.length > 0 && selectedFloorId != null ? (
           <DropdownMenu
             menuAriaLabel="Floor plan"
-            align="left"
-            placement={isPublished ? 'top' : 'bottom'}
+            align={isPublished && !isPublishedMini ? 'right' : 'left'}
+            placement="bottom"
             panelWidth="7.5rem"
             items={floorPlanOptions.map((opt) => ({
               id: opt.id,
@@ -119,7 +104,7 @@ export function MapControlHeader({
                 aria-label={`Floor plan: ${selectedLabel}`}
               >
                 <span className="truncate">{selectedLabel}</span>
-                {isPublished ? <ChevronUpIcon /> : <ChevronDownIcon />}
+                <ChevronDownIcon />
               </button>
             )}
           />

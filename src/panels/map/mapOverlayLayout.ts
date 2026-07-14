@@ -2,6 +2,7 @@
 export const mapOverlayInsetXClassName = 'inset-x-panel-padding'
 export const mapOverlayInsetTopClassName = 'top-5'
 export const mapOverlayInsetBottomClassName = 'bottom-5'
+export const mapOverlayInsetLeftClassName = 'left-panel-padding'
 export const mapOverlayInsetRightClassName = 'right-panel-padding'
 
 /** Shared floating panel chrome for published map/media headers. */
@@ -20,3 +21,7 @@ export const publishedFloatingPanelClassName =
 export const publishedFloatingPanelAutoClassName =
   publishedFloatingPanelBaseClassName +
   ' w-fit max-w-[calc(100%-2*var(--spacing-panel-padding))]'
+
+/** Fixed-size mini overlay panel for published map/media swap. */
+export const publishedMiniPanelClassName =
+  'h-[280px] w-[456px] overflow-hidden rounded-panel border border-stroke bg-panel shadow-lg'

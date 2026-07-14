@@ -10,6 +10,8 @@ import { PublishedBottomLogo } from '@/panels/map/PublishedBottomLogo'
 import { PublishedMapHeader } from '@/panels/map/PublishedMapHeader'
 import { PublishedMediaHeader } from '@/panels/map/PublishedMediaHeader'
 import { PublishedMediaNavButtons } from '@/panels/map/PublishedMediaNavButtons'
+import { PublishedMiniMediaHeader } from '@/panels/map/PublishedMiniMediaHeader'
+import { PublishedMiniPanel } from '@/panels/map/PublishedMiniPanel'
 import { mapOverlayInsetBottomClassName } from '@/panels/map/mapOverlayLayout'
 
 export function PublishedDashboardLayout() {
@@ -22,9 +24,12 @@ export function PublishedDashboardLayout() {
     setViewDirectionLiveOffsetDeg,
   } = useFeatureMapHover()
   const [openedAsset, setOpenedAsset] = useState<SpatialAsset | null>(null)
+  const [viewSwapped, setViewSwapped] = useState(false)
   const [layoutModeToken, setLayoutModeToken] = useState(0)
 
   const mediaOpen = openedAsset != null
+  const mapIsPrimary = !mediaOpen || viewSwapped
+  const mediaIsPrimary = mediaOpen && !viewSwapped
 
   const closeMedia = useCallback(() => {
     setOpenedAsset(null)
@@ -39,9 +44,19 @@ export function PublishedDashboardLayout() {
     [setOpenedFeatureId],
   )
 
+  const toggleViewSwap = useCallback(() => {
+    setViewSwapped((swapped) => !swapped)
+  }, [])
+
+  useEffect(() => {
+    if (!mediaOpen) {
+      setViewSwapped(false)
+    }
+  }, [mediaOpen])
+
   useEffect(() => {
     setLayoutModeToken((token) => token + 1)
-  }, [mediaOpen])
+  }, [mediaOpen, viewSwapped])
 
   useEffect(() => {
     setMapFeatureClickHandler((id) => {
@@ -95,12 +110,31 @@ export function PublishedDashboardLayout() {
     return () => window.removeEventListener('keydown', onKey)
   }, [mediaOpen, closeMedia])
 
+  const mediaViewerProps = {
+    asset: openedAsset!,
+    libraryAssets: mediaAssets,
+    onAssetChange: changeOpenedAsset,
+    hideOverlayClose: true as const,
+    hideOverlayNavigation: true as const,
+  }
+
   return (
     <div className="box-border flex h-full min-h-0 flex-col bg-page p-page">
       <div className="relative min-h-0 flex-1 overflow-hidden rounded-panel border border-stroke bg-panel">
         <PublishedMapHeader />
 
-        {mediaOpen ? (
+        {mapIsPrimary ? (
+          <div className="absolute inset-0 z-0 flex min-h-0 min-w-0 flex-col">
+            <MapColumn
+              variant="published"
+              layoutMode="full"
+              layoutModeToken={layoutModeToken}
+              hideHeader
+            />
+          </div>
+        ) : null}
+
+        {mediaIsPrimary && openedAsset != null ? (
           <>
             <PublishedMediaHeader
               title={openedAsset.title}
@@ -108,46 +142,42 @@ export function PublishedDashboardLayout() {
               onClose={closeMedia}
             />
             <div className="absolute inset-0 z-0 flex min-h-0 min-w-0 flex-col">
-              <FeatureLibraryMediaViewer
-                asset={openedAsset}
-                libraryAssets={mediaAssets}
-                onAssetChange={changeOpenedAsset}
-                hideOverlayClose
-                hideOverlayNavigation
-              />
+              <FeatureLibraryMediaViewer {...mediaViewerProps} />
             </div>
           </>
         ) : null}
 
-        <div
-          className={
-            mediaOpen
-              ? `absolute left-panel-padding z-10 flex flex-col gap-6 ${mapOverlayInsetBottomClassName}`
-              : 'absolute inset-0 z-0 flex min-h-0 min-w-0 flex-col'
-          }
-        >
-          {mediaOpen ? (
+        {mediaOpen && openedAsset != null ? (
+          <div
+            className={`absolute left-panel-padding z-10 flex flex-col gap-6 ${mapOverlayInsetBottomClassName}`}
+          >
             <PublishedMediaNavButtons
               asset={openedAsset}
               mediaAssets={mediaAssets}
               onAssetChange={changeOpenedAsset}
             />
-          ) : null}
-          <div
-            className={
-              mediaOpen
-                ? 'h-[280px] w-[456px] overflow-hidden rounded-panel border border-stroke bg-panel shadow-lg'
-                : 'flex min-h-0 min-w-0 flex-1 flex-col'
-            }
-          >
-            <MapColumn
-              variant="published"
-              layoutMode={mediaOpen ? 'mini' : 'full'}
-              layoutModeToken={layoutModeToken}
-              hideHeader
-            />
+            <PublishedMiniPanel onSwap={toggleViewSwap}>
+              {viewSwapped ? (
+                <>
+                  <PublishedMiniMediaHeader
+                    title={openedAsset.title}
+                    typeLabel={getAssetTypeLabel(openedAsset.kind)}
+                    onClose={closeMedia}
+                  />
+                  <FeatureLibraryMediaViewer {...mediaViewerProps} />
+                </>
+              ) : (
+                <MapColumn
+                  variant="published"
+                  layoutMode="mini"
+                  layoutModeToken={layoutModeToken}
+                  hideHeader
+                />
+              )}
+            </PublishedMiniPanel>
           </div>
-        </div>
+        ) : null}
+
         <PublishedBottomLogo />
       </div>
     </div>

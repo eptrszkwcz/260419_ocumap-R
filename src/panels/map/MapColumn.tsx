@@ -53,7 +53,7 @@ type MapColumnProps = {
 export function MapColumn({
   splitCommitToken = 0,
   variant = 'editor',
-  layoutMode: _layoutMode = 'full',
+  layoutMode = 'full',
   layoutModeToken = 0,
   hideHeader = false,
 }: MapColumnProps) {
@@ -231,6 +231,7 @@ export function MapColumn({
           onAddFloorPlan={() => setFloorPlanViewMode('add')}
           showAddFloorPlan={!isPublished}
           variant={isPublished ? 'published' : 'editor'}
+          layoutMode={isPublished ? layoutMode : 'full'}
         />
       ) : null}
       {!isPublished && buildingTab === '2d' && floorPlanViewMode === 'add' ? (
@@ -256,6 +257,7 @@ export function MapColumn({
           floorPlanMarkers={displayFloorPlanMarkers}
           floorDrawnGeometries={floorPlanDrawnGeometries}
           readOnly={readOnly}
+          viewResizeToken={isPublished ? resizeToken : 0}
         />
       )}
     </div>

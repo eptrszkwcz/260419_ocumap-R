@@ -108,3 +108,17 @@ export function CloseIcon() {
     </svg>
   )
 }
+
+export function SwapViewIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <path
+        d="M4 12L12 4M12 4H8.5M12 4V7.5M4 12H7.5M4 12V8.5"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
