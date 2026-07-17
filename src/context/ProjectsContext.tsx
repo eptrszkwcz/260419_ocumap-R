@@ -23,6 +23,7 @@ type ProjectsContextValue = {
   getProjectProfile: (id: string) => DemoProjectDetailsProfile
   createProject: (input: CreateProjectInput) => ProjectRecord
   updateProjectProfile: (id: string, profile: DemoProjectDetailsProfile) => void
+  updateProjectType: (id: string, projectType: ProjectType) => void
   publishProject: (id: string) => void
 }
 
@@ -97,6 +98,30 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     setProfilesById((prev) => ({ ...prev, [id]: profile }))
   }, [])
 
+  const updateProjectType = useCallback((id: string, projectType: ProjectType) => {
+    const today = todayDisplayDate()
+    setProjects((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p
+        const base = {
+          ...p,
+          projectType,
+          lastModified: today,
+        }
+        if (projectType === 'Infrastructure') {
+          return {
+            ...base,
+            mapboxStyleUrl: KATY_FREEWAY_MAPBOX_STYLE,
+            mapCenterLat: 29.786,
+            mapCenterLng: -95.794,
+          }
+        }
+        const { mapboxStyleUrl: _s, mapCenterLat: _lat, mapCenterLng: _lng, ...rest } = base
+        return rest
+      }),
+    )
+  }, [])
+
   const publishProject = useCallback((id: string) => {
     const today = todayDisplayDate()
     setProjects((prev) =>
@@ -113,9 +138,10 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
       getProjectProfile,
       createProject,
       updateProjectProfile,
+      updateProjectType,
       publishProject,
     }),
-    [projects, getProjectById, getProjectProfile, createProject, updateProjectProfile, publishProject],
+    [projects, getProjectById, getProjectProfile, createProject, updateProjectProfile, updateProjectType, publishProject],
   )
 
   return <ProjectsContext.Provider value={value}>{children}</ProjectsContext.Provider>

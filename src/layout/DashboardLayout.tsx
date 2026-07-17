@@ -1,13 +1,22 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
+import { useActiveProject } from '@/context/ActiveProjectContext'
+import { useNewProjectOptional } from '@/context/NewProjectContext'
 import { DashboardResizeHandle, DASHBOARD_RESIZE_HANDLE_HIT_PX } from '@/layout/DashboardResizeHandle'
 import { LibraryColumn } from '@/panels/library/LibraryColumn'
 import { MapColumn } from '@/panels/map/MapColumn'
+import type { ProjectType } from '@/data/sampleProjects'
 
 /** Matches previous grid `minmax(400px, …)` for the library track. */
 const LIBRARY_MIN_PX = 456
 /** Matches previous grid `minmax(500px, …)` for the map track. */
 const MAP_MIN_PX = 456
+const DEFAULT_LIBRARY_RATIO = 0.45
+const FILES_ONLY_LIBRARY_RATIO = 0.65
+
+function defaultLibraryRatio(projectType: ProjectType): number {
+  return projectType === 'FilesOnly' ? FILES_ONLY_LIBRARY_RATIO : DEFAULT_LIBRARY_RATIO
+}
 
 function clamp(n: number, lo: number, hi: number) {
   return Math.min(hi, Math.max(lo, n))
@@ -22,12 +31,22 @@ function libraryPxFromRatio(available: number, ratio: number) {
 }
 
 export function DashboardLayout() {
+  const { project, projectId, isNewProject } = useActiveProject()
+  const newProject = useNewProjectOptional()
+  const effectiveProjectType: ProjectType = isNewProject
+    ? (newProject?.draft.organizationType ?? project.projectType)
+    : project.projectType
+
   const rowRef = useRef<HTMLDivElement>(null)
   const [trackWidth, setTrackWidth] = useState(0)
   /** Library width as a fraction of `(row width − resize handle)`. */
-  const [libraryRatio, setLibraryRatio] = useState(0.45)
+  const [libraryRatio, setLibraryRatio] = useState(() => defaultLibraryRatio(effectiveProjectType))
   /** Bumped when column drag ends so Mapbox can run a final `resize()` after layout settles. */
   const [splitCommitToken, setSplitCommitToken] = useState(0)
+
+  useEffect(() => {
+    setLibraryRatio(defaultLibraryRatio(effectiveProjectType))
+  }, [projectId, effectiveProjectType])
 
   useLayoutEffect(() => {
     const el = rowRef.current

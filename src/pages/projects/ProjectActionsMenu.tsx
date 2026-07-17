@@ -4,11 +4,12 @@ import {
   ArrowUpTrayIcon,
   InformationCircleIcon,
   LinkIcon,
-  ShareIcon,
 } from '@heroicons/react/24/outline'
 
 import { DropdownMenu } from '@/components/DropdownMenu'
+import { HandshakeIcon } from '@/components/HandshakeIcon'
 import { usePublishProject } from '@/context/PublishProjectContext'
+import { useShareProject } from '@/context/ShareProjectContext'
 import type { ProjectRecord } from '@/data/sampleProjects'
 import { publishedProjectUrl, openPublishedProjectInNewTab } from '@/lib/publishedProjectUrl'
 import { MoreVerticalIcon } from '@/pages/projectsListPresentation'
@@ -27,6 +28,7 @@ export function ProjectActionsMenu({
   stopTriggerPropagation = false,
 }: ProjectActionsMenuProps) {
   const { openPublishModal } = usePublishProject()
+  const { openShareModal } = useShareProject()
   const publishLabel = project.status === 'Published' ? 'Republish' : 'Publish'
   const iconClass = 'text-fg-muted group-hover:text-fg-highlight'
 
@@ -50,8 +52,8 @@ export function ProjectActionsMenu({
     {
       id: 'share',
       label: 'Share',
-      icon: <ShareIcon className={menuItemIconClass} aria-hidden />,
-      onSelect: () => undefined,
+      icon: <HandshakeIcon className={menuItemIconClass} />,
+      onSelect: () => openShareModal(project),
     },
     {
       id: 'archive',
