@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { PanelTabRow, type TabItem } from '@/components/PanelTabRow'
 import { PanelCenteredPrompt } from '@/components/PanelCenteredPrompt'
 import { TabPanelBody } from '@/components/TabPanelBody'
 import { useActiveFloorPlan } from '@/context/ActiveFloorPlanContext'
 import { useActiveProject } from '@/context/ActiveProjectContext'
+import { useProjects } from '@/context/ProjectsContext'
 import { useProjectFloorPlans } from '@/context/ProjectFloorPlansContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
@@ -15,6 +16,7 @@ import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 
 import { NewProjectOrganizationPicker } from '@/panels/library/newProject/NewProjectOrganizationPicker'
 import { AddFloorPlanFlow } from '@/panels/map/addFloorPlan/AddFloorPlanFlow'
+import { FilesOnlyMapWorkspace } from '@/panels/map/FilesOnlyMapWorkspace'
 import { InfrastructureMapStyleHeader } from '@/panels/map/InfrastructureMapStyleHeader'
 import { InfrastructureMapView } from '@/panels/map/InfrastructureMapView'
 import { MapContent } from '@/panels/map/MapContent'
@@ -58,6 +60,7 @@ export function MapColumn({
   hideHeader = false,
 }: MapColumnProps) {
   const { project, projectId, isNewProject } = useActiveProject()
+  const { updateProjectType } = useProjects()
   const { getFloorPlans } = useProjectFloorPlans()
   const userFloorPlans = getFloorPlans(projectId)
   const { captureMarkers, floorPlanMarkers, floorPlanDrawnGeometries, mapDrawnGeometries } =
@@ -69,6 +72,7 @@ export function MapColumn({
   const { openedFeatureId, linkedFeatureId } = useFeatureMapHover()
   const [buildingTab, setBuildingTab] = useState('2d')
   const [floorPlanViewMode, setFloorPlanViewMode] = useState<'view' | 'add'>('view')
+  const [buildingBootstrap, setBuildingBootstrap] = useState<'addFloorPlan' | null>(null)
   const { floorPlanId, setFloorPlanId } = useActiveFloorPlan()
   const [baseMapStyleId, setBaseMapStyleId] = useState<MapBaseStyleId>('default')
 
@@ -81,7 +85,23 @@ export function MapColumn({
   useEffect(() => {
     setBaseMapStyleId('default')
     setFloorPlanViewMode('view')
+    setBuildingBootstrap(null)
   }, [projectId])
+
+  useEffect(() => {
+    if (project.projectType !== 'Building' || buildingBootstrap !== 'addFloorPlan') return
+    setFloorPlanViewMode('add')
+    setBuildingBootstrap(null)
+  }, [project.projectType, buildingBootstrap])
+
+  const handleAddMapToFilesOnlyProject = useCallback(() => {
+    updateProjectType(projectId, 'Infrastructure')
+  }, [projectId, updateProjectType])
+
+  const handleAddFloorPlanToFilesOnlyProject = useCallback(() => {
+    setBuildingBootstrap('addFloorPlan')
+    updateProjectType(projectId, 'Building')
+  }, [projectId, updateProjectType])
 
   useEffect(() => {
     if (!hasFloorPlans) return
@@ -167,7 +187,10 @@ export function MapColumn({
         <div className="flex min-h-0 flex-1 flex-col">
           {tabRowSpacer ?? <div className="h-tab-row shrink-0 bg-page" aria-hidden />}
           <TabPanelBody>
-            <div className="min-h-0 flex-1 bg-panel" role="region" aria-label="Project files workspace" />
+            <FilesOnlyMapWorkspace
+              onAddMap={handleAddMapToFilesOnlyProject}
+              onAddFloorPlan={handleAddFloorPlanToFilesOnlyProject}
+            />
           </TabPanelBody>
         </div>
       </div>

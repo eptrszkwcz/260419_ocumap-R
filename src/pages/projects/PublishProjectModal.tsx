@@ -248,6 +248,14 @@ export function PublishProjectModal({ project, onClose, onConfirm }: PublishProj
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-6">
+            <header className="flex flex-col gap-2">
+              <h1 className="font-title text-title font-bold text-fg">Publish your project</h1>
+              <p className="font-sans text-standard text-fg-muted">
+                Publish a shareable, client-facing version of your project that doesn't require an
+                Ocumap account. Settings for the published site can be changed at any time.
+              </p>
+            </header>
+
             <ModalSectionCard>
               <div className="flex flex-col gap-3">
                 <SectionHeading>Who can access the published document?</SectionHeading>

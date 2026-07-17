@@ -5,6 +5,7 @@ import { RootRedirect } from '@/components/RootRedirect'
 import { AuthProvider } from '@/context/AuthContext'
 import { ProjectsProvider } from '@/context/ProjectsContext'
 import { PublishProjectProvider } from '@/context/PublishProjectContext'
+import { ShareProjectProvider } from '@/context/ShareProjectContext'
 import { LibraryPage } from '@/pages/LibraryPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
@@ -18,6 +19,7 @@ export default function App() {
       <AuthProvider>
         <ProjectsProvider>
           <PublishProjectProvider>
+            <ShareProjectProvider>
             <div className="h-full min-h-0">
               <Routes>
                 <Route path="/" element={<RootRedirect />} />
@@ -44,6 +46,7 @@ export default function App() {
                 <Route path="*" element={<RootRedirect />} />
               </Routes>
             </div>
+            </ShareProjectProvider>
           </PublishProjectProvider>
         </ProjectsProvider>
       </AuthProvider>
