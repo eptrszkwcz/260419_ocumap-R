@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, type Ref } from 'react'
 
 import { DelayedTooltip } from '@/components/DelayedTooltip'
 import { overlayBarInsetStyle, overlayBtnClass, overlayBtnPrimaryClass } from '@/components/overlayControlButtons'
@@ -24,6 +24,8 @@ type FeatureLibraryMediaViewerProps = {
   hideOverlayClose?: boolean
   /** Hide chevron prev/next controls (e.g. when published view uses labeled nav buttons). */
   hideOverlayNavigation?: boolean
+  /** Ref for the bottom-right media viewer control group (published layout measurement). */
+  mediaControlsRef?: Ref<HTMLDivElement>
 }
 
 function isVideoAsset(asset: SpatialAsset): boolean {
@@ -37,6 +39,7 @@ export function FeatureLibraryMediaViewer({
   onClose,
   hideOverlayClose = false,
   hideOverlayNavigation = false,
+  mediaControlsRef,
 }: FeatureLibraryMediaViewerProps) {
   const { setViewDirectionLiveOffsetDeg } = useFeatureMapHover()
   const index = Math.max(
@@ -135,7 +138,7 @@ export function FeatureLibraryMediaViewer({
             ) : null}
           </div>
 
-          <div className="pointer-events-auto flex gap-2">
+          <div ref={mediaControlsRef} className="pointer-events-auto flex gap-2">
             <DelayedTooltip label="Measure on photo">
               <button type="button" className={overlayBtnClass} aria-label="Measure">
                 <RulerIcon />

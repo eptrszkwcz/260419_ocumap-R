@@ -1,7 +1,9 @@
+import { forwardRef } from 'react'
+
 import { useActiveProject } from '@/context/ActiveProjectContext'
 import { useProjects } from '@/context/ProjectsContext'
 import type { DemoProjectDetailsProfile } from '@/data/sampleProjectProfile'
-import { ProjectActionsMenu } from '@/pages/projects/ProjectActionsMenu'
+import { PublishedProjectActionsMenu } from '@/panels/map/PublishedProjectActionsMenu'
 import {
   mapOverlayInsetTopClassName,
   publishedMapHeaderPanelClassName,
@@ -14,7 +16,7 @@ function formatProjectAddress(profile: DemoProjectDetailsProfile): string {
   ].join(', ')
 }
 
-export function PublishedMapHeader() {
+export const PublishedMapHeader = forwardRef<HTMLElement>(function PublishedMapHeader(_, ref) {
   const { project } = useActiveProject()
   const { getProjectProfile } = useProjects()
   const team = project.team.trim()
@@ -22,6 +24,7 @@ export function PublishedMapHeader() {
 
   return (
     <header
+      ref={ref}
       className={
         'pointer-events-none absolute left-panel-padding z-20 justify-between ' +
         mapOverlayInsetTopClassName +
@@ -51,8 +54,8 @@ export function PublishedMapHeader() {
         </div>
       </div>
       <div className="pointer-events-auto shrink-0 self-start pt-0.5">
-        <ProjectActionsMenu project={project} />
+        <PublishedProjectActionsMenu project={project} />
       </div>
     </header>
   )
-}
+})
