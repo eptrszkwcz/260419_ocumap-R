@@ -30,7 +30,7 @@ export function PublishedReportIssueModal({ project, onClose }: PublishedReportI
       maxWidthClass="max-w-[640px]"
       onClose={onClose}
       header={
-        <div className="shrink-0 border-b border-stroke px-6 py-4">
+        <div className="shrink-0 border-b border-stroke bg-white px-6 py-4">
           <h1 className="font-title text-title font-bold text-fg">Report an Issue</h1>
           <p className="mt-2 font-sans text-standard text-fg-muted">
             Describe the issue you encountered while viewing this project.
@@ -38,7 +38,7 @@ export function PublishedReportIssueModal({ project, onClose }: PublishedReportI
         </div>
       }
       footer={
-        <footer className="flex shrink-0 border-t border-stroke bg-page px-6 py-4">
+        <footer className="flex shrink-0 border-t border-stroke bg-white px-6 py-4">
           <div className={featureMetadataFooterActionsClassName}>
             <button
               type="button"

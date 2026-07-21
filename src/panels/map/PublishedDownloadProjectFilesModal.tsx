@@ -41,7 +41,7 @@ export function PublishedDownloadProjectFilesModal({
       maxWidthClass="max-w-4xl"
       onClose={onClose}
       header={
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-stroke px-6 py-4">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-stroke bg-white px-6 py-4">
           <h1 className="font-title text-title font-bold text-fg">Download Project Files</h1>
           <button
             type="button"
@@ -58,7 +58,7 @@ export function PublishedDownloadProjectFilesModal({
         </div>
       }
       footer={
-        <footer className="flex shrink-0 border-t border-stroke bg-page px-6 py-4">
+        <footer className="flex shrink-0 border-t border-stroke bg-white px-6 py-4">
           <div className={featureMetadataFooterActionsClassName}>
             <button
               type="button"
@@ -75,10 +75,10 @@ export function PublishedDownloadProjectFilesModal({
         {assets.length === 0 ? (
           <p className="font-sans text-standard text-fg-muted">No project files available.</p>
         ) : (
-          <div className="overflow-x-auto rounded-panel border border-stroke">
-            <table className="w-full min-w-[36rem] border-collapse text-left font-sans text-standard">
+          <div className="overflow-x-auto rounded-panel border border-stroke bg-white">
+            <table className="w-full min-w-[36rem] border-collapse bg-white text-left font-sans text-standard">
               <thead>
-                <tr className="border-b border-stroke bg-area-highlight/50">
+                <tr className="border-b border-stroke bg-white">
                   <th scope="col" className="px-3 py-2.5 font-bold text-fg">
                     Name
                   </th>

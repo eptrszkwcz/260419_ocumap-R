@@ -28,7 +28,7 @@ export function PublishedProjectDetailsModal({ project, onClose }: PublishedProj
       maxWidthClass="max-w-3xl"
       onClose={onClose}
       header={
-        <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-stroke px-6 py-4">
+        <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-stroke bg-white px-6 py-4">
           <h1 className="min-w-0 flex-1 truncate font-title text-title font-bold text-fg">
             {project.name}
           </h1>
@@ -41,7 +41,7 @@ export function PublishedProjectDetailsModal({ project, onClose }: PublishedProj
         </div>
       }
       footer={
-        <footer className="flex shrink-0 border-t border-stroke bg-page px-6 py-4">
+        <footer className="flex shrink-0 border-t border-stroke bg-white px-6 py-4">
           <div className={featureMetadataFooterActionsClassName}>
             <button
               type="button"

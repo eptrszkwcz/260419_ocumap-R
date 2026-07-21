@@ -118,6 +118,41 @@ export function featureTypeFilterLabel(id: FeatureTypeFilter): string {
 const sampleImagesBase = '/samples/feature-viewer/images'
 const sampleSphericalPanoBase = '/samples/feature-viewer/spherical-pano'
 
+/** Demo drawn points on Jefferson floor plans (normalized x, y). */
+const jeffersonDemoPointSeeds: [FloorPlanId, number, number][] = [
+  ['SOM-2', 0.18, 0.44],
+  ['SOM-2', 0.55, 0.72],
+  ['SOM-2', 0.73, 0.38],
+  ['SOM-2', 0.41, 0.51],
+  ['SOM-4', 0.22, 0.61],
+  ['SOM-4', 0.58, 0.19],
+  ['SOM-4', 0.67, 0.54],
+  ['SOM-4', 0.35, 0.78],
+  ['SOM-5', 0.31, 0.26],
+  ['SOM-5', 0.59, 0.47],
+  ['SOM-5', 0.81, 0.63],
+  ['SOM-5', 0.15, 0.52],
+]
+
+const jeffersonDemoPoints: SpatialAsset[] = jeffersonDemoPointSeeds.map(
+  ([floorPlanId, x, y], index) => {
+    const n = index + 1
+    return {
+      id: `drawn-jefferson-point-${n}`,
+      kind: 'image',
+      title: `Point ${n}`,
+      dateUploaded: `June ${17 + index}, 2026`,
+      geometryType: 'point',
+      markerColor: '#2563eb',
+      floorPlanGeometry: {
+        floorPlanId,
+        coordinates: [{ x, y }],
+      },
+      floorPlanPosition: { floorPlanId, x, y },
+    }
+  },
+)
+
 /** Default building project (e.g. 1603 Jefferson): three MEP images, one per floor. */
 export const sampleAssetsJefferson: SpatialAsset[] = [
   {
@@ -214,6 +249,7 @@ export const sampleAssetsJefferson: SpatialAsset[] = [
     floorPlanPosition: { floorPlanId: 'SOM-5', x: 0.42, y: 0.74 },
     viewDirectionDeg: 156,
   },
+  ...jeffersonDemoPoints,
 ]
 
 /** Katy Freeway Expansion: three katy-* images in the same folder. */
