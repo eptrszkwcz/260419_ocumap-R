@@ -232,7 +232,7 @@ type MapFloorPlanViewerProps = {
   floorMarkers: FloorPlanMarker[]
   floorDrawnGeometries: FloorPlanDrawnGeometry[]
   readOnly?: boolean
-  /** Bumped when the published map container changes size (e.g. media/map swap). */
+  /** Bumped when the published map container changes size (e.g. full vs mini layout). */
   viewResizeToken?: number
 }
 

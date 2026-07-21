@@ -23,7 +23,7 @@ import {
 type AccessMode = 'link' | 'emails'
 type PasswordMode = 'no' | 'yes'
 type ExpirationMode = 'none' | 'expires'
-type ListOnDiscoverMode = 'yes' | 'no'
+type YesNoMode = 'no' | 'yes'
 
 type PublishProjectModalProps = {
   project: ProjectRecord
@@ -49,9 +49,6 @@ function formatExpirationDateFromDays(daysInput: string): string {
 const publishDropdownTriggerClassName =
   'text-fg hover:text-fg-highlight flex h-8 w-full cursor-pointer items-center justify-between gap-2 rounded-panel border border-stroke bg-panel px-2.5 font-sans text-standard font-normal leading-none focus-visible:border-fg-highlight focus-visible:ring-1 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
 
-const matterportDiscoverLinkClassName =
-  'text-fg-highlight underline decoration-fg-highlight/30 underline-offset-2 hover:decoration-fg-highlight'
-
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return <h2 className="font-sans text-[14px] font-bold leading-[1.25rem] text-fg">{children}</h2>
 }
@@ -59,6 +56,49 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 function ModalSectionCard({ children }: { children: React.ReactNode }) {
   return (
     <section className="rounded-panel border border-stroke bg-panel p-4 shadow-sm">{children}</section>
+  )
+}
+
+function YesNoQuestionSection({
+  heading,
+  name,
+  value,
+  onValueChange,
+  children,
+}: {
+  heading: string
+  name: string
+  value: YesNoMode
+  onValueChange: (value: YesNoMode) => void
+  children?: React.ReactNode
+}) {
+  return (
+    <ModalSectionCard>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-4">
+          <SectionHeading>{heading}</SectionHeading>
+          <div className="flex shrink-0 items-center gap-10">
+            <RadioOption
+              id={`${name}-yes`}
+              name={name}
+              label="Yes"
+              checked={value === 'yes'}
+              onChange={() => onValueChange('yes')}
+              compact
+            />
+            <RadioOption
+              id={`${name}-no`}
+              name={name}
+              label="No"
+              checked={value === 'no'}
+              onChange={() => onValueChange('no')}
+              compact
+            />
+          </div>
+        </div>
+        {children}
+      </div>
+    </ModalSectionCard>
   )
 }
 
@@ -203,9 +243,10 @@ export function PublishProjectModal({ project, onClose, onConfirm }: PublishProj
   const [passwordMode, setPasswordMode] = useState<PasswordMode>('no')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
+  const [allowDownload, setAllowDownload] = useState<YesNoMode>('yes')
+  const [allowComment, setAllowComment] = useState<YesNoMode>('yes')
   const [expirationMode, setExpirationMode] = useState<ExpirationMode>('none')
   const [expirationDays, setExpirationDays] = useState('30')
-  const [listOnDiscover, setListOnDiscover] = useState<ListOnDiscoverMode>('no')
   const [activeGroupId, setActiveGroupId] = useState<PublishFileGroupId>(fileGroups[0]?.id ?? 'image')
   const [selectedFileIds, setSelectedFileIds] = useState(() => allPublishFileIds(fileGroups))
 
@@ -213,12 +254,6 @@ export function PublishProjectModal({ project, onClose, onConfirm }: PublishProj
     () => formatExpirationDateFromDays(expirationDays),
     [expirationDays],
   )
-
-  useEffect(() => {
-    if (passwordMode === 'yes') {
-      setListOnDiscover('no')
-    }
-  }, [passwordMode])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -337,104 +372,63 @@ export function PublishProjectModal({ project, onClose, onConfirm }: PublishProj
               </div>
             </ModalSectionCard>
 
-            <ModalSectionCard>
-              <div className="flex flex-col gap-3">
-                <SectionHeading>Password protect this site?</SectionHeading>
-                <div className={publishModalOptionsRowClassName}>
-                  <RadioOption
-                    id="password-no"
-                    name="password-mode"
-                    label="No"
-                    checked={passwordMode === 'no'}
-                    onChange={() => setPasswordMode('no')}
-                  />
-                  <RadioOption
-                    id="password-yes"
-                    name="password-mode"
-                    label="Yes"
-                    checked={passwordMode === 'yes'}
-                    onChange={() => setPasswordMode('yes')}
-                  />
-                </div>
-                {passwordMode === 'yes' ? (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <label
-                        htmlFor="publish-password"
-                        className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide"
-                      >
-                        Enter password
-                      </label>
-                      <input
-                        id="publish-password"
-                        type="password"
-                        className={featureMetadataInputClassName}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        autoComplete="new-password"
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="publish-password-confirm"
-                        className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide"
-                      >
-                        Re-enter password
-                      </label>
-                      <input
-                        id="publish-password-confirm"
-                        type="password"
-                        className={featureMetadataInputClassName}
-                        value={passwordConfirm}
-                        onChange={(e) => setPasswordConfirm(e.target.value)}
-                        autoComplete="new-password"
-                      />
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </ModalSectionCard>
-
-            <ModalSectionCard>
-              <div className="flex flex-col gap-3">
-                <SectionHeading>
-                  Would you like to list this project on the <em>Realityimt</em> page on{' '}
-                  <a
-                    href="https://discover.matterport.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={matterportDiscoverLinkClassName}
-                  >
-                    Matterport Discover
-                  </a>
-                  ? (project will be indexed by search engines)
-                </SectionHeading>
-                <div className={publishModalOptionsRowClassName}>
-                  <RadioOption
-                    id="discover-no"
-                    name="list-on-discover"
-                    label="No"
-                    checked={listOnDiscover === 'no'}
-                    onChange={() => setListOnDiscover('no')}
-                  />
-                  <div className="flex items-center">
-                    <RadioOption
-                      id="discover-yes"
-                      name="list-on-discover"
-                      label="Yes"
-                      checked={listOnDiscover === 'yes'}
-                      disabled={passwordMode === 'yes'}
-                      onChange={() => setListOnDiscover('yes')}
+            <YesNoQuestionSection
+              heading="Password protect this site?"
+              name="password-mode"
+              value={passwordMode}
+              onValueChange={setPasswordMode}
+            >
+              {passwordMode === 'yes' ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="publish-password"
+                      className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide"
+                    >
+                      Enter password
+                    </label>
+                    <input
+                      id="publish-password"
+                      type="password"
+                      className={featureMetadataInputClassName}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="new-password"
                     />
-                    {passwordMode === 'yes' ? (
-                      <span className="text-fg-muted pl-2 font-sans text-badge">
-                        Disable password protection to list project
-                      </span>
-                    ) : null}
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="publish-password-confirm"
+                      className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide"
+                    >
+                      Re-enter password
+                    </label>
+                    <input
+                      id="publish-password-confirm"
+                      type="password"
+                      className={featureMetadataInputClassName}
+                      value={passwordConfirm}
+                      onChange={(e) => setPasswordConfirm(e.target.value)}
+                      autoComplete="new-password"
+                    />
                   </div>
                 </div>
-              </div>
-            </ModalSectionCard>
+              ) : null}
+            </YesNoQuestionSection>
+
+            <YesNoQuestionSection
+              heading="Allow users to download project files?"
+              name="allow-download"
+              value={allowDownload}
+              onValueChange={setAllowDownload}
+            />
+
+            <YesNoQuestionSection
+              heading="Allow users to comment?"
+              name="allow-comment"
+              value={allowComment}
+              onValueChange={setAllowComment}
+            />
 
             {fileGroups.length > 0 ? (
               <FileSelectionSection

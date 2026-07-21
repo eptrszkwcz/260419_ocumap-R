@@ -4,6 +4,7 @@ import { DropdownMenu } from '@/components/DropdownMenu'
 import { HamburgerIcon } from '@/components/HamburgerIcon'
 import { ChevronLeftIcon, ChevronRightIcon } from '@/components/overlayControlIcons'
 import type { SpatialAsset } from '@/data/sampleAssets'
+import { publishedMediaNavWidthClassName } from '@/panels/map/mapOverlayLayout'
 
 const navButtonClassName =
   'text-fg-highlight hover:bg-area-highlight flex h-button w-full cursor-pointer items-center justify-center gap-1.5 rounded-panel border border-fg-highlight bg-panel px-3 font-sans text-standard leading-none shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40'
@@ -53,7 +54,7 @@ export function PublishedMediaNavButtons({
 
   return (
     <div
-      className="grid w-[456px] grid-cols-[1fr_auto_1fr] gap-2"
+      className={'grid grid-cols-[1fr_auto_1fr] gap-2 ' + publishedMediaNavWidthClassName}
       role="navigation"
       aria-label="Media feature navigation"
     >
@@ -70,7 +71,7 @@ export function PublishedMediaNavButtons({
       <DropdownMenu
         menuAriaLabel="Published project features"
         align="center"
-        placement="top"
+        placement="bottom"
         panelWidth="280px"
         panelMaxHeight="360px"
         closeOnMouseLeave={false}

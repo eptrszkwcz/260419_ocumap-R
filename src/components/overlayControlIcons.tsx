@@ -109,11 +109,18 @@ export function CloseIcon() {
   )
 }
 
-export function SwapViewIcon() {
+export function DownloadIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
       <path
-        d="M4 12L12 4M12 4H8.5M12 4V7.5M4 12H7.5M4 12V8.5"
+        d="M8 2.5v6.5M8 9l2.25-2.25M8 9L5.75 6.75"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3.5 11.5v1.5h9v-1.5"
         stroke="currentColor"
         strokeWidth="1.25"
         strokeLinecap="round"
@@ -122,3 +129,4 @@ export function SwapViewIcon() {
     </svg>
   )
 }
+
