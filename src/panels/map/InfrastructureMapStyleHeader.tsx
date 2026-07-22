@@ -6,6 +6,8 @@ import {
   type MapBaseStyleId,
 } from '@/panels/map/mapBaseStyles'
 import {
+  mapOverlayInsetBottomAboveMapboxLogoClassName,
+  mapOverlayInsetLeftClassName,
   mapOverlayInsetTopClassName,
   mapOverlayInsetXClassName,
 } from '@/panels/map/mapOverlayLayout'
@@ -50,25 +52,33 @@ function MapBaseStyleThumbnail({ src }: { src: string }) {
 type InfrastructureMapStyleHeaderProps = {
   selectedStyleId: MapBaseStyleId
   onStyleChange: (id: MapBaseStyleId) => void
+  variant?: 'editor' | 'published'
+  layoutMode?: 'full' | 'mini'
 }
 
 /**
- * Transparent overlay strip on infrastructure maps: base map style selector (upper right).
+ * Transparent overlay strip on infrastructure maps: base map style selector.
  */
 export function InfrastructureMapStyleHeader({
   selectedStyleId,
   onStyleChange,
+  variant = 'editor',
+  layoutMode = 'full',
 }: InfrastructureMapStyleHeaderProps) {
+  const isPublishedFull = variant === 'published' && layoutMode === 'full'
   const selectedLabel = mapBaseStyleLabel(selectedStyleId)
+
+  const positionClassName = isPublishedFull
+    ? mapOverlayInsetBottomAboveMapboxLogoClassName + ' ' + mapOverlayInsetLeftClassName
+    : mapOverlayInsetXClassName + ' ' + mapOverlayInsetTopClassName
 
   return (
     <div
       id="control-header-map-style"
       className={
-        'pointer-events-none absolute z-10 flex items-center justify-end bg-transparent ' +
-        mapOverlayInsetXClassName +
-        ' ' +
-        mapOverlayInsetTopClassName
+        'pointer-events-none absolute z-10 flex items-center bg-transparent ' +
+        (isPublishedFull ? 'justify-start ' : 'justify-end ') +
+        positionClassName
       }
       role="toolbar"
       aria-label="Map base style"
@@ -76,7 +86,8 @@ export function InfrastructureMapStyleHeader({
       <div className="pointer-events-auto min-w-0">
         <DropdownMenu
           menuAriaLabel="Map base style"
-          align="right"
+          align={isPublishedFull ? 'left' : 'right'}
+          placement={isPublishedFull ? 'top' : 'bottom'}
           panelWidth="200px"
           items={MAP_BASE_STYLE_OPTIONS.map((opt) => ({
             id: opt.id,
@@ -93,9 +104,9 @@ export function InfrastructureMapStyleHeader({
               aria-expanded={open}
               aria-haspopup="menu"
               aria-controls={menuId}
-              aria-label={`Map base style: ${selectedLabel}`}
+              aria-label={`Map Style, ${selectedLabel} selected`}
             >
-              <span className="truncate">{selectedLabel}</span>
+              <span className="truncate">Map Style</span>
               <ChevronDownIcon />
             </button>
           )}

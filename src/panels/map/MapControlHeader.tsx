@@ -3,8 +3,8 @@ import { DropdownMenu } from '@/components/DropdownMenu'
 
 import type { FloorPlanId, FloorPlanOption } from '@/panels/map/mapFloorPlans'
 import {
+  mapOverlayInsetBottomClassName,
   mapOverlayInsetLeftClassName,
-  mapOverlayInsetRightClassName,
   mapOverlayInsetTopClassName,
   mapOverlayInsetXClassName,
 } from '@/panels/map/mapOverlayLayout'
@@ -58,6 +58,7 @@ export function MapControlHeader({
 }: MapControlHeaderProps) {
   const isPublished = variant === 'published'
   const isPublishedMini = isPublished && layoutMode === 'mini'
+  const isPublishedFull = isPublished && !isPublishedMini
   const selectedLabel =
     selectedFloorId != null
       ? (floorPlanOptions.find((o) => o.id === selectedFloorId)?.label ?? selectedFloorId)
@@ -69,9 +70,9 @@ export function MapControlHeader({
       className={
         isPublished
           ? 'pointer-events-none absolute z-10 ' +
-            mapOverlayInsetTopClassName +
-            ' ' +
-            (isPublishedMini ? mapOverlayInsetLeftClassName : mapOverlayInsetRightClassName)
+            (isPublishedFull
+              ? mapOverlayInsetBottomClassName + ' ' + mapOverlayInsetLeftClassName
+              : mapOverlayInsetTopClassName + ' ' + mapOverlayInsetLeftClassName)
           : 'pointer-events-none absolute z-10 flex items-center justify-between gap-3 bg-transparent ' +
             mapOverlayInsetXClassName +
             ' ' +
@@ -84,8 +85,8 @@ export function MapControlHeader({
         {floorPlanOptions.length > 0 && selectedFloorId != null ? (
           <DropdownMenu
             menuAriaLabel="Floor plan"
-            align={isPublished && !isPublishedMini ? 'right' : 'left'}
-            placement="bottom"
+            align="left"
+            placement={isPublishedFull ? 'top' : 'bottom'}
             panelWidth="7.5rem"
             items={floorPlanOptions.map((opt) => ({
               id: opt.id,

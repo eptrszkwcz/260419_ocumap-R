@@ -3,54 +3,66 @@ import { useCallback, useMemo } from 'react'
 import { DropdownMenu } from '@/components/DropdownMenu'
 import { HamburgerIcon } from '@/components/HamburgerIcon'
 import { ChevronLeftIcon, ChevronRightIcon } from '@/components/overlayControlIcons'
-import type { SpatialAsset } from '@/data/sampleAssets'
-import { publishedMediaNavWidthClassName } from '@/panels/map/mapOverlayLayout'
+import { getFeatureTypeLabel, type SpatialAsset } from '@/data/sampleAssets'
+import {
+  publishedMediaFeaturesMenuPanelWidth,
+  publishedMediaNavWidthClassName,
+} from '@/panels/map/mapOverlayLayout'
+
+const mediaBadgeClass =
+  'text-fg-highlight inline-flex h-badge min-h-badge max-h-badge shrink-0 items-center justify-center rounded-panel bg-fg-highlight/12 px-2 text-badge font-bold leading-none'
 
 const navButtonClassName =
   'text-fg-highlight hover:bg-area-highlight flex h-button w-full cursor-pointer items-center justify-center gap-1.5 rounded-panel border border-fg-highlight bg-panel px-3 font-sans text-standard leading-none shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40'
 
 const hamburgerButtonClassName =
   navButtonClassName.replace(' w-full', '') +
-  ' w-auto shrink-0 px-3 disabled:cursor-not-allowed disabled:opacity-40'
+  ' w-[160px] shrink-0 px-3 disabled:cursor-not-allowed disabled:opacity-40 gap-1.5'
 
 type PublishedMediaNavButtonsProps = {
-  asset: SpatialAsset
-  mediaAssets: SpatialAsset[]
+  asset: SpatialAsset | null
+  featureAssets: SpatialAsset[]
+  featuresMenuMaxHeightPx: number
   onAssetChange: (asset: SpatialAsset) => void
 }
 
 export function PublishedMediaNavButtons({
   asset,
-  mediaAssets,
+  featureAssets,
+  featuresMenuMaxHeightPx,
   onAssetChange,
 }: PublishedMediaNavButtonsProps) {
-  const canNavigate = mediaAssets.length > 1
-  const canOpenFeatureList = mediaAssets.length > 0
+  const canNavigate = featureAssets.length > 1
+  const canOpenFeatureList = featureAssets.length > 0
 
   const featureMenuItems = useMemo(
     () =>
-      mediaAssets.map((mediaAsset) => ({
+      featureAssets.map((mediaAsset) => ({
         id: mediaAsset.id,
         label: mediaAsset.title,
-        selected: mediaAsset.id === asset.id,
+        selected: asset != null && mediaAsset.id === asset.id,
+        trailing: (
+          <span className={mediaBadgeClass}>{getFeatureTypeLabel(mediaAsset)}</span>
+        ),
         onSelect: () => onAssetChange(mediaAsset),
       })),
-    [asset.id, mediaAssets, onAssetChange],
+    [asset, featureAssets, onAssetChange],
   )
 
+  const currentIndex =
+    asset != null ? featureAssets.findIndex((a) => a.id === asset.id) : -1
+
   const goPrev = useCallback(() => {
-    if (mediaAssets.length === 0) return
-    const i = mediaAssets.findIndex((a) => a.id === asset.id)
-    const next = (i - 1 + mediaAssets.length) % mediaAssets.length
-    onAssetChange(mediaAssets[next])
-  }, [asset.id, mediaAssets, onAssetChange])
+    if (featureAssets.length === 0) return
+    const next = (currentIndex - 1 + featureAssets.length) % featureAssets.length
+    onAssetChange(featureAssets[next])
+  }, [currentIndex, featureAssets, onAssetChange])
 
   const goNext = useCallback(() => {
-    if (mediaAssets.length === 0) return
-    const i = mediaAssets.findIndex((a) => a.id === asset.id)
-    const next = (i + 1) % mediaAssets.length
-    onAssetChange(mediaAssets[next])
-  }, [asset.id, mediaAssets, onAssetChange])
+    if (featureAssets.length === 0) return
+    const next = (currentIndex + 1) % featureAssets.length
+    onAssetChange(featureAssets[next])
+  }, [currentIndex, featureAssets, onAssetChange])
 
   return (
     <div
@@ -72,8 +84,9 @@ export function PublishedMediaNavButtons({
         menuAriaLabel="Published project features"
         align="center"
         placement="bottom"
-        panelWidth="280px"
-        panelMaxHeight="360px"
+        panelWidth={publishedMediaFeaturesMenuPanelWidth}
+        panelMaxHeight={`${featuresMenuMaxHeightPx}px`}
+        tableColumnHeaders={{ feature: 'Feature', type: 'Type' }}
         closeOnMouseLeave={false}
         items={featureMenuItems}
         renderTrigger={({ open, menuId, onToggle }) => (
@@ -88,6 +101,7 @@ export function PublishedMediaNavButtons({
             disabled={!canOpenFeatureList}
           >
             <HamburgerIcon />
+            Features
           </button>
         )}
       />

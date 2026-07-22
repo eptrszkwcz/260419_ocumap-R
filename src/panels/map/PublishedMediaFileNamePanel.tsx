@@ -13,21 +13,25 @@ type PublishedMediaFileNamePanelProps = {
   title: string
   typeLabel: string
   onClose: () => void
+  showDownload?: boolean
 }
 
 export function PublishedMediaFileNamePanel({
   title,
   typeLabel,
   onClose,
+  showDownload = true,
 }: PublishedMediaFileNamePanelProps) {
   return (
     <div className={publishedMediaFileNamePanelClassName} aria-label="Media file name">
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         <h2 className="min-w-0 truncate font-title text-title font-bold text-fg">{title}</h2>
         <span className={mediaBadgeClass}>{typeLabel}</span>
-        <button type="button" className={iconButtonClassName} aria-label="Download media">
-          <DownloadIcon />
-        </button>
+        {showDownload ? (
+          <button type="button" className={iconButtonClassName} aria-label="Download media">
+            <DownloadIcon />
+          </button>
+        ) : null}
       </div>
       <button type="button" onClick={onClose} className={iconButtonClassName} aria-label="Close media">
         <CloseIcon />

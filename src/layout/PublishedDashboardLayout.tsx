@@ -1,10 +1,17 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { useActiveProject } from '@/context/ActiveProjectContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
-import { hasDisplayableMedia, getAssetTypeLabel, type SpatialAsset } from '@/data/sampleAssets'
+import {
+  getAssetTypeLabel,
+  getFeatureTypeLabel,
+  hasDisplayableMedia,
+  isGeometryOnlyFeature,
+  type SpatialAsset,
+} from '@/data/sampleAssets'
 import { useProjectMapAssets } from '@/hooks/useProjectMapAssets'
 import { FeatureLibraryMediaViewer } from '@/panels/library/FeatureLibraryMediaViewer'
+import { sortFeatureLibraryAssets } from '@/panels/library/featureLibrary/sortFeatureLibraryAssets'
 import { MapColumn } from '@/panels/map/MapColumn'
 import { PublishedBottomLogo } from '@/panels/map/PublishedBottomLogo'
 import { PublishedMapHeader } from '@/panels/map/PublishedMapHeader'
@@ -12,6 +19,7 @@ import { PublishedMediaFileNamePanel } from '@/panels/map/PublishedMediaFileName
 import { PublishedMediaNavButtons } from '@/panels/map/PublishedMediaNavButtons'
 import { PublishedMiniPanel } from '@/panels/map/PublishedMiniPanel'
 import {
+  computePublishedFeaturesMenuMaxHeightPx,
   MAP_OVERLAY_INSET_Y_PX,
   mapOverlayInsetBottomClassName,
   mapOverlayInsetRightClassName,
@@ -66,8 +74,8 @@ function computeMiniPanelMaxSize(
 }
 
 export function PublishedDashboardLayout() {
-  const { projectId, isNewProject } = useActiveProject()
-  const { assets, mediaAssets } = useProjectMapAssets(projectId, isNewProject)
+  const { project, projectId, isNewProject } = useActiveProject()
+  const { assets } = useProjectMapAssets(projectId, isNewProject)
   const {
     setMapFeatureClickHandler,
     setOpenedFeatureId,
@@ -84,10 +92,18 @@ export function PublishedDashboardLayout() {
     width: PUBLISHED_MINI_PANEL_DEFAULT_WIDTH,
     height: PUBLISHED_MINI_PANEL_DEFAULT_HEIGHT,
   })
+  const [featuresMenuMaxHeightPx, setFeaturesMenuMaxHeightPx] = useState(360)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLElement>(null)
   const mediaControlsRef = useRef<HTMLDivElement>(null)
+  const publishedNavRef = useRef<HTMLDivElement>(null)
+  const mapViewerPanelRef = useRef<HTMLDivElement>(null)
+
+  const publishedFeatureAssets = useMemo(
+    () => sortFeatureLibraryAssets(assets, 'feature', 'asc', project.projectType),
+    [assets, project.projectType],
+  )
 
   const mediaOpen = openedAsset != null
 
@@ -104,34 +120,50 @@ export function PublishedDashboardLayout() {
     [setOpenedFeatureId],
   )
 
-  const measureMiniPanelBounds = useCallback(() => {
+  const measurePublishedLayout = useCallback(() => {
     const container = containerRef.current
     if (container == null) return
 
     const containerRect = container.getBoundingClientRect()
     const headerRect = headerRef.current?.getBoundingClientRect() ?? null
     const mediaControlsRect = mediaControlsRef.current?.getBoundingClientRect() ?? null
-    const maxSize = computeMiniPanelMaxSize(containerRect, headerRect, mediaControlsRect)
+    const navRowRect = publishedNavRef.current?.getBoundingClientRect() ?? null
+    const mapViewerRect = mapViewerPanelRef.current?.getBoundingClientRect() ?? null
 
+    const maxSize = computeMiniPanelMaxSize(containerRect, headerRect, mediaControlsRect)
     setMiniPanelMaxSize(maxSize)
     setMiniPanelSize((prev) => clampMiniPanelSize(prev, maxSize))
+
+    if (navRowRect != null && mapViewerRect != null) {
+      const navRowBottomY = navRowRect.bottom - containerRect.top
+      const mapViewerBottomY = mapViewerRect.bottom - containerRect.top
+      setFeaturesMenuMaxHeightPx(
+        computePublishedFeaturesMenuMaxHeightPx(navRowBottomY, mapViewerBottomY),
+      )
+    }
   }, [])
 
   useLayoutEffect(() => {
-    measureMiniPanelBounds()
+    measurePublishedLayout()
 
     const observed = [
       containerRef.current,
       headerRef.current,
       mediaControlsRef.current,
+      publishedNavRef.current,
+      mapViewerPanelRef.current,
     ].filter((el): el is HTMLElement => el != null)
 
     if (observed.length === 0) return
 
-    const ro = new ResizeObserver(measureMiniPanelBounds)
+    const ro = new ResizeObserver(measurePublishedLayout)
     for (const el of observed) ro.observe(el)
-    return () => ro.disconnect()
-  }, [measureMiniPanelBounds, mediaOpen])
+    window.addEventListener('resize', measurePublishedLayout)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', measurePublishedLayout)
+    }
+  }, [measurePublishedLayout, mediaOpen])
 
   useEffect(() => {
     setLayoutModeToken((token) => token + 1)
@@ -148,8 +180,9 @@ export function PublishedDashboardLayout() {
 
       setOpenedFeatureId(id)
 
+      setOpenedAsset(asset)
+
       if (hasDisplayableMedia(asset)) {
-        setOpenedAsset(asset)
         if (asset.kind === 'image' || asset.kind === 'panorama') {
           setViewDirectionBaseDeg(asset.viewDirectionDeg ?? 0)
           setViewDirectionLiveOffsetDeg(0)
@@ -158,7 +191,8 @@ export function PublishedDashboardLayout() {
           setViewDirectionLiveOffsetDeg(0)
         }
       } else {
-        setOpenedAsset(null)
+        setViewDirectionBaseDeg(null)
+        setViewDirectionLiveOffsetDeg(0)
       }
     })
     return () => setMapFeatureClickHandler(null)
@@ -172,6 +206,11 @@ export function PublishedDashboardLayout() {
 
   useEffect(() => {
     if (openedAsset == null) return
+    if (!hasDisplayableMedia(openedAsset)) {
+      setViewDirectionBaseDeg(null)
+      setViewDirectionLiveOffsetDeg(0)
+      return
+    }
     if (openedAsset.kind === 'image' || openedAsset.kind === 'panorama') {
       setViewDirectionBaseDeg(openedAsset.viewDirectionDeg ?? 0)
       setViewDirectionLiveOffsetDeg(0)
@@ -195,12 +234,19 @@ export function PublishedDashboardLayout() {
 
   const mediaViewerProps = {
     asset: openedAsset!,
-    libraryAssets: mediaAssets,
+    libraryAssets: publishedFeatureAssets,
     onAssetChange: changeOpenedAsset,
     hideOverlayClose: true as const,
     hideOverlayNavigation: true as const,
     mediaControlsRef,
   }
+
+  const openedTypeLabel =
+    openedAsset != null && isGeometryOnlyFeature(openedAsset)
+      ? getFeatureTypeLabel(openedAsset)
+      : openedAsset != null
+        ? getAssetTypeLabel(openedAsset.kind)
+        : ''
 
   return (
     <div className="box-border flex h-full min-h-0 flex-col bg-page p-page">
@@ -210,66 +256,70 @@ export function PublishedDashboardLayout() {
       >
         <PublishedMapHeader ref={headerRef} />
 
-        {!mediaOpen ? (
-          <div className="absolute inset-0 z-0 flex min-h-0 min-w-0 flex-col">
+        <div
+          ref={mapViewerPanelRef}
+          className="absolute inset-0 z-0 flex min-h-0 min-w-0 flex-col"
+        >
+          {!mediaOpen ? (
             <MapColumn
               variant="published"
               layoutMode="full"
               layoutModeToken={layoutModeToken}
               hideHeader
             />
-          </div>
-        ) : null}
+          ) : null}
 
-        {mediaOpen && openedAsset != null ? (
-          <div className="absolute inset-0 z-0 flex min-h-0 min-w-0 flex-col">
+          {mediaOpen && openedAsset != null ? (
             <FeatureLibraryMediaViewer {...mediaViewerProps} />
+          ) : null}
+        </div>
+
+        <div
+          className={
+            'pointer-events-none absolute z-20 flex flex-col gap-2 ' +
+            mapOverlayInsetTopClassName +
+            ' ' +
+            mapOverlayInsetRightClassName
+          }
+        >
+          {mediaOpen && openedAsset != null ? (
+            <div className="pointer-events-auto">
+              <PublishedMediaFileNamePanel
+                title={openedAsset.title}
+                typeLabel={openedTypeLabel}
+                showDownload={hasDisplayableMedia(openedAsset)}
+                onClose={closeMedia}
+              />
+            </div>
+          ) : null}
+          <div className="pointer-events-auto" ref={publishedNavRef}>
+            <PublishedMediaNavButtons
+              asset={openedAsset}
+              featureAssets={publishedFeatureAssets}
+              featuresMenuMaxHeightPx={featuresMenuMaxHeightPx}
+              onAssetChange={changeOpenedAsset}
+            />
           </div>
-        ) : null}
+        </div>
 
         {mediaOpen && openedAsset != null ? (
-          <>
-            <div
-              className={
-                'pointer-events-none absolute z-20 flex flex-col gap-2 ' +
-                mapOverlayInsetTopClassName +
-                ' ' +
-                mapOverlayInsetRightClassName
-              }
+          <div className={`absolute left-panel-padding z-10 ${mapOverlayInsetBottomClassName}`}>
+            <PublishedMiniPanel
+              width={miniPanelSize.width}
+              height={miniPanelSize.height}
+              maxWidth={miniPanelMaxSize.width}
+              maxHeight={miniPanelMaxSize.height}
+              onResize={setMiniPanelSize}
+              onResizeEnd={handleMiniPanelResizeEnd}
             >
-              <div className="pointer-events-auto">
-                <PublishedMediaFileNamePanel
-                  title={openedAsset.title}
-                  typeLabel={getAssetTypeLabel(openedAsset.kind)}
-                  onClose={closeMedia}
-                />
-              </div>
-              <div className="pointer-events-auto">
-                <PublishedMediaNavButtons
-                  asset={openedAsset}
-                  mediaAssets={mediaAssets}
-                  onAssetChange={changeOpenedAsset}
-                />
-              </div>
-            </div>
-            <div className={`absolute left-panel-padding z-10 ${mapOverlayInsetBottomClassName}`}>
-              <PublishedMiniPanel
-                width={miniPanelSize.width}
-                height={miniPanelSize.height}
-                maxWidth={miniPanelMaxSize.width}
-                maxHeight={miniPanelMaxSize.height}
-                onResize={setMiniPanelSize}
-                onResizeEnd={handleMiniPanelResizeEnd}
-              >
-                <MapColumn
-                  variant="published"
-                  layoutMode="mini"
-                  layoutModeToken={layoutModeToken}
-                  hideHeader
-                />
-              </PublishedMiniPanel>
-            </div>
-          </>
+              <MapColumn
+                variant="published"
+                layoutMode="mini"
+                layoutModeToken={layoutModeToken}
+                hideHeader
+              />
+            </PublishedMiniPanel>
+          </div>
         ) : null}
 
         <PublishedBottomLogo />

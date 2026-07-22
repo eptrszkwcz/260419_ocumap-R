@@ -99,6 +99,13 @@ export function hasDisplayableMedia(asset: SpatialAsset): boolean {
   return !isDrawnFeature(asset) && (asset.fileUrl ?? '') !== ''
 }
 
+/** Shown in published view when a feature has map/plan geometry but no media file. */
+export const GEOMETRY_ONLY_FEATURE_MESSAGE = 'This feature is geometry only'
+
+export function isGeometryOnlyFeature(asset: SpatialAsset): boolean {
+  return !hasDisplayableMedia(asset)
+}
+
 export type FeatureTypeFilter = AssetKind | FeatureGeometryType
 
 export function getFeatureTypeFilterKey(asset: SpatialAsset): FeatureTypeFilter {
