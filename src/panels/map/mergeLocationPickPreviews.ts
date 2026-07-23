@@ -31,7 +31,17 @@ export function mergeCaptureMarkerPreview(
       m.id === preview.featureId ? { ...m, lng: preview.lng, lat: preview.lat } : m,
     )
   }
-  return [...markers, { id: preview.featureId, lng: preview.lng, lat: preview.lat, color: fill, strokeColor: stroke }]
+  return [
+    ...markers,
+    {
+      id: preview.featureId,
+      title: '',
+      lng: preview.lng,
+      lat: preview.lat,
+      color: fill,
+      strokeColor: stroke,
+    },
+  ]
 }
 
 export function mergeFloorPlanMarkerPreview(
@@ -57,6 +67,7 @@ export function mergeFloorPlanMarkerPreview(
     ...markers,
     {
       id: preview.featureId,
+      title: '',
       floorPlanId: preview.floorPlanId,
       x: preview.x,
       y: preview.y,

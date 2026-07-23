@@ -1,5 +1,6 @@
 import type { FloorPlanMarker, MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
 import type { SpatialAsset } from '@/data/sampleAssets'
+import { featureHoverFieldsFromAsset } from '@/panels/map/featureHoverDisplay'
 import type { FloorPlanId } from '@/panels/map/mapFloorPlans'
 import { markerColorsFromAsset } from '@/panels/map/markerColors'
 
@@ -42,6 +43,8 @@ export function mapVerticesFromAsset(asset: SpatialAsset): MapVertexDisplay[] {
 
 export type FloorPlanDrawnGeometry = {
   id: string
+  title: string
+  previewUrl?: string
   floorPlanId: FloorPlanMarker['floorPlanId']
   geometryType: 'line' | 'polygon'
   coordinates: { x: number; y: number }[]
@@ -51,6 +54,8 @@ export type FloorPlanDrawnGeometry = {
 
 export type MapDrawnGeometry = {
   id: string
+  title: string
+  previewUrl?: string
   geometryType: 'line' | 'polygon'
   coordinates: { lng: number; lat: number }[]
   color: string
@@ -93,7 +98,17 @@ export function assetsToCaptureMarkers(assets: SpatialAsset[]): MapCaptureMarker
       const fromGeometry = a.mapGeometry?.coordinates[0]
       const lng = fromGeometry?.lng ?? (a.captureLng as number)
       const lat = fromGeometry?.lat ?? (a.captureLat as number)
-      return { id: a.id, lng, lat, color: fill, strokeColor: stroke, ...mediaMarkerFields(a) }
+      const hover = featureHoverFieldsFromAsset(a)
+      return {
+        id: a.id,
+        title: hover.title,
+        previewUrl: hover.previewUrl,
+        lng,
+        lat,
+        color: fill,
+        strokeColor: stroke,
+        ...mediaMarkerFields(a),
+      }
     })
 }
 
@@ -126,10 +141,13 @@ export function assetsToFloorPlanMarkers(assets: SpatialAsset[]): FloorPlanMarke
     })
     .map((a) => {
       const { fill, stroke } = markerColorsFromAsset(a.markerColor)
+      const hover = featureHoverFieldsFromAsset(a)
       if (a.geometryType === 'point' && a.floorPlanGeometry?.coordinates[0] != null) {
         const c = a.floorPlanGeometry.coordinates[0]
         return {
           id: a.id,
+          title: hover.title,
+          previewUrl: hover.previewUrl,
           floorPlanId: a.floorPlanGeometry.floorPlanId,
           x: c.x,
           y: c.y,
@@ -140,6 +158,8 @@ export function assetsToFloorPlanMarkers(assets: SpatialAsset[]): FloorPlanMarke
       }
       return {
         id: a.id,
+        title: hover.title,
+        previewUrl: hover.previewUrl,
         floorPlanId: a.floorPlanPosition!.floorPlanId,
         x: a.floorPlanPosition!.x,
         y: a.floorPlanPosition!.y,
@@ -160,8 +180,11 @@ export function assetsToFloorPlanDrawnGeometries(assets: SpatialAsset[]): FloorP
     )
     .map((a) => {
       const { fill, stroke } = markerColorsFromAsset(a.markerColor)
+      const hover = featureHoverFieldsFromAsset(a)
       return {
         id: a.id,
+        title: hover.title,
+        previewUrl: hover.previewUrl,
         floorPlanId: a.floorPlanGeometry!.floorPlanId,
         geometryType: a.geometryType as 'line' | 'polygon',
         coordinates: a.floorPlanGeometry!.coordinates,
@@ -181,8 +204,11 @@ export function assetsToMapDrawnGeometries(assets: SpatialAsset[]): MapDrawnGeom
     )
     .map((a) => {
       const { fill, stroke } = markerColorsFromAsset(a.markerColor)
+      const hover = featureHoverFieldsFromAsset(a)
       return {
         id: a.id,
+        title: hover.title,
+        previewUrl: hover.previewUrl,
         geometryType: a.geometryType as 'line' | 'polygon',
         coordinates: a.mapGeometry!.coordinates,
         color: fill,

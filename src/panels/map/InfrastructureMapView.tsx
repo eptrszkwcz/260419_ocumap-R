@@ -1,6 +1,6 @@
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 
 import type { MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
@@ -14,6 +14,8 @@ import { DirectionAdjustBanner } from '@/panels/map/DirectionAdjustBanner'
 import { DirectionAdjustMarkerOverlay } from '@/panels/map/DirectionAdjustMarkerOverlay'
 import { DirectionBeam, effectiveViewDirectionDeg } from '@/panels/map/DirectionBeam'
 import { FeatureDrawConfirmPanel } from '@/panels/map/FeatureDrawConfirmPanel'
+import { FeatureMapHoverPopup } from '@/panels/map/FeatureMapHoverPopup'
+import { featureHoverInfoFromMapData } from '@/panels/map/featureHoverDisplay'
 import { FEATURE_DRAW_INSTRUCTION } from '@/panels/map/featureDrawUtils'
 import { MapOverlayControlBar } from '@/panels/map/MapOverlayControlBar'
 import {
@@ -266,6 +268,7 @@ export function InfrastructureMapView({
   const resizeRafRef = useRef<number>(0)
 
   const {
+    mapHoveredFeatureId,
     linkedFeatureId,
     openedFeatureId,
     viewDirectionBaseDeg,
@@ -274,6 +277,13 @@ export function InfrastructureMapView({
     setOpenedFeatureId,
     openFeatureFromMap,
   } = useFeatureMapHover()
+
+  const [hoverAnchor, setHoverAnchor] = useState<{ clientX: number; clientY: number } | null>(null)
+
+  const hoverLookup = useMemo(
+    () => featureHoverInfoFromMapData(captureMarkers, mapDrawnGeometries),
+    [captureMarkers, mapDrawnGeometries],
+  )
 
   useLayoutEffect(() => {
     styleUrlRef.current = styleUrl
@@ -328,6 +338,15 @@ export function InfrastructureMapView({
   const visibleMapDrawnGeometries = mapDrawnGeometries.filter(
     (g) => !(isEditingThisFeature && g.id === editingFeatureId),
   )
+  const mapInteractionLocked =
+    isPickingLocation || isAdjustingDirection || isDrawing || isEditingFeature
+
+  useEffect(() => {
+    if (mapHoveredFeatureId == null || mapInteractionLocked || openedFeatureId != null) {
+      setHoverAnchor(null)
+    }
+  }, [mapHoveredFeatureId, mapInteractionLocked, openedFeatureId])
+
   const editVertexMarkersRef = useRef<mapboxgl.Marker[]>([])
   const collectingVertexMarkersRef = useRef<mapboxgl.Marker[]>([])
   const directionBeamMarkerRef = useRef<mapboxgl.Marker | null>(null)
@@ -712,30 +731,50 @@ export function InfrastructureMapView({
     let prevCursor = ''
     const hoverLayerIds = [CAPTURE_LAYER_ID, DRAWN_FILL_LAYER_ID, DRAWN_LINE_LAYER_ID]
 
+    const setAnchorFromEvent = (e: mapboxgl.MapLayerMouseEvent) => {
+      const rect = canvas.getBoundingClientRect()
+      setHoverAnchor({
+        clientX: rect.left + e.point.x,
+        clientY: rect.top + e.point.y,
+      })
+    }
+
     const onMouseEnter = (e: mapboxgl.MapLayerMouseEvent) => {
       const id = captureMarkerIdFromFeature(e.features?.[0])
       if (id == null) return
       setMapHoveredFeatureId(id)
+      setAnchorFromEvent(e)
       prevCursor = canvas.style.cursor
       canvas.style.cursor = 'pointer'
     }
 
+    const onMouseMove = (e: mapboxgl.MapLayerMouseEvent) => {
+      const id = captureMarkerIdFromFeature(e.features?.[0])
+      if (id == null) return
+      setMapHoveredFeatureId(id)
+      setAnchorFromEvent(e)
+    }
+
     const onMouseLeave = () => {
       setMapHoveredFeatureId(null)
+      setHoverAnchor(null)
       canvas.style.cursor = prevCursor
     }
 
     for (const layerId of hoverLayerIds) {
       map.on('mouseenter', layerId, onMouseEnter)
+      map.on('mousemove', layerId, onMouseMove)
       map.on('mouseleave', layerId, onMouseLeave)
     }
 
     return () => {
       for (const layerId of hoverLayerIds) {
         map.off('mouseenter', layerId, onMouseEnter)
+        map.off('mousemove', layerId, onMouseMove)
         map.off('mouseleave', layerId, onMouseLeave)
       }
       setMapHoveredFeatureId(null)
+      setHoverAnchor(null)
       canvas.style.cursor = prevCursor
     }
   }, [isPickingLocation, isAdjustingDirection, isDrawing, isEditingFeature, setMapHoveredFeatureId, styleUrl])
@@ -852,6 +891,15 @@ export function InfrastructureMapView({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [isAdjustingDirection, cancelDirectionAdjust])
 
+  const showHoverPopup =
+    !mapInteractionLocked &&
+    mapHoveredFeatureId != null &&
+    openedFeatureId == null &&
+    hoverAnchor != null
+
+  const hoverPopupContent =
+    mapHoveredFeatureId != null ? hoverLookup.get(mapHoveredFeatureId) : undefined
+
   if (token == null) {
     return (
       <div
@@ -941,6 +989,13 @@ export function InfrastructureMapView({
             {FEATURE_DRAW_INSTRUCTION}
           </div>
         </div>
+      ) : null}
+      {showHoverPopup && hoverAnchor != null ? (
+        <FeatureMapHoverPopup
+          title={hoverPopupContent?.title ?? ''}
+          previewUrl={hoverPopupContent?.previewUrl}
+          anchor={hoverAnchor}
+        />
       ) : null}
     </div>
   )
