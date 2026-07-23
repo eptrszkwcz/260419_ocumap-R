@@ -36,6 +36,7 @@ export function mergeCaptureMarkerPreview(
     {
       id: preview.featureId,
       title: '',
+      typeLabel: '',
       lng: preview.lng,
       lat: preview.lat,
       color: fill,
@@ -68,6 +69,7 @@ export function mergeFloorPlanMarkerPreview(
     {
       id: preview.featureId,
       title: '',
+      typeLabel: '',
       floorPlanId: preview.floorPlanId,
       x: preview.x,
       y: preview.y,

@@ -1094,6 +1094,7 @@ function MapFloorPlanViewer({
       {showHoverPopup && hoverAnchor != null ? (
         <FeatureMapHoverPopup
           title={hoverPopupContent?.title ?? ''}
+          typeLabel={hoverPopupContent?.typeLabel}
           previewUrl={hoverPopupContent?.previewUrl}
           anchor={hoverAnchor}
         />

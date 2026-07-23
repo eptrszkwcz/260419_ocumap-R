@@ -9,6 +9,7 @@ export type MediaMarkerKind = Extract<AssetKind, 'image' | 'panorama'>
 export type MapCaptureMarker = {
   id: string
   title: string
+  typeLabel: string
   previewUrl?: string
   lng: number
   lat: number
@@ -21,6 +22,7 @@ export type MapCaptureMarker = {
 export type FloorPlanMarker = {
   id: string
   title: string
+  typeLabel: string
   previewUrl?: string
   floorPlanId: FloorPlanId
   /** Normalized 0–1 horizontal position on the floor plan drawing. */

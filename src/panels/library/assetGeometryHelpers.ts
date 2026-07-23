@@ -44,6 +44,7 @@ export function mapVerticesFromAsset(asset: SpatialAsset): MapVertexDisplay[] {
 export type FloorPlanDrawnGeometry = {
   id: string
   title: string
+  typeLabel: string
   previewUrl?: string
   floorPlanId: FloorPlanMarker['floorPlanId']
   geometryType: 'line' | 'polygon'
@@ -55,6 +56,7 @@ export type FloorPlanDrawnGeometry = {
 export type MapDrawnGeometry = {
   id: string
   title: string
+  typeLabel: string
   previewUrl?: string
   geometryType: 'line' | 'polygon'
   coordinates: { lng: number; lat: number }[]
@@ -102,6 +104,7 @@ export function assetsToCaptureMarkers(assets: SpatialAsset[]): MapCaptureMarker
       return {
         id: a.id,
         title: hover.title,
+        typeLabel: hover.typeLabel,
         previewUrl: hover.previewUrl,
         lng,
         lat,
@@ -147,6 +150,7 @@ export function assetsToFloorPlanMarkers(assets: SpatialAsset[]): FloorPlanMarke
         return {
           id: a.id,
           title: hover.title,
+          typeLabel: hover.typeLabel,
           previewUrl: hover.previewUrl,
           floorPlanId: a.floorPlanGeometry.floorPlanId,
           x: c.x,
@@ -159,6 +163,7 @@ export function assetsToFloorPlanMarkers(assets: SpatialAsset[]): FloorPlanMarke
       return {
         id: a.id,
         title: hover.title,
+        typeLabel: hover.typeLabel,
         previewUrl: hover.previewUrl,
         floorPlanId: a.floorPlanPosition!.floorPlanId,
         x: a.floorPlanPosition!.x,
@@ -184,6 +189,7 @@ export function assetsToFloorPlanDrawnGeometries(assets: SpatialAsset[]): FloorP
       return {
         id: a.id,
         title: hover.title,
+        typeLabel: hover.typeLabel,
         previewUrl: hover.previewUrl,
         floorPlanId: a.floorPlanGeometry!.floorPlanId,
         geometryType: a.geometryType as 'line' | 'polygon',
@@ -208,6 +214,7 @@ export function assetsToMapDrawnGeometries(assets: SpatialAsset[]): MapDrawnGeom
       return {
         id: a.id,
         title: hover.title,
+        typeLabel: hover.typeLabel,
         previewUrl: hover.previewUrl,
         geometryType: a.geometryType as 'line' | 'polygon',
         coordinates: a.mapGeometry!.coordinates,
