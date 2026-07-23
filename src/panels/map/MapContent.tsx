@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import type { FloorPlanMarker } from '@/context/MapCaptureMarkersContext'
 import { useFeatureDraw } from '@/context/FeatureDrawContext'
@@ -8,6 +8,8 @@ import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 import type { FloorPlanDrawnGeometry } from '@/panels/library/assetGeometryHelpers'
 import { FeatureDrawConfirmPanel } from '@/panels/map/FeatureDrawConfirmPanel'
+import { FeatureMapHoverPopup } from '@/panels/map/FeatureMapHoverPopup'
+import { featureHoverInfoFromFloorPlanData } from '@/panels/map/featureHoverDisplay'
 import { FEATURE_DRAW_INSTRUCTION } from '@/panels/map/featureDrawUtils'
 import { MapOverlayControlBar } from '@/panels/map/MapOverlayControlBar'
 import type { FloorPlanId } from '@/panels/map/mapFloorPlans'
@@ -137,7 +139,7 @@ type FloorPlanCaptureMarkerProps = {
   linkedFeatureId: string | null
   openedFeatureId: string | null
   locationPickActive: boolean
-  onEnter: (id: string) => void
+  onEnter: (id: string, clientX: number, clientY: number) => void
   onLeave: () => void
   onSelect: (id: string) => void
 }
@@ -188,8 +190,10 @@ function FloorPlanCaptureMarker({
         transform: 'translate(-50%, -50%)',
         pointerEvents: locationPickActive && !isDirectionAdjustTarget ? 'none' : 'auto',
       }}
-      onMouseEnter={() => {
-        if (!locationPickActive && !isDirectionAdjustTarget) onEnter(marker.id)
+      onMouseEnter={(e) => {
+        if (!locationPickActive && !isDirectionAdjustTarget) {
+          onEnter(marker.id, e.clientX, e.clientY)
+        }
       }}
       onMouseLeave={onLeave}
     >
@@ -251,11 +255,12 @@ function FloorPlanDrawnGeometryLayer({
   linkedFeatureId: string | null
   openedFeatureId: string | null
   hoverEnabled: boolean
-  onEnter: (id: string) => void
+  onEnter: (id: string, clientX: number, clientY: number) => void
   onLeave: () => void
   onSelect: (id: string) => void
 }) {
   const { w, h } = naturalSize
+  const enter = (id: string, e: React.MouseEvent) => onEnter(id, e.clientX, e.clientY)
   return (
     <svg
       className="pointer-events-none absolute inset-0 z-[5] h-full w-full overflow-visible"
@@ -277,7 +282,7 @@ function FloorPlanDrawnGeometryLayer({
           ? {
               pointerEvents: 'all' as const,
               style: { cursor: 'pointer' },
-              onMouseEnter: () => onEnter(g.id),
+              onMouseEnter: (e: React.MouseEvent) => enter(g.id, e),
               onMouseLeave: onLeave,
               onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
               onClick: (e: React.MouseEvent) => {
@@ -309,7 +314,7 @@ function FloorPlanDrawnGeometryLayer({
                 strokeWidth={12}
                 pointerEvents="stroke"
                 style={{ cursor: 'pointer' }}
-                onMouseEnter={() => onEnter(g.id)}
+                onMouseEnter={(e) => enter(g.id, e)}
                 onMouseLeave={onLeave}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
@@ -549,12 +554,37 @@ function MapFloorPlanViewer({
   const suppressPlanClickRef = useRef(false)
 
   const {
+    mapHoveredFeatureId,
     linkedFeatureId,
     openedFeatureId,
     setMapHoveredFeatureId,
     setOpenedFeatureId,
     openFeatureFromMap,
   } = useFeatureMapHover()
+
+  const [hoverAnchor, setHoverAnchor] = useState<{ clientX: number; clientY: number } | null>(null)
+
+  const hoverLookup = useMemo(
+    () => featureHoverInfoFromFloorPlanData(floorMarkers, floorDrawnGeometries),
+    [floorMarkers, floorDrawnGeometries],
+  )
+
+  const handleMapFeatureEnter = useCallback(
+    (id: string, clientX: number, clientY: number) => {
+      setMapHoveredFeatureId(id)
+      setHoverAnchor({ clientX, clientY })
+    },
+    [setMapHoveredFeatureId],
+  )
+
+  const handleMapFeatureLeave = useCallback(() => {
+    setMapHoveredFeatureId(null)
+    setHoverAnchor(null)
+  }, [setMapHoveredFeatureId])
+
+  useEffect(() => {
+    if (mapHoveredFeatureId == null) setHoverAnchor(null)
+  }, [mapHoveredFeatureId])
 
   const {
     isPickingFloorPlanLocation,
@@ -776,6 +806,9 @@ function MapFloorPlanViewer({
   }
 
   const onPointerMove = (e: React.PointerEvent) => {
+    if (mapHoveredFeatureId != null) {
+      setHoverAnchor({ clientX: e.clientX, clientY: e.clientY })
+    }
     if (!dragRef.current.active) return
     const { startX, startY, origPanX, origPanY } = dragRef.current
     setView((v) => ({
@@ -862,6 +895,15 @@ function MapFloorPlanViewer({
   )
 
   const { scale, panX, panY } = view
+  const showHoverPopup =
+    !interactionLocked &&
+    mapHoveredFeatureId != null &&
+    openedFeatureId == null &&
+    hoverAnchor != null
+
+  const hoverPopupContent =
+    mapHoveredFeatureId != null ? hoverLookup.get(mapHoveredFeatureId) : undefined
+
   const nw = naturalSize?.w
   const nh = naturalSize?.h
 
@@ -921,8 +963,8 @@ function MapFloorPlanViewer({
               linkedFeatureId={linkedFeatureId}
               openedFeatureId={openedFeatureId}
               hoverEnabled={!interactionLocked}
-              onEnter={setMapHoveredFeatureId}
-              onLeave={() => setMapHoveredFeatureId(null)}
+              onEnter={handleMapFeatureEnter}
+              onLeave={handleMapFeatureLeave}
               onSelect={onFeatureSelect}
             />
             {showDrawPreview ? (
@@ -974,8 +1016,8 @@ function MapFloorPlanViewer({
                 linkedFeatureId={linkedFeatureId}
                 openedFeatureId={openedFeatureId}
                 locationPickActive={isPickingFloorPlanLocation}
-                onEnter={setMapHoveredFeatureId}
-                onLeave={() => setMapHoveredFeatureId(null)}
+                onEnter={handleMapFeatureEnter}
+                onLeave={handleMapFeatureLeave}
                 onSelect={onFeatureSelect}
               />
             ))
@@ -1048,6 +1090,13 @@ function MapFloorPlanViewer({
             {FEATURE_DRAW_INSTRUCTION}
           </div>
         </div>
+      ) : null}
+      {showHoverPopup && hoverAnchor != null ? (
+        <FeatureMapHoverPopup
+          title={hoverPopupContent?.title ?? ''}
+          previewUrl={hoverPopupContent?.previewUrl}
+          anchor={hoverAnchor}
+        />
       ) : null}
     </div>
   )

@@ -9,6 +9,7 @@ import {
 } from 'react'
 
 type FeatureMapHoverContextValue = {
+  mapHoveredFeatureId: string | null
   linkedFeatureId: string | null
   setMapHoveredFeatureId: (id: string | null) => void
   setTableHoveredFeatureId: (id: string | null) => void
@@ -76,6 +77,7 @@ export function FeatureMapHoverProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     (): FeatureMapHoverContextValue => ({
+      mapHoveredFeatureId,
       linkedFeatureId,
       setMapHoveredFeatureId,
       setTableHoveredFeatureId,
@@ -89,6 +91,7 @@ export function FeatureMapHoverProvider({ children }: { children: ReactNode }) {
       setViewDirectionLiveOffsetDeg,
     }),
     [
+      mapHoveredFeatureId,
       linkedFeatureId,
       setMapHoveredFeatureId,
       setTableHoveredFeatureId,
@@ -111,6 +114,7 @@ export function useFeatureMapHover(): FeatureMapHoverContextValue {
   const ctx = useContext(FeatureMapHoverContext)
   if (ctx == null) {
     return {
+      mapHoveredFeatureId: null,
       linkedFeatureId: null,
       setMapHoveredFeatureId: () => {},
       setTableHoveredFeatureId: () => {},
