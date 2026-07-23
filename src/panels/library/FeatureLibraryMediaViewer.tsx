@@ -11,7 +11,12 @@ import {
   GridIcon,
   RulerIcon,
 } from '@/components/overlayControlIcons'
-import { getAssetTypeLabel, type SpatialAsset } from '@/data/sampleAssets'
+import {
+  GEOMETRY_ONLY_FEATURE_MESSAGE,
+  getAssetTypeLabel,
+  isGeometryOnlyFeature,
+  type SpatialAsset,
+} from '@/data/sampleAssets'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { Panorama360Viewer } from '@/panels/library/Panorama360Viewer'
 
@@ -63,6 +68,8 @@ export function FeatureLibraryMediaViewer({
     onAssetChange(libraryAssets[next])
   }, [asset.id, libraryAssets, onAssetChange])
 
+  const geometryOnly = isGeometryOnlyFeature(asset)
+
   return (
     <div
       className="flex min-h-0 min-w-0 flex-1 flex-col"
@@ -70,7 +77,11 @@ export function FeatureLibraryMediaViewer({
       aria-label={`Media viewer: ${asset.title}`}
     >
       <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-panel bg-page">
-        {asset.kind === 'panorama' ? (
+        {geometryOnly ? (
+          <p className="text-fg-muted absolute inset-0 flex items-center justify-center px-6 text-center font-sans text-standard">
+            {GEOMETRY_ONLY_FEATURE_MESSAGE}
+          </p>
+        ) : asset.kind === 'panorama' ? (
           <Panorama360Viewer
             key={asset.id}
             panoramaUrl={asset.fileUrl ?? ''}
@@ -139,32 +150,37 @@ export function FeatureLibraryMediaViewer({
           </div>
 
           <div ref={mediaControlsRef} className="pointer-events-auto flex gap-2">
-            <DelayedTooltip label="Measure on photo">
-              <button type="button" className={overlayBtnClass} aria-label="Measure">
-                <RulerIcon />
-              </button>
-            </DelayedTooltip>
-            <DelayedTooltip label="Show grid overlay">
-              <button type="button" className={overlayBtnClass} aria-label="Grid overlay">
-                <GridIcon />
-              </button>
-            </DelayedTooltip>
-            <DelayedTooltip label="Viewer settings">
-              <button type="button" className={overlayBtnClass} aria-label="Viewer settings">
-                <GearIcon />
-              </button>
-            </DelayedTooltip>
-            <DelayedTooltip label="View comments">
-              <button type="button" className={overlayBtnPrimaryClass} aria-label="Comments">
-                <ChatIcon />
-              </button>
-            </DelayedTooltip>
+            {!geometryOnly ? (
+              <>
+                <DelayedTooltip label="Measure on photo">
+                  <button type="button" className={overlayBtnClass} aria-label="Measure">
+                    <RulerIcon />
+                  </button>
+                </DelayedTooltip>
+                <DelayedTooltip label="Show grid overlay">
+                  <button type="button" className={overlayBtnClass} aria-label="Grid overlay">
+                    <GridIcon />
+                  </button>
+                </DelayedTooltip>
+                <DelayedTooltip label="Viewer settings">
+                  <button type="button" className={overlayBtnClass} aria-label="Viewer settings">
+                    <GearIcon />
+                  </button>
+                </DelayedTooltip>
+                <DelayedTooltip label="View comments">
+                  <button type="button" className={overlayBtnPrimaryClass} aria-label="Comments">
+                    <ChatIcon />
+                  </button>
+                </DelayedTooltip>
+              </>
+            ) : null}
           </div>
         </div>
       </div>
 
       <p className="sr-only" aria-live="polite">
-        Showing {index + 1} of {libraryAssets.length}: {asset.title}, {getAssetTypeLabel(asset.kind)},{' '}
+        Showing {index + 1} of {libraryAssets.length}: {asset.title},{' '}
+        {geometryOnly ? 'geometry only' : getAssetTypeLabel(asset.kind)},{' '}
         {asset.dateUploaded}.
       </p>
     </div>

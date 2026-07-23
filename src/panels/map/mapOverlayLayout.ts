@@ -5,6 +5,10 @@ export const mapOverlayInsetBottomClassName = 'bottom-5'
 export const mapOverlayInsetLeftClassName = 'left-panel-padding'
 export const mapOverlayInsetRightClassName = 'right-panel-padding'
 
+/** Extra lift above `mapOverlayInsetBottomClassName` to clear the Mapbox logo (lower-left). */
+export const MAPBOX_ATTRIBUTION_CLEARANCE_PX = 18
+export const mapOverlayInsetBottomAboveMapboxLogoClassName = 'bottom-[calc(1.25rem+18px)]'
+
 /** Shared floating panel chrome for published map/media headers. */
 export const publishedFloatingPanelBaseClassName =
   'flex h-header items-center gap-4 rounded-panel border border-stroke bg-panel px-panel-padding shadow-lg'
@@ -24,6 +28,9 @@ export const publishedMediaFileNamePanelClassName =
 /** Width shared by published media file name panel and nav buttons. */
 export const publishedMediaNavWidthClassName = 'w-[400px]'
 
+/** Features menu panel width (matches `publishedMediaNavWidthClassName`). */
+export const publishedMediaFeaturesMenuPanelWidth = '400px'
+
 /** Content-width variant (media header). */
 export const publishedFloatingPanelAutoClassName =
   publishedFloatingPanelBaseClassName +
@@ -39,6 +46,25 @@ export const PUBLISHED_MINI_PANEL_RESIZE_BUFFER_PX = 24
 export const MAP_OVERLAY_INSET_Y_PX = 20
 /** Matches `--spacing-panel-padding`. */
 export const PUBLISHED_PANEL_PADDING_PX = 24
+
+/** Features dropdown: stop this far above the map / media viewer panel bottom edge. */
+export const PUBLISHED_FEATURES_MENU_CLEARANCE_ABOVE_VIEWER_BOTTOM_PX = 70
+/** Matches `DropdownPanel` `mt-2` below the Features trigger. */
+export const PUBLISHED_FEATURES_MENU_OFFSET_BELOW_TRIGGER_PX = 8
+
+/**
+ * Max height for the published Features menu panel (scrolls when content exceeds this).
+ * Measured from below the nav row to 70px above the map viewer panel bottom.
+ */
+export function computePublishedFeaturesMenuMaxHeightPx(
+  navRowBottomYInContainer: number,
+  mapViewerBottomYInContainer: number,
+): number {
+  const panelTopY = navRowBottomYInContainer + PUBLISHED_FEATURES_MENU_OFFSET_BELOW_TRIGGER_PX
+  const limitY =
+    mapViewerBottomYInContainer - PUBLISHED_FEATURES_MENU_CLEARANCE_ABOVE_VIEWER_BOTTOM_PX
+  return Math.max(0, Math.floor(limitY - panelTopY))
+}
 
 /** Mini overlay panel chrome for published map preview (size set inline). */
 export const publishedMiniPanelClassName =

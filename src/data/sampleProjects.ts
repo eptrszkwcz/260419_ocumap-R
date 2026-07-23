@@ -55,8 +55,8 @@ export const KATY_FREEWAY_MAPBOX_STYLE =
 
 const projectsById: Record<string, ProjectRecord> = {}
 
-/** Demo: two projects shown as published (stable “random” pair). */
-const publishedProjectIds = new Set(['p-2', KATY_FREEWAY_PROJECT_ID])
+/** Demo: published projects for read-only published view demos. */
+const publishedProjectIds = new Set(['p-1', 'p-2', KATY_FREEWAY_PROJECT_ID])
 
 export const sampleProjects: ProjectRecord[] = [
   {
@@ -65,6 +65,7 @@ export const sampleProjects: ProjectRecord[] = [
     status: publishedProjectIds.has('p-1') ? 'Published' : 'Draft',
     team: 'Smith Property Management',
     lastModified: 'May 3, 2026',
+    publishedDate: 'May 3, 2026',
     featureFileCount: 142,
     projectSizeMb: 486,
     createdRelative: '3 days ago',

@@ -23,6 +23,9 @@ export { dropdownMenuPanelClassName } from '@/components/DropdownPanel'
 export const dropdownMenuItemClassName =
   'text-fg-muted hover:text-fg-highlight flex w-full cursor-pointer items-center gap-2.5 rounded-panel px-[16px] py-[12px] text-left font-sans text-standard font-normal leading-none hover:bg-area-highlight hover:font-normal focus-visible:bg-area-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35'
 
+export const dropdownMenuTableHeaderClassName =
+  'text-fg flex shrink-0 items-center justify-between gap-3 border-b border-solid border-fg-muted px-[16px] py-2.5 font-sans text-standard font-bold leading-none'
+
 function dropdownMenuItemClass(selected: boolean | undefined): string {
   if (selected) {
     return dropdownMenuItemClassName + ' text-fg-highlight bg-area-highlight'
@@ -37,6 +40,7 @@ type DropdownMenuProps = {
   placement?: 'bottom' | 'top'
   panelWidth?: string
   panelMaxHeight?: string
+  tableColumnHeaders?: { feature: string; type: string }
   closeOnMouseLeave?: boolean
   stopTriggerPropagation?: boolean
   open?: boolean
@@ -51,6 +55,7 @@ export function DropdownMenu({
   placement = 'bottom',
   panelWidth,
   panelMaxHeight,
+  tableColumnHeaders,
   closeOnMouseLeave = true,
   stopTriggerPropagation = false,
   open: openControlled,
@@ -72,6 +77,14 @@ export function DropdownMenu({
     fn()
   }
 
+  const panelHeader =
+    tableColumnHeaders != null ? (
+      <div className={dropdownMenuTableHeaderClassName}>
+        <span>{tableColumnHeaders.feature}</span>
+        <span className="shrink-0">{tableColumnHeaders.type}</span>
+      </div>
+    ) : undefined
+
   return (
     <DropdownPanel
       panelAriaLabel={menuAriaLabel}
@@ -79,6 +92,7 @@ export function DropdownMenu({
       placement={placement}
       panelWidth={panelWidth}
       panelMaxHeight={panelMaxHeight}
+      panelHeader={panelHeader}
       closeOnMouseLeave={closeOnMouseLeave}
       stopTriggerPropagation={stopTriggerPropagation}
       open={open}
@@ -102,7 +116,7 @@ export function DropdownMenu({
           >
             {item.trailing != null ? (
               <>
-                <span className="min-w-0">{item.label}</span>
+                <span className="min-w-0 truncate">{item.label}</span>
                 <span className="shrink-0">{item.trailing}</span>
               </>
             ) : (

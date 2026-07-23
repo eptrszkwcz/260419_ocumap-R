@@ -208,6 +208,8 @@ export function MapColumn({
             <InfrastructureMapStyleHeader
               selectedStyleId={baseMapStyleId}
               onStyleChange={setBaseMapStyleId}
+              variant={variant}
+              layoutMode={layoutMode}
             />
             <InfrastructureMapView
               styleUrl={activeStyleUrl}

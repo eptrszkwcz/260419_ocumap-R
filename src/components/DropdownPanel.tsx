@@ -18,6 +18,8 @@ type DropdownPanelProps = {
   placement?: 'bottom' | 'top'
   panelWidth?: string
   panelMaxHeight?: string
+  /** Fixed region above scrollable `children` when `panelMaxHeight` is set. */
+  panelHeader?: ReactNode
   /** When true, close panel when pointer leaves it (single-select menus). */
   closeOnMouseLeave?: boolean
   stopTriggerPropagation?: boolean
@@ -34,6 +36,7 @@ export function DropdownPanel({
   placement = 'bottom',
   panelWidth,
   panelMaxHeight,
+  panelHeader,
   closeOnMouseLeave = false,
   stopTriggerPropagation = false,
   open: openControlled,
@@ -83,17 +86,18 @@ export function DropdownPanel({
   const alignClass =
     align === 'left' ? 'left-0' : align === 'center' ? 'left-1/2 -translate-x-1/2' : 'right-0'
   const placementClass = placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'
+  const splitScrollLayout = panelMaxHeight != null && panelHeader != null
   const scrollClass =
-    panelMaxHeight != null ? ' overflow-y-auto overflow-x-hidden' : ''
-  const panelClassName =
-    (panelMaxHeight != null
-      ? dropdownMenuPanelBaseClassName.replace(' overflow-hidden', '')
-      : dropdownMenuPanelBaseClassName) +
-    scrollClass +
-    ' ' +
-    placementClass +
-    ' ' +
-    alignClass
+    panelMaxHeight != null && !splitScrollLayout ? ' overflow-y-auto overflow-x-hidden' : ''
+  let panelBase = dropdownMenuPanelBaseClassName
+  if (panelMaxHeight != null && !splitScrollLayout) {
+    panelBase = panelBase.replace(' overflow-hidden', '')
+  }
+  if (splitScrollLayout) {
+    panelBase = panelBase.replace(' overflow-hidden', '').replace(' py-1', ' py-0')
+    panelBase += ' flex flex-col overflow-hidden'
+  }
+  const panelClassName = panelBase + scrollClass + ' ' + placementClass + ' ' + alignClass
 
   const panelStyle: CSSProperties = {}
   if (panelWidth != null) panelStyle.width = panelWidth
@@ -112,7 +116,16 @@ export function DropdownPanel({
           onMouseLeave={closeOnMouseLeave ? () => setOpen(false) : undefined}
           onClick={(e) => e.stopPropagation()}
         >
-          {children}
+          {splitScrollLayout ? (
+            <>
+              <div className="shrink-0">{panelHeader}</div>
+              <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto py-1">
+                {children}
+              </div>
+            </>
+          ) : (
+            children
+          )}
         </div>
       ) : null}
     </div>
