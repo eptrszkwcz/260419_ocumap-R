@@ -24,6 +24,7 @@ type FeatureLibraryTableProps = {
   onSelectFeature?: (asset: SpatialAsset, index: number, shiftKey: boolean) => void
   onToggleFeatureSelection?: (asset: SpatialAsset, index: number) => void
   onOpenAsset?: (asset: SpatialAsset) => void
+  onOpenMediaMarker?: (asset: SpatialAsset, marker: import('@/data/sampleAssets').MediaAnnotationMarker) => void
   onSetLocation?: (asset: SpatialAsset) => void
   onDownloadAsset?: (asset: SpatialAsset) => void
   onCopyAsset?: (asset: SpatialAsset) => void
@@ -61,6 +62,7 @@ export function FeatureLibraryTable({
   onSelectFeature,
   onToggleFeatureSelection,
   onOpenAsset,
+  onOpenMediaMarker,
   onSetLocation,
   onDownloadAsset,
   onCopyAsset,
@@ -142,6 +144,9 @@ export function FeatureLibraryTable({
                     : undefined
                 }
                 onOpen={onOpenAsset != null ? () => onOpenAsset(asset) : undefined}
+                onOpenMarker={
+                  onOpenMediaMarker != null ? (marker) => onOpenMediaMarker(asset, marker) : undefined
+                }
                 onSetLocation={onSetLocation != null ? () => onSetLocation(asset) : undefined}
                 onDownload={onDownloadAsset != null ? () => onDownloadAsset(asset) : undefined}
                 onCopy={onCopyAsset != null ? () => onCopyAsset(asset) : undefined}

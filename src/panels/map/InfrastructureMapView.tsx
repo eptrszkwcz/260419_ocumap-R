@@ -7,6 +7,7 @@ import type { MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
 import { useFeatureDraw } from '@/context/FeatureDrawContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
+import { useMediaMarkerFlow } from '@/context/MediaMarkerFlowContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 import type { MapDrawnGeometry } from '@/panels/library/assetGeometryHelpers'
@@ -23,7 +24,8 @@ import {
   DRAWN_LINE_LAYER_ID,
   resyncAllDrawLayers,
 } from '@/panels/map/mapDrawLayers'
-import { markerColorsFromAsset, markerRgba } from '@/panels/map/markerColors'
+import { markerColorsFromAsset, markerRgba, PRELIMINARY_MARKER_COLOR } from '@/panels/map/markerColors'
+import { MEDIA_MARKER_DRAFT_ID } from '@/panels/map/mergeMediaMarkerPreview'
 import {
   mapOverlayInsetBottomClassName,
   mapOverlayInsetXClassName,
@@ -323,6 +325,12 @@ export function InfrastructureMapView({
     recordDrawVertexMove,
   } = useFeatureDraw()
   const { markerStylePreview } = useMarkerStylePreview()
+  const {
+    isAdjustingMediaMarker,
+    draftMarker,
+    updateDraftMarker,
+    cancelFlow: cancelMediaMarkerFlow,
+  } = useMediaMarkerFlow()
   const previewColor = markerStylePreview?.color ?? draftMarkerColor
   const { fill: previewFill, stroke: previewStroke } = markerColorsFromAsset(previewColor)
 
@@ -333,13 +341,18 @@ export function InfrastructureMapView({
     (isEditingFeature && drawPhase === 'collecting')
   const showPreviewSession = (isDrawing || isEditingFeature) && mapVertices.length > 0
   const visibleCaptureMarkers = captureMarkers.filter(
-    (m) => !(isEditingThisFeature && m.id === editingFeatureId),
+    (m) =>
+      !(isEditingThisFeature && m.id === editingFeatureId) && m.id !== MEDIA_MARKER_DRAFT_ID,
   )
   const visibleMapDrawnGeometries = mapDrawnGeometries.filter(
     (g) => !(isEditingThisFeature && g.id === editingFeatureId),
   )
   const mapInteractionLocked =
-    isPickingLocation || isAdjustingDirection || isDrawing || isEditingFeature
+    isPickingLocation ||
+    isAdjustingDirection ||
+    isDrawing ||
+    isEditingFeature ||
+    isAdjustingMediaMarker
 
   useEffect(() => {
     if (mapHoveredFeatureId == null || mapInteractionLocked || openedFeatureId != null) {
@@ -349,6 +362,7 @@ export function InfrastructureMapView({
 
   const editVertexMarkersRef = useRef<mapboxgl.Marker[]>([])
   const collectingVertexMarkersRef = useRef<mapboxgl.Marker[]>([])
+  const mediaMarkerDraftMarkerRef = useRef<mapboxgl.Marker | null>(null)
   const directionBeamMarkerRef = useRef<mapboxgl.Marker | null>(null)
   const directionBeamRootRef = useRef<Root | null>(null)
   const suppressMapClickRef = useRef(false)
@@ -613,6 +627,67 @@ export function InfrastructureMapView({
     updateMapVertex,
   ])
 
+  useEffect(() => {
+    const map = mapRef.current
+    if (map == null || !isAdjustingMediaMarker || draftMarker?.mapPosition == null) {
+      mediaMarkerDraftMarkerRef.current?.remove()
+      mediaMarkerDraftMarkerRef.current = null
+      return
+    }
+
+    const color = draftMarker.isPreliminary
+      ? PRELIMINARY_MARKER_COLOR
+      : (draftMarker.color ?? PRELIMINARY_MARKER_COLOR)
+    const { fill } = markerColorsFromAsset(color)
+    const { lng, lat } = draftMarker.mapPosition
+
+    if (mediaMarkerDraftMarkerRef.current == null) {
+      const marker = new mapboxgl.Marker({ draggable: true, color: fill })
+        .setLngLat([lng, lat])
+        .addTo(map)
+      marker.on('drag', () => {
+        const ll = marker.getLngLat()
+        updateDraftMarker({ mapPosition: { lng: ll.lng, lat: ll.lat } })
+      })
+      mediaMarkerDraftMarkerRef.current = marker
+    } else {
+      mediaMarkerDraftMarkerRef.current.setLngLat([lng, lat])
+    }
+
+    return () => {
+      mediaMarkerDraftMarkerRef.current?.remove()
+      mediaMarkerDraftMarkerRef.current = null
+    }
+  }, [
+    draftMarker?.mapPosition?.lat,
+    draftMarker?.mapPosition?.lng,
+    draftMarker?.color,
+    draftMarker?.isPreliminary,
+    isAdjustingMediaMarker,
+    updateDraftMarker,
+  ])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (
+      map == null ||
+      !isAdjustingMediaMarker ||
+      draftMarker?.mapPosition == null ||
+      openedFeatureId == null
+    ) {
+      return
+    }
+    const parent = captureMarkersRef.current.find((m) => m.id === openedFeatureId)
+    if (parent == null) return
+    const draft = draftMarker.mapPosition
+    const bounds = new mapboxgl.LngLatBounds([parent.lng, parent.lat], [draft.lng, draft.lat])
+    map.fitBounds(bounds, {
+      padding: FIT_ALL_MARKERS_PADDING,
+      maxZoom: FEATURE_FOCUS_MAX_ZOOM,
+      duration: FLY_DURATION_MS,
+    })
+  }, [isAdjustingMediaMarker, splitCommitToken, draftMarker?.mapPosition, openedFeatureId])
+
   const showCollectingVertexMarkers =
     isDrawing && drawPhase === 'collecting' && geometryType !== 'polygon' && mapVertices.length > 0
   const canClosePolygon = mapVertices.length >= 3 && geometryType === 'line'
@@ -876,6 +951,20 @@ export function InfrastructureMapView({
       window.removeEventListener('keydown', onKeyDown)
     }
   }, [isPickingLocation, reportLocationPick, cancelLocationPick])
+
+  useEffect(() => {
+    if (!isAdjustingMediaMarker) return
+
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') {
+        ev.preventDefault()
+        cancelMediaMarkerFlow()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [cancelMediaMarkerFlow, isAdjustingMediaMarker])
 
   useEffect(() => {
     if (!isAdjustingDirection) return

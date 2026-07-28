@@ -1,6 +1,9 @@
 /** Default fill for capture points on map and floor plan. */
 export const DEFAULT_MARKER_COLOR = '#2563eb'
 
+/** Orange fill for preliminary media annotation markers before confirm. */
+export const PRELIMINARY_MARKER_COLOR = '#f97316'
+
 export function normalizeMarkerColor(value: string | undefined): string {
   if (value == null) return DEFAULT_MARKER_COLOR
   const v = value.trim()

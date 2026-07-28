@@ -4,6 +4,7 @@ import type { FloorPlanMarker } from '@/context/MapCaptureMarkersContext'
 import { useFeatureDraw } from '@/context/FeatureDrawContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
+import { useMediaMarkerFlow } from '@/context/MediaMarkerFlowContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 import type { FloorPlanDrawnGeometry } from '@/panels/library/assetGeometryHelpers'
@@ -17,7 +18,8 @@ import {
   mapOverlayInsetBottomClassName,
   mapOverlayInsetXClassName,
 } from '@/panels/map/mapOverlayLayout'
-import { markerColorsFromAsset, markerRgba } from '@/panels/map/markerColors'
+import { markerColorsFromAsset, markerRgba, PRELIMINARY_MARKER_COLOR } from '@/panels/map/markerColors'
+import { MEDIA_MARKER_DRAFT_ID } from '@/panels/map/mergeMediaMarkerPreview'
 import { DirectionAdjustBanner } from '@/panels/map/DirectionAdjustBanner'
 import { DirectionAdjustMarkerOverlay } from '@/panels/map/DirectionAdjustMarkerOverlay'
 import { DirectionBeam, effectiveViewDirectionDeg } from '@/panels/map/DirectionBeam'
@@ -552,6 +554,7 @@ function MapFloorPlanViewer({
     origPanY: 0,
   })
   const suppressPlanClickRef = useRef(false)
+  const draftMarkerDragRef = useRef(false)
 
   const {
     mapHoveredFeatureId,
@@ -592,6 +595,14 @@ function MapFloorPlanViewer({
     cancelFloorPlanLocationPick,
   } = useFloorPlanLocationPick()
 
+  const {
+    isAdjustingMediaMarker,
+    draftMarker,
+    updateDraftMarker,
+    parentAssetId,
+    cancelFlow: cancelMediaMarkerFlow,
+  } = useMediaMarkerFlow()
+
   const { isAdjustingDirection, cancelDirectionAdjust } = useViewDirectionAdjust()
 
   const {
@@ -627,6 +638,7 @@ function MapFloorPlanViewer({
     isPickingFloorPlanLocation ||
     isAdjustingDirection ||
     isDrawing ||
+    isAdjustingMediaMarker ||
     (isEditingFeature && drawPhase === 'collecting')
 
   const applyView = (next: ViewState) => {
@@ -661,6 +673,31 @@ function MapFloorPlanViewer({
         const geometry = floorDrawnGeometries.find(
           (g) => g.id === targetId && g.floorPlanId === floorPlanId,
         )
+        if (
+          isAdjustingMediaMarker &&
+          draftMarker?.floorPlanPosition != null &&
+          draftMarker.floorPlanPosition.floorPlanId === floorPlanId &&
+          parentAssetId === targetId &&
+          marker != null
+        ) {
+          applyView(
+            focusViewOnGeometry(
+              size.w,
+              size.h,
+              naturalSize.w,
+              naturalSize.h,
+              [
+                { x: marker.x, y: marker.y },
+                {
+                  x: draftMarker.floorPlanPosition.x,
+                  y: draftMarker.floorPlanPosition.y,
+                },
+              ],
+              fit.scale,
+            ),
+          )
+          return true
+        }
         if (marker != null) {
           applyView(
             focusViewOnMarker(size.w, size.h, naturalSize.w, naturalSize.h, marker, fit.scale),
@@ -685,7 +722,7 @@ function MapFloorPlanViewer({
       applyView(fit)
       return true
     },
-    [openedFeatureId, floorMarkers, floorDrawnGeometries, floorPlanId, naturalSize],
+    [openedFeatureId, floorMarkers, floorDrawnGeometries, floorPlanId, naturalSize, isAdjustingMediaMarker, draftMarker, parentAssetId],
   )
 
   useEffect(() => {
@@ -734,12 +771,14 @@ function MapFloorPlanViewer({
   }, [viewResizeToken, applyViewForContext])
 
   useEffect(() => {
-    if (!isPickingFloorPlanLocation && !isAdjustingDirection && !isDrawing && !isEditingFeature) return
+    if (!isPickingFloorPlanLocation && !isAdjustingDirection && !isDrawing && !isEditingFeature && !isAdjustingMediaMarker) return
 
     const onKeyDown = (ev: KeyboardEvent) => {
       if (ev.key === 'Escape') {
         ev.preventDefault()
-        if (isAdjustingDirection) {
+        if (isAdjustingMediaMarker) {
+          cancelMediaMarkerFlow()
+        } else if (isAdjustingDirection) {
           cancelDirectionAdjust()
         } else if (isEditingFeature) {
           cancelEditFeature()
@@ -756,8 +795,10 @@ function MapFloorPlanViewer({
   }, [
     isPickingFloorPlanLocation,
     isAdjustingDirection,
+    isAdjustingMediaMarker,
     isDrawing,
     isEditingFeature,
+    cancelMediaMarkerFlow,
     cancelDirectionAdjust,
     cancelDraw,
     cancelEditFeature,
@@ -891,8 +932,68 @@ function MapFloorPlanViewer({
     return true
   })
   const visibleFloorMarkers = floorMarkers.filter(
-    (m) => !(isEditingThisFeature && m.id === editingFeatureId),
+    (m) =>
+      !(isEditingThisFeature && m.id === editingFeatureId) && m.id !== MEDIA_MARKER_DRAFT_ID,
   )
+
+  const draftFloorMarker =
+    isAdjustingMediaMarker &&
+    draftMarker?.floorPlanPosition != null &&
+    draftMarker.floorPlanPosition.floorPlanId === floorPlanId
+      ? draftMarker
+      : null
+  const draftMediaMarkerColor = draftFloorMarker?.isPreliminary
+    ? PRELIMINARY_MARKER_COLOR
+    : (draftFloorMarker?.color ?? PRELIMINARY_MARKER_COLOR)
+  const { fill: draftFill, stroke: draftStroke } = markerColorsFromAsset(draftMediaMarkerColor)
+
+  useEffect(() => {
+    if (!isAdjustingMediaMarker) return
+    applyViewForContext(openedFeatureId)
+  }, [isAdjustingMediaMarker, viewResizeToken, applyViewForContext, openedFeatureId])
+
+  useEffect(() => {
+    if (!isAdjustingMediaMarker || draftFloorMarker?.floorPlanPosition == null) return
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!draftMarkerDragRef.current) return
+      const el = containerRef.current
+      if (el == null || naturalSize == null) return
+      const rect = el.getBoundingClientRect()
+      const localX = e.clientX - rect.left
+      const localY = e.clientY - rect.top
+      const ix = (localX - view.panX) / view.scale
+      const iy = (localY - view.panY) / view.scale
+      if (ix < 0 || iy < 0 || ix > naturalSize.w || iy > naturalSize.h) return
+      updateDraftMarker({
+        floorPlanPosition: {
+          floorPlanId,
+          x: ix / naturalSize.w,
+          y: iy / naturalSize.h,
+        },
+      })
+    }
+
+    const onPointerUp = () => {
+      draftMarkerDragRef.current = false
+    }
+
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp)
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerUp)
+    }
+  }, [
+    draftFloorMarker?.floorPlanPosition,
+    floorPlanId,
+    isAdjustingMediaMarker,
+    naturalSize,
+    updateDraftMarker,
+    view.panX,
+    view.panY,
+    view.scale,
+  ])
 
   const { scale, panX, panY } = view
   const showHoverPopup =
@@ -1022,6 +1123,45 @@ function MapFloorPlanViewer({
               />
             ))
           : null}
+        {draftFloorMarker?.floorPlanPosition != null ? (
+          <div
+            className="absolute z-20 overflow-visible"
+            style={{
+              left: `${draftFloorMarker.floorPlanPosition.x * 100}%`,
+              top: `${draftFloorMarker.floorPlanPosition.y * 100}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <svg
+              className="pointer-events-none absolute left-1/2 top-1/2"
+              width="32"
+              height="32"
+              viewBox="0 0 32 32"
+              style={{ transform: 'translate(-50%, -50%)' }}
+              aria-hidden
+            >
+              <line x1="16" y1="4" x2="16" y2="28" stroke={draftStroke} strokeWidth="1.5" />
+              <line x1="4" y1="16" x2="28" y2="16" stroke={draftStroke} strokeWidth="1.5" />
+            </svg>
+            <button
+              type="button"
+              data-floor-marker
+              className="relative z-10 block cursor-grab rounded-full border-2 p-0"
+              style={{
+                width: 20,
+                height: 20,
+                borderColor: markerRgba(draftStroke, 1),
+                backgroundColor: markerRgba(draftFill, 0.9),
+              }}
+              aria-label="Adjust marker location"
+              onPointerDown={(e) => {
+                e.stopPropagation()
+                draftMarkerDragRef.current = true
+                ;(e.currentTarget as HTMLButtonElement).setPointerCapture(e.pointerId)
+              }}
+            />
+          </div>
+        ) : null}
       </div>
       </div>
       <MapOverlayControlBar floorPlanId={floorPlanId} readOnly={readOnly} />

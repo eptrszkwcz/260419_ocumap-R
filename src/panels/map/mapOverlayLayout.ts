@@ -69,3 +69,10 @@ export function computePublishedFeaturesMenuMaxHeightPx(
 /** Mini overlay panel chrome for published map preview (size set inline). */
 export const publishedMiniPanelClassName =
   'overflow-hidden rounded-panel border border-stroke bg-panel shadow-lg'
+
+/** Map column height fraction when marker panel is open (top map area). */
+export const MARKER_FLOW_MAP_HEIGHT_FRACTION = 0.4
+/** Map column height fraction for marker panel (bottom area). */
+export const MARKER_FLOW_PANEL_HEIGHT_FRACTION = 0.6
+/** Vertical gap between map panel and marker panel tab row when marker flow is open. */
+export const MARKER_FLOW_PANEL_GAP_PX = 24

@@ -7,6 +7,7 @@ import { MapCaptureMarkersProvider } from '@/context/MapCaptureMarkersContext'
 import { FeatureDrawProvider } from '@/context/FeatureDrawContext'
 import { FloorPlanLocationPickProvider } from '@/context/FloorPlanLocationPickContext'
 import { MapLocationPickProvider } from '@/context/MapLocationPickContext'
+import { MediaMarkerFlowProvider } from '@/context/MediaMarkerFlowContext'
 import { ViewDirectionAdjustProvider } from '@/context/ViewDirectionAdjustContext'
 import { ProjectsDrawerProvider } from '@/context/ProjectsDrawerContext'
 import { DashboardLayout } from '@/layout/DashboardLayout'
@@ -19,6 +20,7 @@ export function LibraryPage() {
         <MapLocationPickProvider>
           <FloorPlanLocationPickProvider>
             <FeatureDrawProvider>
+              <MediaMarkerFlowProvider>
               <MarkerStylePreviewProvider>
                 <MapCaptureMarkersProvider>
                   <FeatureMapHoverProvider>
@@ -35,6 +37,7 @@ export function LibraryPage() {
                   </FeatureMapHoverProvider>
                 </MapCaptureMarkersProvider>
               </MarkerStylePreviewProvider>
+              </MediaMarkerFlowProvider>
             </FeatureDrawProvider>
           </FloorPlanLocationPickProvider>
         </MapLocationPickProvider>

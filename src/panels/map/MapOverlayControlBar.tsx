@@ -1,6 +1,7 @@
 import { useFeatureDraw } from '@/context/FeatureDrawContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
+import { useMediaMarkerFlow } from '@/context/MediaMarkerFlowContext'
 import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 import { DelayedTooltip } from '@/components/DelayedTooltip'
 import {
@@ -27,6 +28,7 @@ export function MapOverlayControlBar({
   const { isPickingLocation } = useMapLocationPick()
   const { isPickingFloorPlanLocation } = useFloorPlanLocationPick()
   const { isAdjustingDirection } = useViewDirectionAdjust()
+  const { isPlacingMediaMarker, isAdjustingMediaMarker } = useMediaMarkerFlow()
   const startFeatureDraw = useStartFeatureDraw()
 
   if (
@@ -34,6 +36,8 @@ export function MapOverlayControlBar({
     isPickingLocation ||
     isPickingFloorPlanLocation ||
     isAdjustingDirection ||
+    isPlacingMediaMarker ||
+    isAdjustingMediaMarker ||
     isEditingFeature
   ) {
     return null

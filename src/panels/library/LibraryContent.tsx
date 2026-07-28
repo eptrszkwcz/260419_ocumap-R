@@ -8,8 +8,9 @@ import { useMapCaptureMarkers } from '@/context/MapCaptureMarkersContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
+import { useMediaMarkerFlow } from '@/context/MediaMarkerFlowContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
-import { getSampleAssetsForProject, isDrawnFeature, type SpatialAsset } from '@/data/sampleAssets'
+import { getSampleAssetsForProject, isDrawnFeature, type MediaAnnotationMarker, type SpatialAsset } from '@/data/sampleAssets'
 import type { DemoProjectDetailsProfile } from '@/data/sampleProjectProfile'
 import { NEW_PROJECT_ID, sampleProjects } from '@/data/sampleProjects'
 import { downloadSpatialAsset } from '@/lib/downloadSpatialAsset'
@@ -18,6 +19,8 @@ import {
   assetsToFloorPlanDrawnGeometries,
   assetsToFloorPlanMarkers,
   assetsToMapDrawnGeometries,
+  assetsToMediaAnnotationCaptureMarkers,
+  assetsToMediaAnnotationFloorPlanMarkers,
 } from '@/panels/library/assetGeometryHelpers'
 import { DrawnFeatureMetadataPanel } from '@/panels/library/DrawnFeatureMetadataPanel'
 import { createDraftDrawnAsset } from '@/panels/map/FeatureDrawConfirmPanel'
@@ -67,6 +70,7 @@ function assetsForProject(projectId: string, isNewProject: boolean): SpatialAsse
 export function LibraryContent({ activeTabId }: LibraryContentProps) {
   const { projectId, isNewProject, project } = useActiveProject()
   const { getProjectProfile, updateProjectProfile } = useProjects()
+  const { registerPersistMarker } = useMediaMarkerFlow()
   const { setCaptureMarkers, setFloorPlanMarkers, setFloorPlanDrawnGeometries, setMapDrawnGeometries } =
     useMapCaptureMarkers()
   const [assets, setAssets] = useState<SpatialAsset[]>(() =>
@@ -90,8 +94,14 @@ export function LibraryContent({ activeTabId }: LibraryContentProps) {
   )
 
   useEffect(() => {
-    setCaptureMarkers(assetsToCaptureMarkers(mapVisibleAssets))
-    setFloorPlanMarkers(assetsToFloorPlanMarkers(mapVisibleAssets))
+    setCaptureMarkers([
+      ...assetsToCaptureMarkers(mapVisibleAssets),
+      ...assetsToMediaAnnotationCaptureMarkers(mapVisibleAssets),
+    ])
+    setFloorPlanMarkers([
+      ...assetsToFloorPlanMarkers(mapVisibleAssets),
+      ...assetsToMediaAnnotationFloorPlanMarkers(mapVisibleAssets),
+    ])
     setFloorPlanDrawnGeometries(assetsToFloorPlanDrawnGeometries(mapVisibleAssets))
     setMapDrawnGeometries(assetsToMapDrawnGeometries(mapVisibleAssets))
     return () => {
@@ -107,6 +117,24 @@ export function LibraryContent({ activeTabId }: LibraryContentProps) {
     setFloorPlanDrawnGeometries,
     setMapDrawnGeometries,
   ])
+
+  useEffect(() => {
+    registerPersistMarker((parentAssetId, marker: MediaAnnotationMarker) => {
+      setAssets((list) =>
+        list.map((a) => {
+          if (a.id !== parentAssetId) return a
+          const existing = a.mediaMarkers ?? []
+          const idx = existing.findIndex((m) => m.id === marker.id)
+          const nextMarkers =
+            idx >= 0
+              ? existing.map((m, i) => (i === idx ? marker : m))
+              : [...existing, marker]
+          return { ...a, mediaMarkers: nextMarkers }
+        }),
+      )
+    })
+    return () => registerPersistMarker(null)
+  }, [registerPersistMarker])
 
   if (isNewProject) {
     return <NewProjectDetailsForm />
@@ -156,6 +184,7 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
   const { cancelFloorPlanLocationPick, clearFloorPlanLocationPickPreview } = useFloorPlanLocationPick()
   const { cancelDirectionAdjust, isAdjustingDirection } = useViewDirectionAdjust()
   const { clearMarkerStylePreview } = useMarkerStylePreview()
+  const { openSavedMarker } = useMediaMarkerFlow()
   const { setOpenedFeatureId, setMapFeatureClickHandler, setViewDirectionBaseDeg, setViewDirectionLiveOffsetDeg } =
     useFeatureMapHover()
   const {
@@ -299,6 +328,11 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
     setOpenedAsset(asset)
     setOpenedFeatureId(asset.id)
     setViewerPanel(isDrawnFeature(asset) ? 'metadata' : 'media')
+  }
+
+  const openMediaMarker = (asset: SpatialAsset, marker: MediaAnnotationMarker) => {
+    openAsset(asset)
+    openSavedMarker(marker, asset)
   }
 
   const openFeatureProperties = (asset: SpatialAsset) => {
@@ -607,6 +641,7 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
                     onSelectFeature={selectFeature}
                     onToggleFeatureSelection={toggleFeatureSelection}
                     onOpenAsset={openAsset}
+                    onOpenMediaMarker={openMediaMarker}
                     onSetLocation={openSetLocation}
                     onDownloadAsset={downloadSpatialAsset}
                     onCopyAsset={() => undefined}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { PanelTabRow, type TabItem } from '@/components/PanelTabRow'
 import { PanelCenteredPrompt } from '@/components/PanelCenteredPrompt'
@@ -11,6 +11,7 @@ import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapCaptureMarkers } from '@/context/MapCaptureMarkersContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
+import { useMediaMarkerFlow } from '@/context/MediaMarkerFlowContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 
@@ -37,6 +38,16 @@ import {
   mergeFloorPlanMarkerPreview,
   mergeFloorPlanMarkerStylePreview,
 } from '@/panels/map/mergeLocationPickPreviews'
+import {
+  mergeMediaMarkerCapturePreview,
+  mergeMediaMarkerFloorPlanPreview,
+} from '@/panels/map/mergeMediaMarkerPreview'
+import { MarkerPanelColumn } from '@/panels/map/MarkerPanelColumn'
+import {
+  MARKER_FLOW_MAP_HEIGHT_FRACTION,
+  MARKER_FLOW_PANEL_HEIGHT_FRACTION,
+  MARKER_FLOW_PANEL_GAP_PX,
+} from '@/panels/map/mapOverlayLayout'
 
 const buildingTabs: TabItem[] = [
   { id: '2d', label: 'Floor Plans' },
@@ -68,6 +79,13 @@ export function MapColumn({
   const { locationPickPreview } = useMapLocationPick()
   const { floorPlanPickPreview } = useFloorPlanLocationPick()
   const { markerStylePreview } = useMarkerStylePreview()
+  const {
+    isMarkerPanelOpen,
+    draftMarker,
+    parentAssetId,
+    parentAsset,
+    markerFlowResizeToken,
+  } = useMediaMarkerFlow()
   const { adjustingFeatureId, isAdjustingDirection } = useViewDirectionAdjust()
   const { openedFeatureId, linkedFeatureId } = useFeatureMapHover()
   const [buildingTab, setBuildingTab] = useState('2d')
@@ -112,13 +130,27 @@ export function MapColumn({
 
   const displayCaptureMarkers = useMemo(() => {
     const withLocation = mergeCaptureMarkerPreview(captureMarkers, locationPickPreview)
-    return mergeCaptureMarkerStylePreview(withLocation, markerStylePreview)
-  }, [captureMarkers, locationPickPreview, markerStylePreview])
+    const withStyle = mergeCaptureMarkerStylePreview(withLocation, markerStylePreview)
+    return mergeMediaMarkerCapturePreview(withStyle, draftMarker, parentAssetId)
+  }, [captureMarkers, locationPickPreview, markerStylePreview, draftMarker, parentAssetId])
 
   const displayFloorPlanMarkers = useMemo(() => {
     const withLocation = mergeFloorPlanMarkerPreview(floorPlanMarkers, floorPlanPickPreview)
-    return mergeFloorPlanMarkerStylePreview(withLocation, markerStylePreview)
-  }, [floorPlanMarkers, floorPlanPickPreview, markerStylePreview])
+    const withStyle = mergeFloorPlanMarkerStylePreview(withLocation, markerStylePreview)
+    return mergeMediaMarkerFloorPlanPreview(
+      withStyle,
+      draftMarker,
+      parentAssetId,
+      floorPlanId,
+    )
+  }, [
+    floorPlanMarkers,
+    floorPlanPickPreview,
+    markerStylePreview,
+    draftMarker,
+    parentAssetId,
+    floorPlanId,
+  ])
 
   useEffect(() => {
     if (floorPlanPickPreview == null) return
@@ -154,6 +186,58 @@ export function MapColumn({
     ? 'flex h-full min-h-0 min-w-0 flex-col'
     : 'flex h-full min-h-[680px] min-w-0 flex-col'
   const resizeToken = isPublished ? layoutModeToken : splitCommitToken
+  const mapViewResizeToken = isMarkerPanelOpen && !isPublished ? markerFlowResizeToken : 0
+
+  const renderMapColumnBody = useCallback(
+    (mapBody: ReactNode, tabConnected = false) => {
+      if (!isMarkerPanelOpen || isPublished) {
+        return <TabPanelBody>{mapBody}</TabPanelBody>
+      }
+
+      const mapPanel = (
+        <TabPanelBody
+          className="min-h-0 min-w-0 overflow-hidden"
+          style={{ flex: MARKER_FLOW_MAP_HEIGHT_FRACTION }}
+        >
+          {mapBody}
+        </TabPanelBody>
+      )
+      const gapSpacer = (
+        <div
+          className="shrink-0 bg-page"
+          style={{ height: MARKER_FLOW_PANEL_GAP_PX }}
+          aria-hidden
+        />
+      )
+      const markerPanel = (
+        <div
+          className="flex min-h-0 min-w-0 flex-col"
+          style={{ flex: MARKER_FLOW_PANEL_HEIGHT_FRACTION }}
+        >
+          <MarkerPanelColumn parentAsset={parentAsset} />
+        </div>
+      )
+
+      if (tabConnected) {
+        return (
+          <>
+            {mapPanel}
+            {gapSpacer}
+            {markerPanel}
+          </>
+        )
+      }
+
+      return (
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-page">
+          {mapPanel}
+          {gapSpacer}
+          {markerPanel}
+        </div>
+      )
+    },
+    [isMarkerPanelOpen, isPublished, parentAsset],
+  )
 
   const columnHeader = hideHeader ? null : (
     <>
@@ -213,7 +297,7 @@ export function MapColumn({
             />
             <InfrastructureMapView
               styleUrl={activeStyleUrl}
-              splitCommitToken={resizeToken}
+              splitCommitToken={resizeToken + mapViewResizeToken}
               captureMarkers={displayCaptureMarkers}
               mapDrawnGeometries={mapDrawnGeometries}
               readOnly={readOnly}
@@ -240,7 +324,7 @@ export function MapColumn({
         {columnHeader}
         <div className="flex min-h-0 flex-1 flex-col">
           {tabRowSpacer}
-          <TabPanelBody>{infrastructureMapBody}</TabPanelBody>
+          {renderMapColumnBody(infrastructureMapBody)}
         </div>
       </div>
     )
@@ -282,7 +366,7 @@ export function MapColumn({
           floorPlanMarkers={displayFloorPlanMarkers}
           floorDrawnGeometries={floorPlanDrawnGeometries}
           readOnly={readOnly}
-          viewResizeToken={isPublished ? resizeToken : 0}
+          viewResizeToken={(isPublished ? resizeToken : 0) + mapViewResizeToken}
         />
       )}
     </div>
@@ -302,7 +386,7 @@ export function MapColumn({
           onSelect={setBuildingTab}
           aria-label="Map view mode"
         />
-        <TabPanelBody>{buildingMapBody}</TabPanelBody>
+        {renderMapColumnBody(buildingMapBody, true)}
       </div>
     </div>
   )

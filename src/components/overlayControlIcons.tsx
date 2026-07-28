@@ -68,6 +68,27 @@ export function ChatIcon() {
   )
 }
 
+export function AddMarkerIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <g transform="translate(0, -1)">
+        <path
+          d="M5.25 5.25h13.5a1.5 1.5 0 011.5 1.5v9.75a1.5 1.5 0 01-1.5 1.5H9.3L6 21V18h-.75a1.5 1.5 0 01-1.5-1.5v-9.75a1.5 1.5 0 011.5-1.5z"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M12 8.625v4.5M9.375 10.875h5.25"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+      </g>
+    </svg>
+  )
+}
+
 export function ChevronLeftIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
