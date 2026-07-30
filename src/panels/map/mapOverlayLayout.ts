@@ -69,3 +69,17 @@ export function computePublishedFeaturesMenuMaxHeightPx(
 /** Mini overlay panel chrome for published map preview (size set inline). */
 export const publishedMiniPanelClassName =
   'overflow-hidden rounded-panel border border-stroke bg-panel shadow-lg'
+
+/** Default marker panel height as a fraction of available split area (map + marker). */
+export const MARKER_FLOW_DEFAULT_PANEL_RATIO = 0.6
+/** Minimum height for the map area when the marker panel is open. */
+export const MARKER_FLOW_MAP_MIN_PX = 240
+/** Minimum height for the marker panel (tabs, header, composer). */
+export const MARKER_FLOW_PANEL_MIN_PX = 280
+/** Hit target height for the draggable split handle between map and marker panel. */
+export const MARKER_FLOW_RESIZE_HANDLE_HIT_PX = 16
+
+/** Extra lift for the media marker placement banner above the default bottom inset. */
+export const MEDIA_MARKER_PLACEMENT_BANNER_LIFT_PX = 64
+export const mapOverlayInsetBottomAboveMediaControlsClassName =
+  'bottom-[calc(1.25rem+64px)]'

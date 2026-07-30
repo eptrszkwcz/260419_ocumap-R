@@ -2,6 +2,7 @@ import {
   ACTIONS_COLUMN_WIDTH_PX,
   columnDefinitions,
   FEATURE_COLUMN_MIN_WIDTH_PX,
+  MARKERS_INDICATOR_COLUMN_WIDTH_PX,
 } from '@/panels/library/featureLibrary/columnDefinitions'
 import type { OptionalColumnId } from '@/panels/library/featureLibrary/types'
 
@@ -24,7 +25,11 @@ export function resolveVisibleColumns({
   }
 
   let remaining =
-    containerWidthPx - FEATURE_COLUMN_MIN_WIDTH_PX - ACTIONS_COLUMN_WIDTH_PX - TABLE_HORIZONTAL_PADDING_PX
+    containerWidthPx -
+    FEATURE_COLUMN_MIN_WIDTH_PX -
+    MARKERS_INDICATOR_COLUMN_WIDTH_PX -
+    ACTIONS_COLUMN_WIDTH_PX -
+    TABLE_HORIZONTAL_PADDING_PX
   const visible: OptionalColumnId[] = []
 
   for (const id of enabled) {

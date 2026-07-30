@@ -8,6 +8,7 @@ import {
   ACTIONS_COLUMN_WIDTH_PX,
   columnDefinitions,
   FEATURE_COLUMN_MIN_WIDTH_PX,
+  MARKERS_INDICATOR_COLUMN_WIDTH_PX,
 } from '@/panels/library/featureLibrary/columnDefinitions'
 import type { FeatureLibrarySortColumn } from '@/panels/library/featureLibrary/sortFeatureLibraryAssets'
 import type { OptionalColumnId } from '@/panels/library/featureLibrary/types'
@@ -24,6 +25,7 @@ type FeatureLibraryTableProps = {
   onSelectFeature?: (asset: SpatialAsset, index: number, shiftKey: boolean) => void
   onToggleFeatureSelection?: (asset: SpatialAsset, index: number) => void
   onOpenAsset?: (asset: SpatialAsset) => void
+  onOpenMediaMarker?: (asset: SpatialAsset, marker: import('@/data/sampleAssets').MediaAnnotationMarker) => void
   onSetLocation?: (asset: SpatialAsset) => void
   onDownloadAsset?: (asset: SpatialAsset) => void
   onCopyAsset?: (asset: SpatialAsset) => void
@@ -42,6 +44,7 @@ function FeatureLibraryTableColgroup({ visibleColumns }: { visibleColumns: Optio
       {visibleColumns.map((id) => (
         <col key={id} style={{ width: `${columnDefinitions[id].minWidthPx}px` }} />
       ))}
+      <col style={{ width: `${MARKERS_INDICATOR_COLUMN_WIDTH_PX}px` }} />
       <col style={{ width: `${ACTIONS_COLUMN_WIDTH_PX}px` }} />
     </colgroup>
   )
@@ -61,6 +64,7 @@ export function FeatureLibraryTable({
   onSelectFeature,
   onToggleFeatureSelection,
   onOpenAsset,
+  onOpenMediaMarker,
   onSetLocation,
   onDownloadAsset,
   onCopyAsset,
@@ -106,6 +110,14 @@ export function FeatureLibraryTable({
                 </th>
               ))}
               <th
+                className="bg-panel pl-0 pr-0 text-center font-bold"
+                scope="col"
+                style={{ width: MARKERS_INDICATOR_COLUMN_WIDTH_PX }}
+                aria-label="Markers"
+              >
+                <span className="sr-only">Markers</span>
+              </th>
+              <th
                 className="bg-panel pr-panel-padding pl-0 text-right font-bold"
                 scope="col"
                 aria-label="Actions"
@@ -142,6 +154,9 @@ export function FeatureLibraryTable({
                     : undefined
                 }
                 onOpen={onOpenAsset != null ? () => onOpenAsset(asset) : undefined}
+                onOpenMarker={
+                  onOpenMediaMarker != null ? (marker) => onOpenMediaMarker(asset, marker) : undefined
+                }
                 onSetLocation={onSetLocation != null ? () => onSetLocation(asset) : undefined}
                 onDownload={onDownloadAsset != null ? () => onDownloadAsset(asset) : undefined}
                 onCopy={onCopyAsset != null ? () => onCopyAsset(asset) : undefined}

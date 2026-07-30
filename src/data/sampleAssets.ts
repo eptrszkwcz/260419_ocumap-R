@@ -34,6 +34,37 @@ export type FloorPlanPosition = {
   y: number
 }
 
+export type MarkerLogEntryKind = 'user' | 'system'
+
+export type MarkerLogEntry = {
+  id: string
+  body: string
+  authorDisplayName: string
+  authorEmail?: string
+  /** ISO 8601 */
+  createdAt: string
+  /** ISO 8601; set when edited */
+  updatedAt?: string
+  kind: MarkerLogEntryKind
+}
+
+/** Annotation marker placed on media and linked to a map/floor-plan position. */
+export type MediaAnnotationMarker = {
+  id: string
+  name: string
+  dateAdded: string
+  color: string
+  logEntries?: MarkerLogEntry[]
+  /** Normalized 0–1 on flat image */
+  mediaPosition?: { x: number; y: number }
+  /** Spherical coords for pano (yaw/pitch in degrees) */
+  panoPosition?: { yawDeg: number; pitchDeg: number }
+  /** Building: normalized floor plan position */
+  floorPlanPosition?: FloorPlanPosition
+  /** Infrastructure: WGS84 */
+  mapPosition?: { lng: number; lat: number }
+}
+
 export type SpatialAsset = {
   id: string
   kind: AssetKind
@@ -69,6 +100,8 @@ export type SpatialAsset = {
   markerColor?: string
   /** Viewing direction on the map/plan, degrees clockwise from screen-up (0 = up, 90 = right). */
   viewDirectionDeg?: number
+  /** Markers annotated on this media item. */
+  mediaMarkers?: MediaAnnotationMarker[]
 }
 
 /** Best-effort kind for an uploaded `File` (user can override in the add form). */

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { PanelTabRow, type TabItem } from '@/components/PanelTabRow'
 import { PanelCenteredPrompt } from '@/components/PanelCenteredPrompt'
@@ -11,6 +11,7 @@ import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapCaptureMarkers } from '@/context/MapCaptureMarkersContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
+import { useMediaMarkerFlow } from '@/context/MediaMarkerFlowContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 
@@ -37,11 +38,35 @@ import {
   mergeFloorPlanMarkerPreview,
   mergeFloorPlanMarkerStylePreview,
 } from '@/panels/map/mergeLocationPickPreviews'
+import {
+  mergeMediaMarkerCapturePreview,
+  mergeMediaMarkerFloorPlanPreview,
+} from '@/panels/map/mergeMediaMarkerPreview'
+import { MapMarkerResizeHandle } from '@/layout/MapMarkerResizeHandle'
+import { MarkerPanelColumn } from '@/panels/map/MarkerPanelColumn'
+import {
+  MARKER_FLOW_DEFAULT_PANEL_RATIO,
+  MARKER_FLOW_MAP_MIN_PX,
+  MARKER_FLOW_PANEL_MIN_PX,
+  MARKER_FLOW_RESIZE_HANDLE_HIT_PX,
+} from '@/panels/map/mapOverlayLayout'
 
 const buildingTabs: TabItem[] = [
   { id: '2d', label: 'Floor Plans' },
   { id: '3d', label: '3D Point Cloud' },
 ]
+
+function clamp(n: number, lo: number, hi: number) {
+  return Math.min(hi, Math.max(lo, n))
+}
+
+function markerPanelPxFromRatio(available: number, ratio: number) {
+  if (available <= 0) return 0
+  const lo = MARKER_FLOW_PANEL_MIN_PX
+  const hi = available - MARKER_FLOW_MAP_MIN_PX
+  if (hi <= lo) return available / 2
+  return clamp(lo, ratio * available, hi)
+}
 
 type MapColumnProps = {
   /** Incremented when the library/map splitter drag ends; infrastructure Mapbox runs a final `resize()`. */
@@ -68,11 +93,23 @@ export function MapColumn({
   const { locationPickPreview } = useMapLocationPick()
   const { floorPlanPickPreview } = useFloorPlanLocationPick()
   const { markerStylePreview } = useMarkerStylePreview()
+  const {
+    isMarkerPanelOpen,
+    draftMarker,
+    parentAssetId,
+    parentAsset,
+    markerFlowResizeToken,
+  } = useMediaMarkerFlow()
   const { adjustingFeatureId, isAdjustingDirection } = useViewDirectionAdjust()
   const { openedFeatureId, linkedFeatureId } = useFeatureMapHover()
   const [buildingTab, setBuildingTab] = useState('2d')
   const [floorPlanViewMode, setFloorPlanViewMode] = useState<'view' | 'add'>('view')
   const [buildingBootstrap, setBuildingBootstrap] = useState<'addFloorPlan' | null>(null)
+  const splitRef = useRef<HTMLDivElement>(null)
+  const [splitHeight, setSplitHeight] = useState(0)
+  const [markerPanelRatio, setMarkerPanelRatio] = useState(MARKER_FLOW_DEFAULT_PANEL_RATIO)
+  const [markerSplitCommitToken, setMarkerSplitCommitToken] = useState(0)
+  const prevMarkerPanelOpenRef = useRef(false)
   const { floorPlanId, setFloorPlanId } = useActiveFloorPlan()
   const [baseMapStyleId, setBaseMapStyleId] = useState<MapBaseStyleId>('default')
 
@@ -81,12 +118,59 @@ export function MapColumn({
     [projectId, userFloorPlans],
   )
   const hasFloorPlans = floorPlanOptions.length > 0
+  const isPublished = variant === 'published'
 
   useEffect(() => {
     setBaseMapStyleId('default')
     setFloorPlanViewMode('view')
     setBuildingBootstrap(null)
   }, [projectId])
+
+  useLayoutEffect(() => {
+    const el = splitRef.current
+    if (el == null || !isMarkerPanelOpen || isPublished) return
+    const measure = () => setSplitHeight(el.getBoundingClientRect().height)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [isMarkerPanelOpen, isPublished])
+
+  useEffect(() => {
+    const wasOpen = prevMarkerPanelOpenRef.current
+    prevMarkerPanelOpenRef.current = isMarkerPanelOpen
+    if (!wasOpen && isMarkerPanelOpen) {
+      setMarkerPanelRatio(MARKER_FLOW_DEFAULT_PANEL_RATIO)
+    }
+  }, [isMarkerPanelOpen])
+
+  const applyMarkerSplitClientY = useCallback((clientY: number) => {
+    const el = splitRef.current
+    if (el == null) return
+    const rect = el.getBoundingClientRect()
+    const avail = Math.max(0, rect.height - MARKER_FLOW_RESIZE_HANDLE_HIT_PX)
+    if (avail <= 0) return
+    const markerPx = markerPanelPxFromRatio(avail, (rect.bottom - clientY) / avail)
+    setMarkerPanelRatio(markerPx / avail)
+  }, [])
+
+  const nudgeMarkerPanel = useCallback(
+    (deltaPx: number) => {
+      const el = splitRef.current
+      if (el == null) return
+      const rect = el.getBoundingClientRect()
+      const avail = Math.max(0, rect.height - MARKER_FLOW_RESIZE_HANDLE_HIT_PX)
+      if (avail <= 0) return
+      const cur = markerPanelPxFromRatio(avail, markerPanelRatio)
+      const next = markerPanelPxFromRatio(avail, (cur + deltaPx) / avail)
+      setMarkerPanelRatio(next / avail)
+    },
+    [markerPanelRatio],
+  )
+
+  const onMarkerSplitDragEnd = useCallback(() => {
+    setMarkerSplitCommitToken((t) => t + 1)
+  }, [])
 
   useEffect(() => {
     if (project.projectType !== 'Building' || buildingBootstrap !== 'addFloorPlan') return
@@ -112,13 +196,27 @@ export function MapColumn({
 
   const displayCaptureMarkers = useMemo(() => {
     const withLocation = mergeCaptureMarkerPreview(captureMarkers, locationPickPreview)
-    return mergeCaptureMarkerStylePreview(withLocation, markerStylePreview)
-  }, [captureMarkers, locationPickPreview, markerStylePreview])
+    const withStyle = mergeCaptureMarkerStylePreview(withLocation, markerStylePreview)
+    return mergeMediaMarkerCapturePreview(withStyle, draftMarker, parentAssetId)
+  }, [captureMarkers, locationPickPreview, markerStylePreview, draftMarker, parentAssetId])
 
   const displayFloorPlanMarkers = useMemo(() => {
     const withLocation = mergeFloorPlanMarkerPreview(floorPlanMarkers, floorPlanPickPreview)
-    return mergeFloorPlanMarkerStylePreview(withLocation, markerStylePreview)
-  }, [floorPlanMarkers, floorPlanPickPreview, markerStylePreview])
+    const withStyle = mergeFloorPlanMarkerStylePreview(withLocation, markerStylePreview)
+    return mergeMediaMarkerFloorPlanPreview(
+      withStyle,
+      draftMarker,
+      parentAssetId,
+      floorPlanId,
+    )
+  }, [
+    floorPlanMarkers,
+    floorPlanPickPreview,
+    markerStylePreview,
+    draftMarker,
+    parentAssetId,
+    floorPlanId,
+  ])
 
   useEffect(() => {
     if (floorPlanPickPreview == null) return
@@ -148,12 +246,91 @@ export function MapColumn({
     hasFloorPlans,
   ])
 
-  const isPublished = variant === 'published'
   const readOnly = isPublished
   const shellClass = isPublished
     ? 'flex h-full min-h-0 min-w-0 flex-col'
     : 'flex h-full min-h-[680px] min-w-0 flex-col'
   const resizeToken = isPublished ? layoutModeToken : splitCommitToken
+  const mapViewResizeToken =
+    isMarkerPanelOpen && !isPublished
+      ? markerFlowResizeToken + markerSplitCommitToken
+      : 0
+
+  const availableSplitHeight = Math.max(0, splitHeight - MARKER_FLOW_RESIZE_HANDLE_HIT_PX)
+  const markerPanelPx = markerPanelPxFromRatio(availableSplitHeight, markerPanelRatio)
+  const mapPanelPx = availableSplitHeight - markerPanelPx
+
+  const renderMapColumnBody = useCallback(
+    (mapBody: ReactNode, tabConnected = false) => {
+      if (!isMarkerPanelOpen || isPublished) {
+        return <TabPanelBody>{mapBody}</TabPanelBody>
+      }
+
+      const mapPanelStyle =
+        splitHeight > 0
+          ? { height: mapPanelPx, flexShrink: 0 as const }
+          : { flex: 1 - MARKER_FLOW_DEFAULT_PANEL_RATIO }
+
+      const markerPanelStyle =
+        splitHeight > 0
+          ? { height: markerPanelPx, flexShrink: 0 as const }
+          : { flex: MARKER_FLOW_DEFAULT_PANEL_RATIO }
+
+      const mapPanel = (
+        <TabPanelBody className="min-h-0 min-w-0 overflow-hidden" style={mapPanelStyle}>
+          {mapBody}
+        </TabPanelBody>
+      )
+      const resizeHandle = (
+        <MapMarkerResizeHandle
+          onDrag={applyMarkerSplitClientY}
+          onNudge={nudgeMarkerPanel}
+          onDragEnd={onMarkerSplitDragEnd}
+        />
+      )
+      const markerPanel = (
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden" style={markerPanelStyle}>
+          <MarkerPanelColumn parentAsset={parentAsset} />
+        </div>
+      )
+
+      const splitBody = (
+        <>
+          {mapPanel}
+          {resizeHandle}
+          {markerPanel}
+        </>
+      )
+
+      if (tabConnected) {
+        return (
+          <div
+            ref={splitRef}
+            className="flex min-h-0 min-w-0 flex-1 flex-col bg-page"
+          >
+            {splitBody}
+          </div>
+        )
+      }
+
+      return (
+        <div ref={splitRef} className="flex min-h-0 min-w-0 flex-1 flex-col bg-page">
+          {splitBody}
+        </div>
+      )
+    },
+    [
+      applyMarkerSplitClientY,
+      isMarkerPanelOpen,
+      isPublished,
+      mapPanelPx,
+      markerPanelPx,
+      nudgeMarkerPanel,
+      onMarkerSplitDragEnd,
+      parentAsset,
+      splitHeight,
+    ],
+  )
 
   const columnHeader = hideHeader ? null : (
     <>
@@ -213,7 +390,7 @@ export function MapColumn({
             />
             <InfrastructureMapView
               styleUrl={activeStyleUrl}
-              splitCommitToken={resizeToken}
+              splitCommitToken={resizeToken + mapViewResizeToken}
               captureMarkers={displayCaptureMarkers}
               mapDrawnGeometries={mapDrawnGeometries}
               readOnly={readOnly}
@@ -240,7 +417,7 @@ export function MapColumn({
         {columnHeader}
         <div className="flex min-h-0 flex-1 flex-col">
           {tabRowSpacer}
-          <TabPanelBody>{infrastructureMapBody}</TabPanelBody>
+          {renderMapColumnBody(infrastructureMapBody)}
         </div>
       </div>
     )
@@ -282,7 +459,7 @@ export function MapColumn({
           floorPlanMarkers={displayFloorPlanMarkers}
           floorDrawnGeometries={floorPlanDrawnGeometries}
           readOnly={readOnly}
-          viewResizeToken={isPublished ? resizeToken : 0}
+          viewResizeToken={(isPublished ? resizeToken : 0) + mapViewResizeToken}
         />
       )}
     </div>
@@ -302,7 +479,7 @@ export function MapColumn({
           onSelect={setBuildingTab}
           aria-label="Map view mode"
         />
-        <TabPanelBody>{buildingMapBody}</TabPanelBody>
+        {renderMapColumnBody(buildingMapBody, true)}
       </div>
     </div>
   )

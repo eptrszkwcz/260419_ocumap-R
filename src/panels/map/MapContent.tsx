@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
+import {
+  CrosshairTargetMarker,
+  crosshairTargetMarkerColor,
+  MAP_CROSSHAIR_TARGET_MARKER_SIZE,
+} from '@/components/CrosshairTargetMarker'
 import type { FloorPlanMarker } from '@/context/MapCaptureMarkersContext'
 import { useFeatureDraw } from '@/context/FeatureDrawContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
+import { useMediaMarkerFlow } from '@/context/MediaMarkerFlowContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
 import type { FloorPlanDrawnGeometry } from '@/panels/library/assetGeometryHelpers'
@@ -18,6 +24,7 @@ import {
   mapOverlayInsetXClassName,
 } from '@/panels/map/mapOverlayLayout'
 import { markerColorsFromAsset, markerRgba } from '@/panels/map/markerColors'
+import { MEDIA_MARKER_DRAFT_ID } from '@/panels/map/mergeMediaMarkerPreview'
 import { DirectionAdjustBanner } from '@/panels/map/DirectionAdjustBanner'
 import { DirectionAdjustMarkerOverlay } from '@/panels/map/DirectionAdjustMarkerOverlay'
 import { DirectionBeam, effectiveViewDirectionDeg } from '@/panels/map/DirectionBeam'
@@ -552,6 +559,7 @@ function MapFloorPlanViewer({
     origPanY: 0,
   })
   const suppressPlanClickRef = useRef(false)
+  const draftMarkerDragRef = useRef(false)
 
   const {
     mapHoveredFeatureId,
@@ -592,6 +600,15 @@ function MapFloorPlanViewer({
     cancelFloorPlanLocationPick,
   } = useFloorPlanLocationPick()
 
+  const {
+    isAdjustingMediaMarker,
+    draftMarker,
+    updateDraftMarker,
+    parentAssetId,
+    cancelFlow: cancelMediaMarkerFlow,
+    requestCloseMarkerPanel,
+  } = useMediaMarkerFlow()
+
   const { isAdjustingDirection, cancelDirectionAdjust } = useViewDirectionAdjust()
 
   const {
@@ -627,6 +644,7 @@ function MapFloorPlanViewer({
     isPickingFloorPlanLocation ||
     isAdjustingDirection ||
     isDrawing ||
+    isAdjustingMediaMarker ||
     (isEditingFeature && drawPhase === 'collecting')
 
   const applyView = (next: ViewState) => {
@@ -661,6 +679,31 @@ function MapFloorPlanViewer({
         const geometry = floorDrawnGeometries.find(
           (g) => g.id === targetId && g.floorPlanId === floorPlanId,
         )
+        if (
+          isAdjustingMediaMarker &&
+          draftMarker?.floorPlanPosition != null &&
+          draftMarker.floorPlanPosition.floorPlanId === floorPlanId &&
+          parentAssetId === targetId &&
+          marker != null
+        ) {
+          applyView(
+            focusViewOnGeometry(
+              size.w,
+              size.h,
+              naturalSize.w,
+              naturalSize.h,
+              [
+                { x: marker.x, y: marker.y },
+                {
+                  x: draftMarker.floorPlanPosition.x,
+                  y: draftMarker.floorPlanPosition.y,
+                },
+              ],
+              fit.scale,
+            ),
+          )
+          return true
+        }
         if (marker != null) {
           applyView(
             focusViewOnMarker(size.w, size.h, naturalSize.w, naturalSize.h, marker, fit.scale),
@@ -685,7 +728,7 @@ function MapFloorPlanViewer({
       applyView(fit)
       return true
     },
-    [openedFeatureId, floorMarkers, floorDrawnGeometries, floorPlanId, naturalSize],
+    [openedFeatureId, floorMarkers, floorDrawnGeometries, floorPlanId, naturalSize, isAdjustingMediaMarker, draftMarker, parentAssetId],
   )
 
   useEffect(() => {
@@ -734,12 +777,14 @@ function MapFloorPlanViewer({
   }, [viewResizeToken, applyViewForContext])
 
   useEffect(() => {
-    if (!isPickingFloorPlanLocation && !isAdjustingDirection && !isDrawing && !isEditingFeature) return
+    if (!isPickingFloorPlanLocation && !isAdjustingDirection && !isDrawing && !isEditingFeature && !isAdjustingMediaMarker) return
 
     const onKeyDown = (ev: KeyboardEvent) => {
       if (ev.key === 'Escape') {
         ev.preventDefault()
-        if (isAdjustingDirection) {
+        if (isAdjustingMediaMarker) {
+          requestCloseMarkerPanel()
+        } else if (isAdjustingDirection) {
           cancelDirectionAdjust()
         } else if (isEditingFeature) {
           cancelEditFeature()
@@ -756,8 +801,11 @@ function MapFloorPlanViewer({
   }, [
     isPickingFloorPlanLocation,
     isAdjustingDirection,
+    isAdjustingMediaMarker,
     isDrawing,
     isEditingFeature,
+    cancelMediaMarkerFlow,
+    requestCloseMarkerPanel,
     cancelDirectionAdjust,
     cancelDraw,
     cancelEditFeature,
@@ -891,8 +939,68 @@ function MapFloorPlanViewer({
     return true
   })
   const visibleFloorMarkers = floorMarkers.filter(
-    (m) => !(isEditingThisFeature && m.id === editingFeatureId),
+    (m) =>
+      !(isEditingThisFeature && m.id === editingFeatureId) && m.id !== MEDIA_MARKER_DRAFT_ID,
   )
+
+  const draftFloorMarker =
+    isAdjustingMediaMarker &&
+    draftMarker?.floorPlanPosition != null &&
+    draftMarker.floorPlanPosition.floorPlanId === floorPlanId
+      ? draftMarker
+      : null
+  const draftMediaMarkerColor = crosshairTargetMarkerColor(
+    draftFloorMarker?.color,
+    draftFloorMarker?.isPreliminary,
+  )
+
+  useEffect(() => {
+    if (!isAdjustingMediaMarker) return
+    applyViewForContext(openedFeatureId)
+  }, [isAdjustingMediaMarker, viewResizeToken, applyViewForContext, openedFeatureId])
+
+  useEffect(() => {
+    if (!isAdjustingMediaMarker || draftFloorMarker?.floorPlanPosition == null) return
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!draftMarkerDragRef.current) return
+      const el = containerRef.current
+      if (el == null || naturalSize == null) return
+      const rect = el.getBoundingClientRect()
+      const localX = e.clientX - rect.left
+      const localY = e.clientY - rect.top
+      const ix = (localX - view.panX) / view.scale
+      const iy = (localY - view.panY) / view.scale
+      if (ix < 0 || iy < 0 || ix > naturalSize.w || iy > naturalSize.h) return
+      updateDraftMarker({
+        floorPlanPosition: {
+          floorPlanId,
+          x: ix / naturalSize.w,
+          y: iy / naturalSize.h,
+        },
+      })
+    }
+
+    const onPointerUp = () => {
+      draftMarkerDragRef.current = false
+    }
+
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp)
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerUp)
+    }
+  }, [
+    draftFloorMarker?.floorPlanPosition,
+    floorPlanId,
+    isAdjustingMediaMarker,
+    naturalSize,
+    updateDraftMarker,
+    view.panX,
+    view.panY,
+    view.scale,
+  ])
 
   const { scale, panX, panY } = view
   const showHoverPopup =
@@ -1022,6 +1130,33 @@ function MapFloorPlanViewer({
               />
             ))
           : null}
+        {draftFloorMarker?.floorPlanPosition != null ? (
+          <div
+            className="absolute z-20 overflow-visible"
+            style={{
+              left: `${draftFloorMarker.floorPlanPosition.x * 100}%`,
+              top: `${draftFloorMarker.floorPlanPosition.y * 100}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <button
+              type="button"
+              data-floor-marker
+              className="block cursor-grab border-0 bg-transparent p-0"
+              aria-label="Adjust marker location"
+              onPointerDown={(e) => {
+                e.stopPropagation()
+                draftMarkerDragRef.current = true
+                ;(e.currentTarget as HTMLButtonElement).setPointerCapture(e.pointerId)
+              }}
+            >
+              <CrosshairTargetMarker
+                color={draftMediaMarkerColor}
+                size={MAP_CROSSHAIR_TARGET_MARKER_SIZE}
+              />
+            </button>
+          </div>
+        ) : null}
       </div>
       </div>
       <MapOverlayControlBar floorPlanId={floorPlanId} readOnly={readOnly} />

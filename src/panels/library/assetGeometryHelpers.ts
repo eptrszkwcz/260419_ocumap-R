@@ -223,3 +223,46 @@ export function assetsToMapDrawnGeometries(assets: SpatialAsset[]): MapDrawnGeom
       }
     })
 }
+
+export function assetsToMediaAnnotationFloorPlanMarkers(
+  assets: SpatialAsset[],
+): FloorPlanMarker[] {
+  const markers: FloorPlanMarker[] = []
+  for (const asset of assets) {
+    for (const m of asset.mediaMarkers ?? []) {
+      if (m.floorPlanPosition == null) continue
+      const { fill, stroke } = markerColorsFromAsset(m.color)
+      markers.push({
+        id: m.id,
+        title: m.name,
+        typeLabel: 'Marker',
+        floorPlanId: m.floorPlanPosition.floorPlanId,
+        x: m.floorPlanPosition.x,
+        y: m.floorPlanPosition.y,
+        color: fill,
+        strokeColor: stroke,
+      })
+    }
+  }
+  return markers
+}
+
+export function assetsToMediaAnnotationCaptureMarkers(assets: SpatialAsset[]): MapCaptureMarker[] {
+  const markers: MapCaptureMarker[] = []
+  for (const asset of assets) {
+    for (const m of asset.mediaMarkers ?? []) {
+      if (m.mapPosition == null) continue
+      const { fill, stroke } = markerColorsFromAsset(m.color)
+      markers.push({
+        id: m.id,
+        title: m.name,
+        typeLabel: 'Marker',
+        lng: m.mapPosition.lng,
+        lat: m.mapPosition.lat,
+        color: fill,
+        strokeColor: stroke,
+      })
+    }
+  }
+  return markers
+}
