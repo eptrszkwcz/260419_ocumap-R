@@ -8,6 +8,7 @@ import {
   ACTIONS_COLUMN_WIDTH_PX,
   columnDefinitions,
   FEATURE_COLUMN_MIN_WIDTH_PX,
+  MARKERS_INDICATOR_COLUMN_WIDTH_PX,
 } from '@/panels/library/featureLibrary/columnDefinitions'
 import type { FeatureLibrarySortColumn } from '@/panels/library/featureLibrary/sortFeatureLibraryAssets'
 import type { OptionalColumnId } from '@/panels/library/featureLibrary/types'
@@ -43,6 +44,7 @@ function FeatureLibraryTableColgroup({ visibleColumns }: { visibleColumns: Optio
       {visibleColumns.map((id) => (
         <col key={id} style={{ width: `${columnDefinitions[id].minWidthPx}px` }} />
       ))}
+      <col style={{ width: `${MARKERS_INDICATOR_COLUMN_WIDTH_PX}px` }} />
       <col style={{ width: `${ACTIONS_COLUMN_WIDTH_PX}px` }} />
     </colgroup>
   )
@@ -107,6 +109,14 @@ export function FeatureLibraryTable({
                   />
                 </th>
               ))}
+              <th
+                className="bg-panel pl-0 pr-0 text-center font-bold"
+                scope="col"
+                style={{ width: MARKERS_INDICATOR_COLUMN_WIDTH_PX }}
+                aria-label="Markers"
+              >
+                <span className="sr-only">Markers</span>
+              </th>
               <th
                 className="bg-panel pr-panel-padding pl-0 text-right font-bold"
                 scope="col"

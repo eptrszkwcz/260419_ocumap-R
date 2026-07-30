@@ -14,6 +14,7 @@ export type ColumnDefinition = {
 }
 
 export const FEATURE_COLUMN_MIN_WIDTH_PX = 256
+export const MARKERS_INDICATOR_COLUMN_WIDTH_PX = 28
 export const ACTIONS_COLUMN_WIDTH_PX = 36
 
 export const columnDefinitions: Record<OptionalColumnId, ColumnDefinition> = {

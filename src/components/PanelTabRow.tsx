@@ -1,4 +1,4 @@
-export type TabItem = { id: string; label: string }
+export type TabItem = { id: string; label: string; disabled?: boolean; title?: string }
 
 type PanelTabRowProps = {
   tabs: TabItem[]
@@ -21,6 +21,7 @@ export function PanelTabRow({
     >
       {tabs.map((tab) => {
         const selected = tab.id === activeId
+        const disabled = tab.disabled === true
         if (selected) {
           return (
             <button
@@ -28,8 +29,12 @@ export function PanelTabRow({
               type="button"
               role="tab"
               aria-selected
-              className="ocu-tab-active-surface ocu-tab-active-overlap relative z-10 box-border flex min-w-0 shrink-0 items-center border border-stroke border-b-0 bg-panel px-4 font-sans text-standard font-bold text-fg-highlight shadow-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35"
-              onClick={() => onSelect(tab.id)}
+              disabled={disabled}
+              title={tab.title}
+              className="ocu-tab-active-surface ocu-tab-active-overlap relative z-10 box-border flex min-w-0 shrink-0 items-center border border-stroke border-b-0 bg-panel px-4 font-sans text-standard font-bold text-fg-highlight shadow-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35 disabled:cursor-not-allowed disabled:opacity-45"
+              onClick={() => {
+                if (!disabled) onSelect(tab.id)
+              }}
             >
               {tab.label}
             </button>
@@ -41,8 +46,12 @@ export function PanelTabRow({
             type="button"
             role="tab"
             aria-selected={false}
-            className="box-border flex h-tab-row min-w-0 shrink-0 items-center px-3 font-sans text-standard text-fg-muted transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35"
-            onClick={() => onSelect(tab.id)}
+            disabled={disabled}
+            title={tab.title}
+            className="box-border flex h-tab-row min-w-0 shrink-0 items-center px-3 font-sans text-standard text-fg-muted transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:text-fg-muted"
+            onClick={() => {
+              if (!disabled) onSelect(tab.id)
+            }}
           >
             {tab.label}
           </button>

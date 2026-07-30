@@ -26,7 +26,7 @@ import {
 } from '@/data/sampleAssets'
 import { effectiveViewDirectionDeg } from '@/panels/map/DirectionBeam'
 import {
-  mapOverlayInsetBottomClassName,
+  mapOverlayInsetBottomAboveMediaControlsClassName,
   mapOverlayInsetXClassName,
 } from '@/panels/map/mapOverlayLayout'
 import { getDefaultFloorPlanIdForProject } from '@/panels/map/mapFloorPlans'
@@ -69,12 +69,16 @@ export function FeatureLibraryMediaViewer({
   const {
     isPlacingMediaMarker,
     isAdjustingMediaMarker,
+    parentAssetId,
     draftMarker,
     startPlacement,
     placeOnMedia,
     updateDraftMarker,
     cancelFlow,
+    requestCloseMarkerPanel,
   } = useMediaMarkerFlow()
+
+  const markerFlowAppliesToAsset = parentAssetId === asset.id
 
   const index = Math.max(
     0,
@@ -152,15 +156,47 @@ export function FeatureLibraryMediaViewer({
     const onKeyDown = (ev: KeyboardEvent) => {
       if (ev.key === 'Escape') {
         ev.preventDefault()
-        cancelFlow()
+        if (isAdjustingMediaMarker) {
+          requestCloseMarkerPanel()
+        } else {
+          cancelFlow()
+        }
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [cancelFlow, isAdjustingMediaMarker, isPlacingMediaMarker])
+  }, [cancelFlow, isAdjustingMediaMarker, isPlacingMediaMarker, requestCloseMarkerPanel])
 
-  const showMediaMarker =
-    isAdjustingMediaMarker && draftMarker?.mediaPosition != null
+  const showDraftMediaMarker =
+    markerFlowAppliesToAsset &&
+    isAdjustingMediaMarker &&
+    draftMarker?.mediaPosition != null
+
+  const savedFlatMediaMarkers = (asset.mediaMarkers ?? []).filter((marker) => {
+    if (marker.mediaPosition == null) return false
+    if (
+      markerFlowAppliesToAsset &&
+      isAdjustingMediaMarker &&
+      draftMarker?.id != null &&
+      marker.id === draftMarker.id
+    ) {
+      return false
+    }
+    return true
+  })
+
+  const savedPanoMediaMarkers = (asset.mediaMarkers ?? []).filter((marker) => {
+    if (marker.panoPosition == null) return false
+    if (
+      markerFlowAppliesToAsset &&
+      isAdjustingMediaMarker &&
+      draftMarker?.id != null &&
+      marker.id === draftMarker.id
+    ) {
+      return false
+    }
+    return true
+  })
 
   return (
     <div
@@ -181,11 +217,22 @@ export function FeatureLibraryMediaViewer({
             placementMode={isPlacingMediaMarker}
             onPlacementClick={handlePanoPlacementClick}
             markerPanoPosition={
-              isAdjustingMediaMarker ? (draftMarker?.panoPosition ?? null) : null
+              markerFlowAppliesToAsset && isAdjustingMediaMarker
+                ? (draftMarker?.panoPosition ?? null)
+                : null
             }
             markerIsPreliminary={draftMarker?.isPreliminary ?? true}
             markerColor={draftMarker?.color}
-            markerDraggable={isAdjustingMediaMarker && draftMarker?.panoPosition != null}
+            markerDraggable={
+              markerFlowAppliesToAsset &&
+              isAdjustingMediaMarker &&
+              draftMarker?.panoPosition != null
+            }
+            persistedPanoMarkers={savedPanoMediaMarkers.map((marker) => ({
+              id: marker.id,
+              panoPosition: marker.panoPosition!,
+              color: marker.color,
+            }))}
             onMarkerMove={(pos) => updateDraftMarker({ panoPosition: pos })}
           />
         ) : isVideoAsset(asset) ? (
@@ -209,7 +256,14 @@ export function FeatureLibraryMediaViewer({
               className="pointer-events-none absolute inset-0 h-full w-full object-cover"
               draggable={false}
             />
-            {showMediaMarker && draftMarker?.mediaPosition != null ? (
+            {savedFlatMediaMarkers.map((marker) => (
+              <MediaMarkerOverlay
+                key={marker.id}
+                draft={{ color: marker.color, isPreliminary: false }}
+                mediaPosition={marker.mediaPosition!}
+              />
+            ))}
+            {showDraftMediaMarker && draftMarker?.mediaPosition != null ? (
               <MediaMarkerOverlay
                 draft={draftMarker}
                 mediaPosition={draftMarker.mediaPosition}
@@ -226,7 +280,7 @@ export function FeatureLibraryMediaViewer({
               'pointer-events-none absolute z-20 flex justify-center ' +
               mapOverlayInsetXClassName +
               ' ' +
-              mapOverlayInsetBottomClassName
+              mapOverlayInsetBottomAboveMediaControlsClassName
             }
             role="status"
             aria-live="polite"

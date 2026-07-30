@@ -34,12 +34,27 @@ export type FloorPlanPosition = {
   y: number
 }
 
+export type MarkerLogEntryKind = 'user' | 'system'
+
+export type MarkerLogEntry = {
+  id: string
+  body: string
+  authorDisplayName: string
+  authorEmail?: string
+  /** ISO 8601 */
+  createdAt: string
+  /** ISO 8601; set when edited */
+  updatedAt?: string
+  kind: MarkerLogEntryKind
+}
+
 /** Annotation marker placed on media and linked to a map/floor-plan position. */
 export type MediaAnnotationMarker = {
   id: string
   name: string
   dateAdded: string
   color: string
+  logEntries?: MarkerLogEntry[]
   /** Normalized 0–1 on flat image */
   mediaPosition?: { x: number; y: number }
   /** Spherical coords for pano (yaw/pitch in degrees) */

@@ -3,6 +3,12 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 
+import {
+  createCrosshairTargetMarkerElement,
+  crosshairTargetMarkerColor,
+  crosshairTargetMarkerSvgMarkup,
+  MAP_CROSSHAIR_TARGET_MARKER_SIZE,
+} from '@/components/CrosshairTargetMarker'
 import type { MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
 import { useFeatureDraw } from '@/context/FeatureDrawContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
@@ -24,7 +30,7 @@ import {
   DRAWN_LINE_LAYER_ID,
   resyncAllDrawLayers,
 } from '@/panels/map/mapDrawLayers'
-import { markerColorsFromAsset, markerRgba, PRELIMINARY_MARKER_COLOR } from '@/panels/map/markerColors'
+import { markerColorsFromAsset, markerRgba } from '@/panels/map/markerColors'
 import { MEDIA_MARKER_DRAFT_ID } from '@/panels/map/mergeMediaMarkerPreview'
 import {
   mapOverlayInsetBottomClassName,
@@ -330,6 +336,7 @@ export function InfrastructureMapView({
     draftMarker,
     updateDraftMarker,
     cancelFlow: cancelMediaMarkerFlow,
+    requestCloseMarkerPanel,
   } = useMediaMarkerFlow()
   const previewColor = markerStylePreview?.color ?? draftMarkerColor
   const { fill: previewFill, stroke: previewStroke } = markerColorsFromAsset(previewColor)
@@ -635,14 +642,15 @@ export function InfrastructureMapView({
       return
     }
 
-    const color = draftMarker.isPreliminary
-      ? PRELIMINARY_MARKER_COLOR
-      : (draftMarker.color ?? PRELIMINARY_MARKER_COLOR)
-    const { fill } = markerColorsFromAsset(color)
+    const color = crosshairTargetMarkerColor(draftMarker.color, draftMarker.isPreliminary)
     const { lng, lat } = draftMarker.mapPosition
 
     if (mediaMarkerDraftMarkerRef.current == null) {
-      const marker = new mapboxgl.Marker({ draggable: true, color: fill })
+      const el = createCrosshairTargetMarkerElement(color, {
+        cursor: 'grab',
+        size: MAP_CROSSHAIR_TARGET_MARKER_SIZE,
+      })
+      const marker = new mapboxgl.Marker({ element: el, draggable: true, anchor: 'center' })
         .setLngLat([lng, lat])
         .addTo(map)
       marker.on('drag', () => {
@@ -652,6 +660,9 @@ export function InfrastructureMapView({
       mediaMarkerDraftMarkerRef.current = marker
     } else {
       mediaMarkerDraftMarkerRef.current.setLngLat([lng, lat])
+      const el = mediaMarkerDraftMarkerRef.current.getElement()
+      el.innerHTML = crosshairTargetMarkerSvgMarkup(color, MAP_CROSSHAIR_TARGET_MARKER_SIZE)
+      el.style.cursor = 'grab'
     }
 
     return () => {
@@ -958,13 +969,13 @@ export function InfrastructureMapView({
     const onKeyDown = (ev: KeyboardEvent) => {
       if (ev.key === 'Escape') {
         ev.preventDefault()
-        cancelMediaMarkerFlow()
+        requestCloseMarkerPanel()
       }
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [cancelMediaMarkerFlow, isAdjustingMediaMarker])
+  }, [isAdjustingMediaMarker, requestCloseMarkerPanel])
 
   useEffect(() => {
     if (!isAdjustingDirection) return

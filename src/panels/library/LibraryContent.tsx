@@ -70,7 +70,7 @@ function assetsForProject(projectId: string, isNewProject: boolean): SpatialAsse
 export function LibraryContent({ activeTabId }: LibraryContentProps) {
   const { projectId, isNewProject, project } = useActiveProject()
   const { getProjectProfile, updateProjectProfile } = useProjects()
-  const { registerPersistMarker } = useMediaMarkerFlow()
+  const { registerPersistMarker, registerRemoveMarker } = useMediaMarkerFlow()
   const { setCaptureMarkers, setFloorPlanMarkers, setFloorPlanDrawnGeometries, setMapDrawnGeometries } =
     useMapCaptureMarkers()
   const [assets, setAssets] = useState<SpatialAsset[]>(() =>
@@ -136,6 +136,21 @@ export function LibraryContent({ activeTabId }: LibraryContentProps) {
     return () => registerPersistMarker(null)
   }, [registerPersistMarker])
 
+  useEffect(() => {
+    registerRemoveMarker((parentAssetId, markerId) => {
+      setAssets((list) =>
+        list.map((a) => {
+          if (a.id !== parentAssetId) return a
+          return {
+            ...a,
+            mediaMarkers: (a.mediaMarkers ?? []).filter((m) => m.id !== markerId),
+          }
+        }),
+      )
+    })
+    return () => registerRemoveMarker(null)
+  }, [registerRemoveMarker])
+
   if (isNewProject) {
     return <NewProjectDetailsForm />
   }
@@ -184,7 +199,6 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
   const { cancelFloorPlanLocationPick, clearFloorPlanLocationPickPreview } = useFloorPlanLocationPick()
   const { cancelDirectionAdjust, isAdjustingDirection } = useViewDirectionAdjust()
   const { clearMarkerStylePreview } = useMarkerStylePreview()
-  const { openSavedMarker } = useMediaMarkerFlow()
   const { setOpenedFeatureId, setMapFeatureClickHandler, setViewDirectionBaseDeg, setViewDirectionLiveOffsetDeg } =
     useFeatureMapHover()
   const {
@@ -198,6 +212,12 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
     cancelEditFeature,
   } = useFeatureDraw()
   const startFeatureDraw = useStartFeatureDraw()
+  const {
+    openSavedMarker,
+    cancelFlow,
+    isMarkerPanelOpen,
+    parentAssetId: markerFlowParentAssetId,
+  } = useMediaMarkerFlow()
   const contentsRef = useRef<HTMLDivElement>(null)
   const drawSessionOpenedRef = useRef<string | null>(null)
 
@@ -320,6 +340,9 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
   const openAsset = (asset: SpatialAsset) => {
     if (isDrawing) closeDrawSession()
     if (isEditingFeature) cancelEditFeature()
+    if (isMarkerPanelOpen && markerFlowParentAssetId !== asset.id) {
+      cancelFlow()
+    }
     cancelLocationPick()
     cancelFloorPlanLocationPick()
     cancelDirectionAdjust()
@@ -415,13 +438,26 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
           openFeatureProperties(asset)
           return
         }
+        if (isMarkerPanelOpen && markerFlowParentAssetId !== asset.id) {
+          cancelFlow()
+        }
         setViewerPanel('media')
         setOpenedAsset(asset)
         setOpenedFeatureId(asset.id)
       }
     })
     return () => setMapFeatureClickHandler(null)
-  }, [assets, isAdjustingDirection, isDrawing, isEditingFeature, setMapFeatureClickHandler, setOpenedFeatureId])
+  }, [
+    assets,
+    cancelFlow,
+    isAdjustingDirection,
+    isDrawing,
+    isEditingFeature,
+    isMarkerPanelOpen,
+    markerFlowParentAssetId,
+    setMapFeatureClickHandler,
+    setOpenedFeatureId,
+  ])
 
   const closeGeometryViewer = () => {
     cancelLocationPick()
@@ -455,6 +491,9 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
   }
 
   const replaceOpenedAsset = (asset: SpatialAsset) => {
+    if (isMarkerPanelOpen && markerFlowParentAssetId !== asset.id) {
+      cancelFlow()
+    }
     setOpenedAsset(asset)
     setViewerPanel('media')
   }

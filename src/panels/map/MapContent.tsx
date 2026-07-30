@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
+import {
+  CrosshairTargetMarker,
+  crosshairTargetMarkerColor,
+  MAP_CROSSHAIR_TARGET_MARKER_SIZE,
+} from '@/components/CrosshairTargetMarker'
 import type { FloorPlanMarker } from '@/context/MapCaptureMarkersContext'
 import { useFeatureDraw } from '@/context/FeatureDrawContext'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
@@ -18,7 +23,7 @@ import {
   mapOverlayInsetBottomClassName,
   mapOverlayInsetXClassName,
 } from '@/panels/map/mapOverlayLayout'
-import { markerColorsFromAsset, markerRgba, PRELIMINARY_MARKER_COLOR } from '@/panels/map/markerColors'
+import { markerColorsFromAsset, markerRgba } from '@/panels/map/markerColors'
 import { MEDIA_MARKER_DRAFT_ID } from '@/panels/map/mergeMediaMarkerPreview'
 import { DirectionAdjustBanner } from '@/panels/map/DirectionAdjustBanner'
 import { DirectionAdjustMarkerOverlay } from '@/panels/map/DirectionAdjustMarkerOverlay'
@@ -601,6 +606,7 @@ function MapFloorPlanViewer({
     updateDraftMarker,
     parentAssetId,
     cancelFlow: cancelMediaMarkerFlow,
+    requestCloseMarkerPanel,
   } = useMediaMarkerFlow()
 
   const { isAdjustingDirection, cancelDirectionAdjust } = useViewDirectionAdjust()
@@ -777,7 +783,7 @@ function MapFloorPlanViewer({
       if (ev.key === 'Escape') {
         ev.preventDefault()
         if (isAdjustingMediaMarker) {
-          cancelMediaMarkerFlow()
+          requestCloseMarkerPanel()
         } else if (isAdjustingDirection) {
           cancelDirectionAdjust()
         } else if (isEditingFeature) {
@@ -799,6 +805,7 @@ function MapFloorPlanViewer({
     isDrawing,
     isEditingFeature,
     cancelMediaMarkerFlow,
+    requestCloseMarkerPanel,
     cancelDirectionAdjust,
     cancelDraw,
     cancelEditFeature,
@@ -942,10 +949,10 @@ function MapFloorPlanViewer({
     draftMarker.floorPlanPosition.floorPlanId === floorPlanId
       ? draftMarker
       : null
-  const draftMediaMarkerColor = draftFloorMarker?.isPreliminary
-    ? PRELIMINARY_MARKER_COLOR
-    : (draftFloorMarker?.color ?? PRELIMINARY_MARKER_COLOR)
-  const { fill: draftFill, stroke: draftStroke } = markerColorsFromAsset(draftMediaMarkerColor)
+  const draftMediaMarkerColor = crosshairTargetMarkerColor(
+    draftFloorMarker?.color,
+    draftFloorMarker?.isPreliminary,
+  )
 
   useEffect(() => {
     if (!isAdjustingMediaMarker) return
@@ -1132,34 +1139,22 @@ function MapFloorPlanViewer({
               transform: 'translate(-50%, -50%)',
             }}
           >
-            <svg
-              className="pointer-events-none absolute left-1/2 top-1/2"
-              width="32"
-              height="32"
-              viewBox="0 0 32 32"
-              style={{ transform: 'translate(-50%, -50%)' }}
-              aria-hidden
-            >
-              <line x1="16" y1="4" x2="16" y2="28" stroke={draftStroke} strokeWidth="1.5" />
-              <line x1="4" y1="16" x2="28" y2="16" stroke={draftStroke} strokeWidth="1.5" />
-            </svg>
             <button
               type="button"
               data-floor-marker
-              className="relative z-10 block cursor-grab rounded-full border-2 p-0"
-              style={{
-                width: 20,
-                height: 20,
-                borderColor: markerRgba(draftStroke, 1),
-                backgroundColor: markerRgba(draftFill, 0.9),
-              }}
+              className="block cursor-grab border-0 bg-transparent p-0"
               aria-label="Adjust marker location"
               onPointerDown={(e) => {
                 e.stopPropagation()
                 draftMarkerDragRef.current = true
                 ;(e.currentTarget as HTMLButtonElement).setPointerCapture(e.pointerId)
               }}
-            />
+            >
+              <CrosshairTargetMarker
+                color={draftMediaMarkerColor}
+                size={MAP_CROSSHAIR_TARGET_MARKER_SIZE}
+              />
+            </button>
           </div>
         ) : null}
       </div>

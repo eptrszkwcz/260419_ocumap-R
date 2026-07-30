@@ -1,46 +1,33 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { FeatureMarkerColorField } from '@/components/FeatureMarkerColorField'
 import { useActiveProject } from '@/context/ActiveProjectContext'
 import { useProjectFloorPlans } from '@/context/ProjectFloorPlansContext'
 import { useMediaMarkerFlow } from '@/context/MediaMarkerFlowContext'
-import type { MediaAnnotationMarker, SpatialAsset } from '@/data/sampleAssets'
+import type { SpatialAsset } from '@/data/sampleAssets'
 import { formatFloorPlanCoord } from '@/lib/formatFloorPlanCoord'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/primaryButtonClass'
 import {
   featureMetadataFooterActionsClassName,
   featureMetadataFooterCancelButtonClass,
   featureMetadataInputClassName,
+  featureMetadataSelectClassName,
 } from '@/panels/library/featureMetadata/styles'
-import { floorPlanDisplayLabel } from '@/panels/map/mapFloorPlans'
+import { getFloorPlanOptionsForProject, type FloorPlanId } from '@/panels/map/mapFloorPlans'
 
 type MarkerInfoPanelProps = {
   parentAsset: SpatialAsset | null
+  onSaveSuccess?: () => void
 }
 
-function isMarkerDraftDirty(
-  draft: Partial<MediaAnnotationMarker>,
-  saved: MediaAnnotationMarker | null,
-): boolean {
-  if (saved == null) return false
-  return (
-    (draft.name ?? '') !== saved.name ||
-    (draft.color ?? '') !== saved.color ||
-    draft.mediaPosition?.x !== saved.mediaPosition?.x ||
-    draft.mediaPosition?.y !== saved.mediaPosition?.y ||
-    draft.panoPosition?.yawDeg !== saved.panoPosition?.yawDeg ||
-    draft.panoPosition?.pitchDeg !== saved.panoPosition?.pitchDeg ||
-    draft.floorPlanPosition?.x !== saved.floorPlanPosition?.x ||
-    draft.floorPlanPosition?.y !== saved.floorPlanPosition?.y ||
-    draft.mapPosition?.lng !== saved.mapPosition?.lng ||
-    draft.mapPosition?.lat !== saved.mapPosition?.lat
-  )
-}
-
-export function MarkerInfoPanel({ parentAsset }: MarkerInfoPanelProps) {
+export function MarkerInfoPanel({ parentAsset, onSaveSuccess }: MarkerInfoPanelProps) {
   const { project, projectId } = useActiveProject()
   const { getFloorPlans } = useProjectFloorPlans()
   const userFloorPlans = getFloorPlans(projectId)
+  const floorPlanOptions = useMemo(
+    () => getFloorPlanOptionsForProject(projectId, userFloorPlans),
+    [projectId, userFloorPlans],
+  )
   const isBuildingProject = project.projectType === 'Building'
   const {
     panelPhase,
@@ -48,55 +35,23 @@ export function MarkerInfoPanel({ parentAsset }: MarkerInfoPanelProps) {
     updateDraftMarker,
     confirmPlacement,
     saveMarker,
-    cancelFlow,
+    openCancelMarkerConfirmation,
   } = useMediaMarkerFlow()
-
-  const savedSnapshot = useMemo((): MediaAnnotationMarker | null => {
-    if (draftMarker?.id == null || draftMarker.isPreliminary) return null
-    return {
-      id: draftMarker.id,
-      name: draftMarker.name ?? 'Marker',
-      dateAdded: draftMarker.dateAdded ?? '',
-      color: draftMarker.color ?? '#2563eb',
-      mediaPosition: draftMarker.mediaPosition,
-      panoPosition: draftMarker.panoPosition,
-      floorPlanPosition: draftMarker.floorPlanPosition,
-      mapPosition: draftMarker.mapPosition,
-    }
-  }, [draftMarker])
-
-  const [baseline, setBaseline] = useState<MediaAnnotationMarker | null>(null)
-
-  const isDirty = useMemo(
-    () => isMarkerDraftDirty(draftMarker ?? {}, baseline ?? savedSnapshot),
-    [baseline, draftMarker, savedSnapshot],
-  )
 
   const handleConfirm = useCallback(() => {
     const count = parentAsset?.mediaMarkers?.length ?? 0
     confirmPlacement(count)
-    setBaseline(null)
   }, [confirmPlacement, parentAsset?.mediaMarkers?.length])
 
   const handleSave = useCallback(() => {
     const saved = saveMarker()
     if (saved == null) return
-    setBaseline(saved)
-  }, [saveMarker])
-
-  const handleCancelEdits = useCallback(() => {
-    if (baseline != null) {
-      updateDraftMarker({ ...baseline, isPreliminary: false })
-      return
-    }
-    if (savedSnapshot != null) {
-      updateDraftMarker({ ...savedSnapshot, isPreliminary: false })
-    }
-  }, [baseline, savedSnapshot, updateDraftMarker])
+    onSaveSuccess?.()
+  }, [onSaveSuccess, saveMarker])
 
   if (panelPhase === 'confirm') {
     return (
-      <div className="flex min-h-0 flex-1 flex-col justify-center gap-4 p-panel-padding">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-panel-padding text-center">
         <p className="text-fg font-sans text-standard">
           Adjust marker location on the media or map if necessary
         </p>
@@ -118,13 +73,7 @@ export function MarkerInfoPanel({ parentAsset }: MarkerInfoPanelProps) {
     return null
   }
 
-  const floorLabel =
-    isBuildingProject && draftMarker.floorPlanPosition != null
-      ? floorPlanDisplayLabel(
-          draftMarker.floorPlanPosition.floorPlanId,
-          userFloorPlans,
-        )
-      : null
+  const floorPlanId = draftMarker.floorPlanPosition?.floorPlanId
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -143,8 +92,34 @@ export function MarkerInfoPanel({ parentAsset }: MarkerInfoPanelProps) {
           </label>
 
           {isBuildingProject ? (
-            <>
-              <label className="min-w-0">
+            <div className="grid min-w-0 grid-cols-[2fr_1fr_1fr] items-end gap-x-[16px] sm:col-span-2">
+              <label className="block min-w-0">
+                <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
+                  Floor
+                </span>
+                <select
+                  className={featureMetadataSelectClassName}
+                  value={floorPlanId ?? ''}
+                  onChange={(e) => {
+                    const nextFloorPlanId = e.target.value as FloorPlanId
+                    updateDraftMarker({
+                      floorPlanPosition: {
+                        floorPlanId: nextFloorPlanId,
+                        x: draftMarker.floorPlanPosition?.x ?? 0,
+                        y: draftMarker.floorPlanPosition?.y ?? 0,
+                      },
+                    })
+                  }}
+                  aria-label="Floor plan"
+                >
+                  {floorPlanOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block min-w-0">
                 <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
                   X
                 </span>
@@ -153,9 +128,10 @@ export function MarkerInfoPanel({ parentAsset }: MarkerInfoPanelProps) {
                   readOnly
                   className={featureMetadataInputClassName + ' bg-area-highlight'}
                   value={formatFloorPlanCoord(draftMarker.floorPlanPosition?.x)}
+                  aria-label="Floor plan X (normalized 0–1)"
                 />
               </label>
-              <label className="min-w-0">
+              <label className="block min-w-0">
                 <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
                   Y
                 </span>
@@ -164,22 +140,10 @@ export function MarkerInfoPanel({ parentAsset }: MarkerInfoPanelProps) {
                   readOnly
                   className={featureMetadataInputClassName + ' bg-area-highlight'}
                   value={formatFloorPlanCoord(draftMarker.floorPlanPosition?.y)}
+                  aria-label="Floor plan Y (normalized 0–1)"
                 />
               </label>
-              {floorLabel != null ? (
-                <label className="min-w-0 sm:col-span-2">
-                  <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                    Floor
-                  </span>
-                  <input
-                    type="text"
-                    readOnly
-                    className={featureMetadataInputClassName + ' bg-area-highlight'}
-                    value={floorLabel}
-                  />
-                </label>
-              ) : null}
-            </>
+            </div>
           ) : (
             <>
               <label className="min-w-0">
@@ -215,18 +179,6 @@ export function MarkerInfoPanel({ parentAsset }: MarkerInfoPanelProps) {
             </>
           )}
 
-          <label className="min-w-0 sm:col-span-2">
-            <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-              Date added
-            </span>
-            <input
-              type="text"
-              readOnly
-              className={featureMetadataInputClassName + ' bg-area-highlight'}
-              value={draftMarker.dateAdded ?? ''}
-            />
-          </label>
-
           <FeatureMarkerColorField
             value={draftMarker.color ?? '#2563eb'}
             onChange={(color) => updateDraftMarker({ color, isPreliminary: false })}
@@ -234,34 +186,26 @@ export function MarkerInfoPanel({ parentAsset }: MarkerInfoPanelProps) {
         </div>
       </div>
 
-      {isDirty ? (
-        <div className="border-t border-stroke bg-panel px-panel-padding py-3">
-          <div className={featureMetadataFooterActionsClassName}>
-            <button
-              type="button"
-              onClick={handleCancelEdits}
-              className={featureMetadataFooterCancelButtonClass}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              className={
-                PRIMARY_BUTTON_CLASS +
-                ' h-8 rounded-panel px-4 text-standard focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
-              }
-            >
-              Save
-            </button>
-          </div>
+      <div className="border-t border-stroke bg-panel px-panel-padding py-3">
+        <div className={featureMetadataFooterActionsClassName}>
+          <button
+            type="button"
+            onClick={openCancelMarkerConfirmation}
+            className={featureMetadataFooterCancelButtonClass}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className={
+              PRIMARY_BUTTON_CLASS +
+              ' h-8 rounded-panel px-4 text-standard focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
+            }
+          >
+            Save
+          </button>
         </div>
-      ) : null}
-
-      <div className="sr-only">
-        <button type="button" onClick={cancelFlow}>
-          Close marker panel
-        </button>
       </div>
     </div>
   )

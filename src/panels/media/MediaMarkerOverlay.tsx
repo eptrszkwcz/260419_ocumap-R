@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react'
 
+import {
+  CrosshairTargetMarker,
+  crosshairTargetMarkerColor,
+} from '@/components/CrosshairTargetMarker'
 import type { MediaMarkerDraft } from '@/context/MediaMarkerFlowContext'
-import { markerRgba, PRELIMINARY_MARKER_COLOR } from '@/panels/map/markerColors'
-
-const MARKER_SIZE_PX = 20
 
 type MediaMarkerOverlayProps = {
   draft: MediaMarkerDraft
@@ -14,22 +15,6 @@ type MediaMarkerOverlayProps = {
   draggable?: boolean
   onMove?: (position: { x: number; y: number }) => void
   onMoveScreen?: (position: { xPct: number; yPct: number }) => void
-}
-
-function CrosshairOverlay({ color }: { color: string }) {
-  return (
-    <svg
-      className="pointer-events-none absolute left-1/2 top-1/2 z-20"
-      width="32"
-      height="32"
-      viewBox="0 0 32 32"
-      style={{ transform: 'translate(-50%, -50%)' }}
-      aria-hidden
-    >
-      <line x1="16" y1="4" x2="16" y2="28" stroke={color} strokeWidth="1.5" opacity="0.9" />
-      <line x1="4" y1="16" x2="28" y2="16" stroke={color} strokeWidth="1.5" opacity="0.9" />
-    </svg>
-  )
 }
 
 export function MediaMarkerOverlay({
@@ -43,8 +28,7 @@ export function MediaMarkerOverlay({
   const draggingRef = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const fillColor = draft.isPreliminary ? PRELIMINARY_MARKER_COLOR : (draft.color ?? PRELIMINARY_MARKER_COLOR)
-  const strokeColor = fillColor
+  const markerColor = crosshairTargetMarkerColor(draft.color, draft.isPreliminary)
 
   const positionStyle =
     mediaPosition != null
@@ -109,21 +93,12 @@ export function MediaMarkerOverlay({
       style={{
         ...positionStyle,
         transform: 'translate(-50%, -50%)',
+        cursor: draggable ? 'grab' : 'default',
       }}
       onPointerDown={handlePointerDown}
+      aria-hidden
     >
-      <CrosshairOverlay color={strokeColor} />
-      <div
-        className="relative z-10 rounded-full border-2"
-        style={{
-          width: MARKER_SIZE_PX,
-          height: MARKER_SIZE_PX,
-          borderColor: markerRgba(strokeColor, 1),
-          backgroundColor: markerRgba(fillColor, 0.9),
-          cursor: draggable ? 'grab' : 'default',
-        }}
-        aria-hidden
-      />
+      <CrosshairTargetMarker color={markerColor} />
     </div>
   )
 }

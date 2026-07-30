@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react'
 
+import { ChatIcon } from '@/components/overlayControlIcons'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import type { MediaAnnotationMarker, SpatialAsset } from '@/data/sampleAssets'
 import type { ProjectType } from '@/data/sampleProjects'
-import { normalizeMarkerColor } from '@/panels/map/markerColors'
 
 import { columnDefinitions } from '@/panels/library/featureLibrary/columnDefinitions'
 import { useDeferredRowClick } from '@/panels/library/featureLibrary/useDeferredRowClick'
@@ -16,11 +16,11 @@ function ChevronIcon({ open }: { open: boolean }) {
       width="12"
       height="12"
       viewBox="0 0 12 12"
-      className={'shrink-0 transition-transform ' + (open ? 'rotate-180' : '')}
+      className={'shrink-0 transition-transform ' + (open ? 'rotate-90' : '')}
       aria-hidden
     >
       <path
-        d="M3 4.5 6 7.5 9 4.5"
+        d="M4.5 3 7.5 6 4.5 9"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.25"
@@ -29,6 +29,12 @@ function ChevronIcon({ open }: { open: boolean }) {
       />
     </svg>
   )
+}
+
+function markerSubRowCellValue(columnId: OptionalColumnId, marker: MediaAnnotationMarker): string {
+  if (columnId === 'type') return 'Marker'
+  if (columnId === 'dateUploaded') return marker.dateAdded
+  return ''
 }
 
 export type FeatureLibraryTableRowProps = {
@@ -80,6 +86,9 @@ export function FeatureLibraryTableRow({
 
   const isHighlighted = isSelected || isLinked
   const cellTextClass = isHighlighted
+    ? 'text-fg-highlight'
+    : 'text-fg-muted group-hover:text-fg-highlight'
+  const markerIconClass = isHighlighted
     ? 'text-fg-highlight'
     : 'text-fg-muted group-hover:text-fg-highlight'
 
@@ -162,6 +171,19 @@ export function FeatureLibraryTableRow({
             {columnDefinitions[id].getCellValue(asset, projectType)}
           </td>
         ))}
+        <td
+          className="pl-0 pr-0 text-center align-middle"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {hasMediaMarkers ? (
+            <span
+              className={'inline-flex size-8 items-center justify-center ' + markerIconClass}
+              aria-label={`${mediaMarkers.length} marker${mediaMarkers.length === 1 ? '' : 's'}`}
+            >
+              <ChatIcon />
+            </span>
+          ) : null}
+        </td>
         <td className="pl-0 pr-panel-padding text-right align-middle" onClick={(e) => e.stopPropagation()}>
           {onSetLocation != null &&
           onDownload != null &&
@@ -192,21 +214,28 @@ export function FeatureLibraryTableRow({
                 onOpenMarker?.(marker)
               }}
             >
-              <td className="min-w-0 pl-panel-padding pr-4 align-middle" colSpan={1}>
+              <td className="min-w-0 pl-panel-padding pr-4 align-middle">
                 <div className="flex min-w-0 items-center gap-2 pl-7">
                   <span
-                    className="size-2.5 shrink-0 rounded-full border border-stroke"
-                    style={{ backgroundColor: normalizeMarkerColor(marker.color) }}
+                    className="text-fg-muted group-hover:text-fg-highlight inline-flex size-3 shrink-0 items-center justify-center [&_svg]:size-3"
                     aria-hidden
-                  />
+                  >
+                    <ChatIcon />
+                  </span>
                   <span className="text-fg-muted group-hover:text-fg-highlight block truncate font-sans text-standard">
                     {marker.name}
                   </span>
                 </div>
               </td>
               {visibleColumns.map((id) => (
-                <td key={id} className="pl-0 pr-4 align-middle" aria-hidden />
+                <td
+                  key={id}
+                  className="text-fg-muted group-hover:text-fg-highlight pl-0 pr-4 align-middle whitespace-nowrap font-sans text-standard"
+                >
+                  {markerSubRowCellValue(id, marker)}
+                </td>
               ))}
+              <td className="pl-0 pr-0 align-middle" aria-hidden />
               <td className="pl-0 pr-panel-padding align-middle" aria-hidden />
             </tr>
           ))

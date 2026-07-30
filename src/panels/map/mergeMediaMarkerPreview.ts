@@ -1,8 +1,9 @@
 import type { FloorPlanMarker, MapCaptureMarker } from '@/context/MapCaptureMarkersContext'
 import type { MediaMarkerDraft } from '@/context/MediaMarkerFlowContext'
 import {
+  DEFAULT_MARKER_COLOR,
   markerColorsFromAsset,
-  PRELIMINARY_MARKER_COLOR,
+  normalizeMarkerColor,
 } from '@/panels/map/markerColors'
 
 export const MEDIA_MARKER_DRAFT_ID = '__media-marker-draft__'
@@ -16,7 +17,9 @@ export function mergeMediaMarkerFloorPlanPreview(
   if (draft?.floorPlanPosition == null || parentAssetId == null) return markers
   if (draft.floorPlanPosition.floorPlanId !== floorPlanId) return markers
 
-  const color = draft.isPreliminary ? PRELIMINARY_MARKER_COLOR : (draft.color ?? PRELIMINARY_MARKER_COLOR)
+  const color = draft.isPreliminary
+    ? DEFAULT_MARKER_COLOR
+    : normalizeMarkerColor(draft.color)
   const { fill, stroke } = markerColorsFromAsset(color)
   const withoutDraft = markers.filter((m) => m.id !== MEDIA_MARKER_DRAFT_ID)
 
@@ -42,7 +45,9 @@ export function mergeMediaMarkerCapturePreview(
 ): MapCaptureMarker[] {
   if (draft?.mapPosition == null || parentAssetId == null) return markers
 
-  const color = draft.isPreliminary ? PRELIMINARY_MARKER_COLOR : (draft.color ?? PRELIMINARY_MARKER_COLOR)
+  const color = draft.isPreliminary
+    ? DEFAULT_MARKER_COLOR
+    : normalizeMarkerColor(draft.color)
   const { fill, stroke } = markerColorsFromAsset(color)
   const withoutDraft = markers.filter((m) => m.id !== MEDIA_MARKER_DRAFT_ID)
 

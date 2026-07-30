@@ -2,9 +2,10 @@ import { Viewer } from '@photo-sphere-viewer/core'
 import '@photo-sphere-viewer/core/index.css'
 import { useEffect, useRef, useState } from 'react'
 
-import { markerRgba, PRELIMINARY_MARKER_COLOR } from '@/panels/map/markerColors'
-
-const MARKER_SIZE_PX = 20
+import {
+  CrosshairTargetMarker,
+  crosshairTargetMarkerColor,
+} from '@/components/CrosshairTargetMarker'
 
 type Panorama360ViewerProps = {
   panoramaUrl: string
@@ -26,8 +27,16 @@ type Panorama360ViewerProps = {
   markerColor?: string
   /** Whether the media marker overlay is draggable. */
   markerDraggable?: boolean
+  /** Saved pano markers belonging to this media item. */
+  persistedPanoMarkers?: Array<{
+    id: string
+    panoPosition: { yawDeg: number; pitchDeg: number }
+    color?: string
+  }>
   onMarkerMove?: (payload: { yawDeg: number; pitchDeg: number }) => void
 }
+
+type MarkerScreenPosition = { xPct: number; yPct: number }
 
 function destroyViewerSafely(viewer: Viewer) {
   if (viewer.state.ready) {
@@ -54,6 +63,7 @@ export function Panorama360Viewer({
   markerIsPreliminary = true,
   markerColor,
   markerDraggable = false,
+  persistedPanoMarkers = [],
   onMarkerMove,
 }: Panorama360ViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -65,7 +75,10 @@ export function Panorama360Viewer({
   onPlacementClickRef.current = onPlacementClick
   onMarkerMoveRef.current = onMarkerMove
 
-  const [markerScreen, setMarkerScreen] = useState<{ xPct: number; yPct: number } | null>(null)
+  const [markerScreen, setMarkerScreen] = useState<MarkerScreenPosition | null>(null)
+  const [persistedMarkerScreens, setPersistedMarkerScreens] = useState<
+    Record<string, MarkerScreenPosition>
+  >({})
   const draggingRef = useRef(false)
 
   useEffect(() => {
@@ -124,34 +137,41 @@ export function Panorama360Viewer({
     const viewer = viewerRef.current
     if (viewer == null || !viewer.state.ready) return
 
-    const updateMarkerScreen = () => {
-      if (markerPanoPosition == null) {
-        setMarkerScreen(null)
-        return
-      }
-      const yaw = (markerPanoPosition.yawDeg * Math.PI) / 180
-      const pitch = (markerPanoPosition.pitchDeg * Math.PI) / 180
+    const panoPositionToScreen = (
+      panoPosition: { yawDeg: number; pitchDeg: number },
+    ): MarkerScreenPosition | null => {
+      const yaw = (panoPosition.yawDeg * Math.PI) / 180
+      const pitch = (panoPosition.pitchDeg * Math.PI) / 180
       const coords = viewer.dataHelper.sphericalCoordsToViewerCoords({ yaw, pitch })
-      if (coords == null) {
-        setMarkerScreen(null)
-        return
-      }
+      if (coords == null) return null
       const rect = containerRef.current?.getBoundingClientRect()
-      if (rect == null || rect.width === 0 || rect.height === 0) return
-      setMarkerScreen({
+      if (rect == null || rect.width === 0 || rect.height === 0) return null
+      return {
         xPct: coords.x / rect.width,
         yPct: coords.y / rect.height,
-      })
+      }
     }
 
-    updateMarkerScreen()
-    viewer.addEventListener('position-updated', updateMarkerScreen)
-    viewer.addEventListener('zoom-updated', updateMarkerScreen)
-    return () => {
-      viewer.removeEventListener('position-updated', updateMarkerScreen)
-      viewer.removeEventListener('zoom-updated', updateMarkerScreen)
+    const updateMarkerScreens = () => {
+      setMarkerScreen(
+        markerPanoPosition == null ? null : panoPositionToScreen(markerPanoPosition),
+      )
+      const nextPersisted: Record<string, MarkerScreenPosition> = {}
+      for (const marker of persistedPanoMarkers) {
+        const screen = panoPositionToScreen(marker.panoPosition)
+        if (screen != null) nextPersisted[marker.id] = screen
+      }
+      setPersistedMarkerScreens(nextPersisted)
     }
-  }, [markerPanoPosition])
+
+    updateMarkerScreens()
+    viewer.addEventListener('position-updated', updateMarkerScreens)
+    viewer.addEventListener('zoom-updated', updateMarkerScreens)
+    return () => {
+      viewer.removeEventListener('position-updated', updateMarkerScreens)
+      viewer.removeEventListener('zoom-updated', updateMarkerScreens)
+    }
+  }, [markerPanoPosition, persistedPanoMarkers])
 
   useEffect(() => {
     const viewer = viewerRef.current
@@ -226,50 +246,44 @@ export function Panorama360Viewer({
             : undefined
         }
       />
+      {persistedPanoMarkers.map((marker) => {
+        const screen = persistedMarkerScreens[marker.id]
+        if (screen == null) return null
+        return (
+          <div
+            key={marker.id}
+            className="pointer-events-none absolute z-30"
+            style={{
+              left: `${screen.xPct * 100}%`,
+              top: `${screen.yPct * 100}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <CrosshairTargetMarker color={crosshairTargetMarkerColor(marker.color, false)} />
+          </div>
+        )
+      })}
       {markerScreen != null ? (
         <div
-          className="pointer-events-none absolute z-30"
+          className="absolute z-30"
           style={{
             left: `${markerScreen.xPct * 100}%`,
             top: `${markerScreen.yPct * 100}%`,
             transform: 'translate(-50%, -50%)',
+            pointerEvents: markerDraggable ? 'auto' : 'none',
+            cursor: markerDraggable ? 'grab' : 'default',
           }}
+          onPointerDown={
+            markerDraggable
+              ? (e) => {
+                  e.stopPropagation()
+                  draggingRef.current = true
+                }
+              : undefined
+          }
         >
-          <svg
-            className="pointer-events-none absolute left-1/2 top-1/2"
-            width="32"
-            height="32"
-            viewBox="0 0 32 32"
-            style={{ transform: 'translate(-50%, -50%)' }}
-            aria-hidden
-          >
-            <line x1="16" y1="4" x2="16" y2="28" stroke={markerIsPreliminary ? PRELIMINARY_MARKER_COLOR : (markerColor ?? PRELIMINARY_MARKER_COLOR)} strokeWidth="1.5" />
-            <line x1="4" y1="16" x2="28" y2="16" stroke={markerIsPreliminary ? PRELIMINARY_MARKER_COLOR : (markerColor ?? PRELIMINARY_MARKER_COLOR)} strokeWidth="1.5" />
-          </svg>
-          <div
-            className="relative z-10 rounded-full border-2"
-            style={{
-              width: MARKER_SIZE_PX,
-              height: MARKER_SIZE_PX,
-              borderColor: markerRgba(
-                markerIsPreliminary ? PRELIMINARY_MARKER_COLOR : (markerColor ?? PRELIMINARY_MARKER_COLOR),
-                1,
-              ),
-              backgroundColor: markerRgba(
-                markerIsPreliminary ? PRELIMINARY_MARKER_COLOR : (markerColor ?? PRELIMINARY_MARKER_COLOR),
-                0.9,
-              ),
-              pointerEvents: markerDraggable ? 'auto' : 'none',
-              cursor: markerDraggable ? 'grab' : 'default',
-            }}
-            onPointerDown={
-              markerDraggable
-                ? (e) => {
-                    e.stopPropagation()
-                    draggingRef.current = true
-                  }
-                : undefined
-            }
+          <CrosshairTargetMarker
+            color={crosshairTargetMarkerColor(markerColor, markerIsPreliminary)}
           />
         </div>
       ) : null}
