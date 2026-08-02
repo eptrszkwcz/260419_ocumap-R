@@ -335,7 +335,6 @@ export function InfrastructureMapView({
     isAdjustingMediaMarker,
     draftMarker,
     updateDraftMarker,
-    cancelFlow: cancelMediaMarkerFlow,
     requestCloseMarkerPanel,
   } = useMediaMarkerFlow()
   const previewColor = markerStylePreview?.color ?? draftMarkerColor
