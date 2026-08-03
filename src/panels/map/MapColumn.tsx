@@ -290,7 +290,7 @@ export function MapColumn({
       )
       const markerPanel = (
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden" style={markerPanelStyle}>
-          <MarkerPanelColumn parentAsset={parentAsset} />
+          <MarkerPanelColumn />
         </div>
       )
 

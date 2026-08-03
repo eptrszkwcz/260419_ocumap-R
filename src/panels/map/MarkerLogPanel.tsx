@@ -7,7 +7,6 @@ import { MarkerLogEntryCard } from '@/panels/map/MarkerLogEntryCard'
 export function MarkerLogPanel() {
   const {
     draftMarker,
-    isMarkerMetadataSaved,
     addMarkerLogEntry,
     updateMarkerLogEntry,
     deleteMarkerLogEntry,
@@ -25,16 +24,6 @@ export function MarkerLogPanel() {
     if (el == null) return
     el.scrollTop = el.scrollHeight
   }, [entries.length])
-
-  if (!isMarkerMetadataSaved) {
-    return (
-      <div className="flex min-h-0 flex-1 items-center justify-center p-panel-padding text-center">
-        <p className="text-fg-muted font-sans text-standard">
-          Save marker info on the Marker Info tab before adding log entries.
-        </p>
-      </div>
-    )
-  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

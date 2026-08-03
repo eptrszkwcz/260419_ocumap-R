@@ -31,6 +31,8 @@ import {
 
 export type MediaMarkerFlowPhase = 'idle' | 'placing' | 'adjusting' | 'viewing'
 
+export type MediaMarkerFlowMode = 'create' | 'view' | null
+
 export type MediaMarkerPanelPhase = 'confirm' | 'metadata'
 
 export type MediaMarkerDraft = Partial<MediaAnnotationMarker> & {
@@ -48,6 +50,8 @@ export type MediaMarkerFlowContextValue = {
   isPlacingMediaMarker: boolean
   isAdjustingMediaMarker: boolean
   isMarkerPanelOpen: boolean
+  isCreateMarkerPopupOpen: boolean
+  markerFlowMode: MediaMarkerFlowMode
   markerFlowResizeToken: number
   startPlacement: (asset: import('@/data/sampleAssets').SpatialAsset) => void
   placeOnMedia: (payload: {
@@ -60,7 +64,7 @@ export type MediaMarkerFlowContextValue = {
   }) => void
   updateDraftMarker: (patch: MediaMarkerDraft) => void
   confirmPlacement: (existingMarkerCount: number) => void
-  saveMarker: () => MediaAnnotationMarker | null
+  saveMarker: (initialNote?: string) => MediaAnnotationMarker | null
   cancelFlow: () => void
   openCancelMarkerConfirmation: () => void
   requestCloseMarkerPanel: () => void
@@ -86,6 +90,7 @@ export function MediaMarkerFlowProvider({ children }: { children: ReactNode }) {
   const { cancelDraw, cancelEditFeature } = useFeatureDraw()
 
   const [phase, setPhase] = useState<MediaMarkerFlowPhase>('idle')
+  const [markerFlowMode, setMarkerFlowMode] = useState<MediaMarkerFlowMode>(null)
   const [panelPhase, setPanelPhase] = useState<MediaMarkerPanelPhase | null>(null)
   const [parentAssetId, setParentAssetId] = useState<string | null>(null)
   const [parentAsset, setParentAsset] = useState<import('@/data/sampleAssets').SpatialAsset | null>(
@@ -163,6 +168,7 @@ export function MediaMarkerFlowProvider({ children }: { children: ReactNode }) {
   const clearFlow = useCallback(() => {
     confirmedMarkerRef.current = null
     setPhase('idle')
+    setMarkerFlowMode(null)
     setPanelPhase(null)
     setParentAssetId(null)
     setParentAsset(null)
@@ -182,6 +188,7 @@ export function MediaMarkerFlowProvider({ children }: { children: ReactNode }) {
       confirmedMarkerRef.current = null
       setIsMarkerMetadataSaved(false)
       setPanelPhase(null)
+      setMarkerFlowMode('create')
       setPhase('placing')
     },
     [cancelOtherModes],
@@ -210,7 +217,6 @@ export function MediaMarkerFlowProvider({ children }: { children: ReactNode }) {
       })
       setPanelPhase('confirm')
       setPhase('adjusting')
-      setMarkerFlowResizeToken((t) => t + 1)
     },
     [],
   )
@@ -241,32 +247,40 @@ export function MediaMarkerFlowProvider({ children }: { children: ReactNode }) {
     setIsMarkerMetadataSaved(false)
   }, [])
 
-  const saveMarker = useCallback((): MediaAnnotationMarker | null => {
-    const marker = confirmedMarkerRef.current
-    if (marker == null || draftMarker == null) return null
-    const wasSaved = isMarkerMetadataSaved
-    const saved: MediaAnnotationMarker = {
-      id: marker.id,
-      name: draftMarker.name ?? marker.name,
-      dateAdded: draftMarker.dateAdded ?? marker.dateAdded,
-      color: draftMarker.color ?? marker.color,
-      logEntries: draftMarker.logEntries ?? marker.logEntries,
-      mediaPosition: draftMarker.mediaPosition ?? marker.mediaPosition,
-      panoPosition: draftMarker.panoPosition ?? marker.panoPosition,
-      floorPlanPosition: draftMarker.floorPlanPosition ?? marker.floorPlanPosition,
-      mapPosition: draftMarker.mapPosition ?? marker.mapPosition,
-    }
-    if (!wasSaved) {
-      const authorName = user?.displayName ?? 'System'
-      saved.logEntries = [
-        ...(saved.logEntries ?? []),
-        createSystemLogEntry('Marker created', authorName),
-      ]
-    }
-    persistMarker(saved)
-    setIsMarkerMetadataSaved(true)
-    return saved
-  }, [draftMarker, isMarkerMetadataSaved, persistMarker, user?.displayName])
+  const saveMarker = useCallback(
+    (initialNote?: string): MediaAnnotationMarker | null => {
+      const marker = confirmedMarkerRef.current
+      if (marker == null || draftMarker == null) return null
+      const wasSaved = isMarkerMetadataSaved
+      const saved: MediaAnnotationMarker = {
+        id: marker.id,
+        name: draftMarker.name ?? marker.name,
+        dateAdded: draftMarker.dateAdded ?? marker.dateAdded,
+        color: draftMarker.color ?? marker.color,
+        logEntries: draftMarker.logEntries ?? marker.logEntries,
+        mediaPosition: draftMarker.mediaPosition ?? marker.mediaPosition,
+        panoPosition: draftMarker.panoPosition ?? marker.panoPosition,
+        floorPlanPosition: draftMarker.floorPlanPosition ?? marker.floorPlanPosition,
+        mapPosition: draftMarker.mapPosition ?? marker.mapPosition,
+      }
+      if (!wasSaved) {
+        const authorName = user?.displayName ?? 'System'
+        const entries = [
+          ...(saved.logEntries ?? []),
+          createSystemLogEntry('Marker created', authorName),
+        ]
+        const trimmedNote = initialNote?.trim() ?? ''
+        if (trimmedNote !== '' && user != null) {
+          entries.push(createUserLogEntry(trimmedNote, user))
+        }
+        saved.logEntries = entries
+      }
+      persistMarker(saved)
+      setIsMarkerMetadataSaved(true)
+      return saved
+    },
+    [draftMarker, isMarkerMetadataSaved, persistMarker, user],
+  )
 
   const addMarkerLogEntry = useCallback(
     (body: string) => {
@@ -349,18 +363,20 @@ export function MediaMarkerFlowProvider({ children }: { children: ReactNode }) {
       confirmedMarkerRef.current = marker
       setParentAssetId(asset.id)
       setParentAsset(asset)
-    setDraftMarker({ ...marker, isPreliminary: false })
-    setSavedMarkerId(marker.id)
-    setPanelPhase('metadata')
-    setPhase('viewing')
-    setIsMarkerMetadataSaved(true)
+      setDraftMarker({ ...marker, isPreliminary: false })
+      setSavedMarkerId(marker.id)
+      setPanelPhase('metadata')
+      setMarkerFlowMode('view')
+      setPhase('viewing')
+      setIsMarkerMetadataSaved(true)
       setMarkerFlowResizeToken((t) => t + 1)
     },
     [],
   )
 
-  const value = useMemo(
-    (): MediaMarkerFlowContextValue => ({
+  const value = useMemo((): MediaMarkerFlowContextValue => {
+    const isFlowUiActive = phase === 'adjusting' || phase === 'viewing'
+    return {
       phase,
       panelPhase,
       parentAssetId,
@@ -369,8 +385,10 @@ export function MediaMarkerFlowProvider({ children }: { children: ReactNode }) {
       savedMarkerId,
       isMarkerMetadataSaved,
       isPlacingMediaMarker: phase === 'placing',
-      isAdjustingMediaMarker: phase === 'adjusting' || phase === 'viewing',
-      isMarkerPanelOpen: phase === 'adjusting' || phase === 'viewing',
+      isAdjustingMediaMarker: isFlowUiActive,
+      isMarkerPanelOpen: markerFlowMode === 'view' && isFlowUiActive,
+      isCreateMarkerPopupOpen: markerFlowMode === 'create' && isFlowUiActive,
+      markerFlowMode,
       markerFlowResizeToken,
       startPlacement,
       placeOnMedia,
@@ -386,9 +404,10 @@ export function MediaMarkerFlowProvider({ children }: { children: ReactNode }) {
       addMarkerLogEntry,
       updateMarkerLogEntry,
       deleteMarkerLogEntry,
-    }),
-    [
+    }
+  }, [
       phase,
+      markerFlowMode,
       panelPhase,
       parentAssetId,
       parentAsset,
@@ -441,6 +460,8 @@ export function useMediaMarkerFlow(): MediaMarkerFlowContextValue {
       isPlacingMediaMarker: false,
       isAdjustingMediaMarker: false,
       isMarkerPanelOpen: false,
+      isCreateMarkerPopupOpen: false,
+      markerFlowMode: null,
       markerFlowResizeToken: 0,
       startPlacement: () => {},
       placeOnMedia: () => {},

@@ -41,7 +41,7 @@ export function FeatureMarkerColorField({ value, onChange }: FeatureMarkerColorF
         />
         <button
           type="button"
-          className="border-stroke focus-visible:ring-fg-highlight/35 h-8 w-10 shrink-0 cursor-pointer rounded-panel border-2 focus-visible:ring-2 focus-visible:outline-none"
+          className="border-stroke focus-visible:ring-fg-highlight/35 size-8 shrink-0 cursor-pointer rounded-panel border-2 focus-visible:ring-2 focus-visible:outline-none"
           style={{ backgroundColor: displayColor }}
           aria-label="Open color picker"
           onClick={openNativePicker}
