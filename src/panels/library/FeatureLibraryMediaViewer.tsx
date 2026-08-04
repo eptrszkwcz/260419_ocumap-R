@@ -30,6 +30,7 @@ import {
   mapOverlayInsetXClassName,
 } from '@/panels/map/mapOverlayLayout'
 import { getDefaultFloorPlanIdForProject } from '@/panels/map/mapFloorPlans'
+import { AddMarkerPopup } from '@/panels/media/AddMarkerPopup'
 import {
   MEDIA_MARKER_PLACEMENT_INSTRUCTION,
   MediaMarkerOverlay,
@@ -69,6 +70,7 @@ export function FeatureLibraryMediaViewer({
   const {
     isPlacingMediaMarker,
     isAdjustingMediaMarker,
+    isCreateMarkerPopupOpen,
     parentAssetId,
     draftMarker,
     startPlacement,
@@ -289,6 +291,10 @@ export function FeatureLibraryMediaViewer({
               {MEDIA_MARKER_PLACEMENT_INSTRUCTION}
             </div>
           </div>
+        ) : null}
+
+        {isCreateMarkerPopupOpen && markerFlowAppliesToAsset ? (
+          <AddMarkerPopup parentAsset={asset} />
         ) : null}
 
         <div

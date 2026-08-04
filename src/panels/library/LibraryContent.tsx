@@ -216,8 +216,10 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
     openSavedMarker,
     cancelFlow,
     isMarkerPanelOpen,
+    isCreateMarkerPopupOpen,
     parentAssetId: markerFlowParentAssetId,
   } = useMediaMarkerFlow()
+  const isMarkerFlowActive = isMarkerPanelOpen || isCreateMarkerPopupOpen
   const contentsRef = useRef<HTMLDivElement>(null)
   const drawSessionOpenedRef = useRef<string | null>(null)
 
@@ -340,7 +342,7 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
   const openAsset = (asset: SpatialAsset) => {
     if (isDrawing) closeDrawSession()
     if (isEditingFeature) cancelEditFeature()
-    if (isMarkerPanelOpen && markerFlowParentAssetId !== asset.id) {
+    if (isMarkerFlowActive && markerFlowParentAssetId !== asset.id) {
       cancelFlow()
     }
     cancelLocationPick()
@@ -438,7 +440,7 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
           openFeatureProperties(asset)
           return
         }
-        if (isMarkerPanelOpen && markerFlowParentAssetId !== asset.id) {
+        if (isMarkerFlowActive && markerFlowParentAssetId !== asset.id) {
           cancelFlow()
         }
         setViewerPanel('media')
@@ -453,7 +455,7 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
     isAdjustingDirection,
     isDrawing,
     isEditingFeature,
-    isMarkerPanelOpen,
+    isMarkerFlowActive,
     markerFlowParentAssetId,
     setMapFeatureClickHandler,
     setOpenedFeatureId,
@@ -491,7 +493,7 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
   }
 
   const replaceOpenedAsset = (asset: SpatialAsset) => {
-    if (isMarkerPanelOpen && markerFlowParentAssetId !== asset.id) {
+    if (isMarkerFlowActive && markerFlowParentAssetId !== asset.id) {
       cancelFlow()
     }
     setOpenedAsset(asset)

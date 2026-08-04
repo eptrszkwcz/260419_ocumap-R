@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react'
 
-import { ChatIcon } from '@/components/overlayControlIcons'
+import {
+  CrosshairTargetMarker,
+  crosshairTargetMarkerColor,
+} from '@/components/CrosshairTargetMarker'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import type { MediaAnnotationMarker, SpatialAsset } from '@/data/sampleAssets'
 import type { ProjectType } from '@/data/sampleProjects'
@@ -88,10 +91,6 @@ export function FeatureLibraryTableRow({
   const cellTextClass = isHighlighted
     ? 'text-fg-highlight'
     : 'text-fg-muted group-hover:text-fg-highlight'
-  const markerIconClass = isHighlighted
-    ? 'text-fg-highlight'
-    : 'text-fg-muted group-hover:text-fg-highlight'
-
   const rowClassName =
     'group h-10 border-b-[0.5px] border-solid border-stroke font-normal transition-colors ' +
     (isSelected
@@ -177,10 +176,13 @@ export function FeatureLibraryTableRow({
         >
           {hasMediaMarkers ? (
             <span
-              className={'inline-flex size-8 items-center justify-center ' + markerIconClass}
+              className="inline-flex size-8 items-center justify-center"
               aria-label={`${mediaMarkers.length} marker${mediaMarkers.length === 1 ? '' : 's'}`}
             >
-              <ChatIcon />
+              <CrosshairTargetMarker
+                size={16}
+                color={crosshairTargetMarkerColor(mediaMarkers[0]?.color, false)}
+              />
             </span>
           ) : null}
         </td>
@@ -217,10 +219,13 @@ export function FeatureLibraryTableRow({
               <td className="min-w-0 pl-panel-padding pr-4 align-middle">
                 <div className="flex min-w-0 items-center gap-2 pl-7">
                   <span
-                    className="text-fg-muted group-hover:text-fg-highlight inline-flex size-3 shrink-0 items-center justify-center [&_svg]:size-3"
+                    className="inline-flex size-3 shrink-0 items-center justify-center"
                     aria-hidden
                   >
-                    <ChatIcon />
+                    <CrosshairTargetMarker
+                      size={12}
+                      color={crosshairTargetMarkerColor(marker.color, false)}
+                    />
                   </span>
                   <span className="text-fg-muted group-hover:text-fg-highlight block truncate font-sans text-standard">
                     {marker.name}
