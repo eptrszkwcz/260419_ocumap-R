@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { RootRedirect } from '@/components/RootRedirect'
 import { AuthProvider } from '@/context/AuthContext'
+import { CustomMarkerColorsProvider } from '@/context/CustomMarkerColorsContext'
 import { ProjectsProvider } from '@/context/ProjectsContext'
 import { PublishProjectProvider } from '@/context/PublishProjectContext'
 import { ShareProjectProvider } from '@/context/ShareProjectContext'
@@ -17,6 +18,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <CustomMarkerColorsProvider>
         <ProjectsProvider>
           <PublishProjectProvider>
             <ShareProjectProvider>
@@ -49,6 +51,7 @@ export default function App() {
             </ShareProjectProvider>
           </PublishProjectProvider>
         </ProjectsProvider>
+        </CustomMarkerColorsProvider>
       </AuthProvider>
     </BrowserRouter>
   )

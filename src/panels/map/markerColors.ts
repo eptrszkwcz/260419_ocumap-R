@@ -4,6 +4,17 @@ export const DEFAULT_MARKER_COLOR = '#2563eb'
 /** Orange fill for preliminary media annotation markers before confirm. */
 export const PRELIMINARY_MARKER_COLOR = '#f97316'
 
+/** Preset swatches shown in the marker color picker popover. */
+export const PRESET_MARKER_COLORS = [
+  '#3a4abf', // OcuMap blue
+  '#f97316', // OcuMap orange
+  '#6b7c3e', // Olive green
+  '#dc2626', // Red
+  '#9333ea', // Purple
+  '#0d9488', // Teal
+  '#db2777', // Pink
+] as const
+
 export function normalizeMarkerColor(value: string | undefined): string {
   if (value == null) return DEFAULT_MARKER_COLOR
   const v = value.trim()

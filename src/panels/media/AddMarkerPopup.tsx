@@ -1,5 +1,6 @@
-import { useCallback, useId, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 
+import { MarkerColorPicker } from '@/components/MarkerColorPicker'
 import { useMediaMarkerFlow } from '@/context/MediaMarkerFlowContext'
 import type { SpatialAsset } from '@/data/sampleAssets'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/primaryButtonClass'
@@ -30,8 +31,6 @@ export function AddMarkerPopup({ parentAsset }: AddMarkerPopupProps) {
   } = useMediaMarkerFlow()
 
   const [notes, setNotes] = useState('')
-  const colorInputId = useId()
-  const colorInputRef = useRef<HTMLInputElement>(null)
 
   const handleConfirm = useCallback(() => {
     const count = parentAsset.mediaMarkers?.length ?? 0
@@ -101,22 +100,10 @@ export function AddMarkerPopup({ parentAsset }: AddMarkerPopupProps) {
                   onChange={(e) => updateDraftMarker({ name: e.target.value })}
                   aria-label="Marker name"
                 />
-                <input
-                  ref={colorInputRef}
-                  id={colorInputId}
-                  type="color"
+                <MarkerColorPicker
                   value={markerColor}
-                  onChange={(e) => handleColorChange(e.target.value)}
-                  className="sr-only"
-                  tabIndex={-1}
-                  aria-label="Pick marker color"
-                />
-                <button
-                  type="button"
-                  className="border-stroke focus-visible:ring-fg-highlight/35 size-8 shrink-0 cursor-pointer rounded-panel border-2 focus-visible:ring-2 focus-visible:outline-none"
-                  style={{ backgroundColor: markerColor }}
-                  aria-label="Pick marker color"
-                  onClick={() => colorInputRef.current?.click()}
+                  onChange={handleColorChange}
+                  ariaLabel="Pick marker color"
                 />
               </div>
             </div>

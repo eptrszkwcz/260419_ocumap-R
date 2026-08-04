@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { MarkerColorPicker } from '@/components/MarkerColorPicker'
 import { PencilIcon } from '@/components/overlayControlIcons'
 import { useMediaMarkerFlow } from '@/context/MediaMarkerFlowContext'
 import { featureMetadataInputClassName } from '@/panels/library/featureMetadata/styles'
@@ -36,8 +37,6 @@ export function MarkerPanelHeader() {
     requestCloseMarkerPanel,
   } = useMediaMarkerFlow()
 
-  const colorInputId = useId()
-  const colorInputRef = useRef<HTMLInputElement>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   const [isEditingName, setIsEditingName] = useState(false)
@@ -143,22 +142,10 @@ export function MarkerPanelHeader() {
         )}
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <input
-          ref={colorInputRef}
-          id={colorInputId}
-          type="color"
+        <MarkerColorPicker
           value={markerColor}
-          onChange={(e) => handleColorChange(e.target.value)}
-          className="sr-only"
-          tabIndex={-1}
-          aria-label="Pick marker color"
-        />
-        <button
-          type="button"
-          className="border-stroke focus-visible:ring-fg-highlight/35 size-8 shrink-0 cursor-pointer rounded-panel border-2 focus-visible:ring-2 focus-visible:outline-none"
-          style={{ backgroundColor: markerColor }}
-          aria-label="Pick marker color"
-          onClick={() => colorInputRef.current?.click()}
+          onChange={handleColorChange}
+          ariaLabel="Pick marker color"
         />
         <span className={mediaBadgeClass}>Marker</span>
         {showDate ? <span className={mediaBadgeClass}>{draftMarker.dateAdded}</span> : null}

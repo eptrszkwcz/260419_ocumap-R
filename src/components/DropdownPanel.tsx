@@ -1,9 +1,62 @@
-import { useEffect, useId, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 
 export const dropdownMenuPanelBaseClassName =
   'border-stroke font-sans text-standard font-normal absolute z-40 w-[200px] overflow-hidden rounded-panel border bg-panel py-1 shadow-lg'
 
 export const dropdownMenuPanelClassName = dropdownMenuPanelBaseClassName + ' top-full mt-2'
+
+export type DropdownPanelAlign = 'left' | 'right' | 'center' | 'auto'
+
+function getConstraintRects(element: HTMLElement): DOMRect[] {
+  const rects: DOMRect[] = [new DOMRect(0, 0, window.innerWidth, window.innerHeight)]
+
+  let node: HTMLElement | null = element.parentElement
+  while (node && node !== document.body) {
+    const style = getComputedStyle(node)
+    const values = [style.overflow, style.overflowX, style.overflowY]
+    if (values.some((v) => v === 'auto' || v === 'scroll' || v === 'hidden' || v === 'clip')) {
+      rects.push(node.getBoundingClientRect())
+    }
+    node = node.parentElement
+  }
+
+  return rects
+}
+
+function parsePanelWidth(panelWidth: string | undefined): number {
+  if (panelWidth == null) return 200
+  const parsed = Number.parseFloat(panelWidth)
+  return Number.isFinite(parsed) ? parsed : 200
+}
+
+function resolveAutoAlign(
+  root: HTMLElement,
+  panelWidthPx: number,
+): 'left' | 'right' {
+  const trigger = root.firstElementChild
+  if (!(trigger instanceof HTMLElement)) return 'left'
+
+  const triggerRect = trigger.getBoundingClientRect()
+  const boundaryRects = getConstraintRects(root)
+
+  let canLeft = true
+  let canRight = true
+
+  for (const boundaryRect of boundaryRects) {
+    const spaceRight = boundaryRect.right - triggerRect.left
+    const spaceLeft = triggerRect.right - boundaryRect.left
+    if (spaceRight < panelWidthPx) canLeft = false
+    if (spaceLeft < panelWidthPx) canRight = false
+  }
+
+  if (canLeft) return 'left'
+  if (canRight) return 'right'
+
+  const viewport = boundaryRects[0]
+  const spaceRight = viewport.right - triggerRect.left
+  const spaceLeft = triggerRect.right - viewport.left
+  return spaceRight >= spaceLeft ? 'left' : 'right'
+}
 
 export type DropdownPanelTriggerProps = {
   open: boolean
@@ -13,7 +66,7 @@ export type DropdownPanelTriggerProps = {
 
 type DropdownPanelProps = {
   panelAriaLabel: string
-  align?: 'left' | 'right' | 'center'
+  align?: DropdownPanelAlign
   /** Where the panel opens relative to the trigger. */
   placement?: 'bottom' | 'top'
   panelWidth?: string
@@ -47,6 +100,9 @@ export function DropdownPanel({
   const panelId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const [openInternal, setOpenInternal] = useState(false)
+  const [resolvedAlign, setResolvedAlign] = useState<'left' | 'right' | 'center'>(
+    align === 'auto' ? 'left' : align,
+  )
   const open = openControlled ?? openInternal
 
   const setOpen = (next: boolean) => {
@@ -55,6 +111,20 @@ export function DropdownPanel({
     }
     onOpenChange?.(next)
   }
+
+  useLayoutEffect(() => {
+    if (!open || align !== 'auto') {
+      if (align !== 'auto') {
+        setResolvedAlign(align)
+      }
+      return
+    }
+
+    const root = rootRef.current
+    if (root == null) return
+
+    setResolvedAlign(resolveAutoAlign(root, parsePanelWidth(panelWidth)))
+  }, [align, open, panelWidth])
 
   useEffect(() => {
     if (!open) return
@@ -84,7 +154,11 @@ export function DropdownPanel({
   }
 
   const alignClass =
-    align === 'left' ? 'left-0' : align === 'center' ? 'left-1/2 -translate-x-1/2' : 'right-0'
+    resolvedAlign === 'left'
+      ? 'left-0'
+      : resolvedAlign === 'center'
+        ? 'left-1/2 -translate-x-1/2'
+        : 'right-0'
   const placementClass = placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'
   const splitScrollLayout = panelMaxHeight != null && panelHeader != null
   const scrollClass =
