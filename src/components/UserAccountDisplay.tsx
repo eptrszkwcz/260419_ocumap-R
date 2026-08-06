@@ -45,6 +45,7 @@ export function UserAccountDisplay() {
       align="right"
       panelWidth="17.5rem"
       closeOnMouseLeave
+      portaled
       open={open}
       onOpenChange={setOpen}
       renderTrigger={({ open, panelId, onToggle }) => (

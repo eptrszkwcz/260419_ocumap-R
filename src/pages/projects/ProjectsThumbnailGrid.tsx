@@ -50,35 +50,59 @@ function ProjectThumbnailVisual({ project }: ProjectThumbnailTileProps) {
   return <ProjectFolderThumbnail className="size-16" />
 }
 
+const PROJECT_CARD_STAGGER_MS = 55
+
 type ProjectsThumbnailGridProps = {
   projects: ProjectRecord[]
   onOpenProject?: (project: ProjectRecord) => void
+  /** When set, tiles fade in top-to-bottom once `reveal` becomes true. */
+  reveal?: boolean
 }
 
-export function ProjectsThumbnailGrid({ projects, onOpenProject }: ProjectsThumbnailGridProps) {
+export function ProjectsThumbnailGrid({
+  projects,
+  onOpenProject,
+  reveal,
+}: ProjectsThumbnailGridProps) {
   return (
     <div className="min-h-0 w-full min-w-0 flex-1 overflow-auto px-panel-padding py-4">
       <div className="flex flex-wrap gap-4">
-        {projects.map((project) => (
-          <button
-            key={project.id}
-            type="button"
-            className="group flex w-[140px] shrink-0 flex-col gap-1.5 rounded-panel text-left transition-colors hover:bg-area-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35"
-            onClick={() => onOpenProject?.(project)}
-          >
-            <div
-              className={`flex size-[140px] shrink-0 items-center justify-center overflow-hidden rounded-panel border border-transparent transition-colors group-hover:border-fg-highlight group-focus-visible:border-fg-highlight ${thumbnailTileBackgroundClass(project.projectType)}`}
+        {projects.map((project, index) => {
+          const tile = (
+            <button
+              type="button"
+              className="group flex w-[140px] shrink-0 flex-col gap-1.5 rounded-panel text-left transition-colors hover:bg-area-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35"
+              onClick={() => onOpenProject?.(project)}
             >
-              <ProjectThumbnailVisual project={project} />
+              <div
+                className={`flex size-[140px] shrink-0 items-center justify-center overflow-hidden rounded-panel border border-transparent transition-colors group-hover:border-fg-highlight group-focus-visible:border-fg-highlight ${thumbnailTileBackgroundClass(project.projectType)}`}
+              >
+                <ProjectThumbnailVisual project={project} />
+              </div>
+              <span className="text-fg group-hover:text-fg-highlight block truncate text-standard group-hover:font-semibold">
+                {project.name}
+              </span>
+              <span className="text-fg-muted group-hover:text-fg-highlight block truncate text-badge">
+                {project.team}
+              </span>
+            </button>
+          )
+          if (reveal == null) {
+            return <div key={project.id}>{tile}</div>
+          }
+          return (
+            <div
+              key={project.id}
+              className="transition-opacity duration-500 ease-out will-change-[opacity]"
+              style={{
+                opacity: reveal ? 1 : 0,
+                transitionDelay: reveal ? `${index * PROJECT_CARD_STAGGER_MS}ms` : '0ms',
+              }}
+            >
+              {tile}
             </div>
-            <span className="text-fg group-hover:text-fg-highlight block truncate text-standard group-hover:font-semibold">
-              {project.name}
-            </span>
-            <span className="text-fg-muted group-hover:text-fg-highlight block truncate text-badge">
-              {project.team}
-            </span>
-          </button>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
