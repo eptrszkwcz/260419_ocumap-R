@@ -24,6 +24,7 @@ export type AuthUser = {
   displayName: string
   email?: string
   photoUrl?: string
+  teamName?: string
 }
 
 type AuthContextValue = {
@@ -66,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       displayName: MOCK_DEFAULT_USER.displayName,
       email: MOCK_DEFAULT_USER.email,
       photoUrl: MOCK_DEFAULT_USER.photoUrl,
+      teamName: MOCK_DEFAULT_USER.teamName,
     }
     setUser(nextUser)
     writeStoredUser(nextUser)
