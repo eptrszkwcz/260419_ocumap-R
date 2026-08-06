@@ -1,13 +1,16 @@
 /** Default fill for capture points on map and floor plan. */
 export const DEFAULT_MARKER_COLOR = '#2563eb'
 
+/** OcuMap brand orange — matches `--color-ocumap-orange` in `index.css`. */
+export const OCUMAP_ORANGE = '#f97316'
+
 /** Orange fill for preliminary media annotation markers before confirm. */
-export const PRELIMINARY_MARKER_COLOR = '#f97316'
+export const PRELIMINARY_MARKER_COLOR = OCUMAP_ORANGE
 
 /** Preset swatches shown in the marker color picker popover. */
 export const PRESET_MARKER_COLORS = [
   '#3a4abf', // OcuMap blue
-  '#f97316', // OcuMap orange
+  OCUMAP_ORANGE, // OcuMap orange
   '#6b7c3e', // Olive green
   '#dc2626', // Red
   '#9333ea', // Purple

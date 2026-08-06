@@ -31,7 +31,7 @@ export function PanelTabRow({
               aria-selected
               disabled={disabled}
               title={tab.title}
-              className="ocu-tab-active-surface ocu-tab-active-overlap relative z-10 box-border flex min-w-0 shrink-0 items-center border border-stroke border-b-0 bg-panel px-4 font-sans text-standard font-bold text-fg-highlight shadow-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35 disabled:cursor-not-allowed disabled:opacity-45"
+              className="ocu-tab-active-surface ocu-tab-active-overlap relative z-10 box-border flex min-w-0 shrink-0 cursor-pointer items-center border border-stroke border-b-0 bg-panel px-4 font-sans text-standard font-bold text-fg-highlight shadow-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35 disabled:cursor-not-allowed disabled:opacity-45"
               onClick={() => {
                 if (!disabled) onSelect(tab.id)
               }}
@@ -48,7 +48,7 @@ export function PanelTabRow({
             aria-selected={false}
             disabled={disabled}
             title={tab.title}
-            className="box-border flex h-tab-row min-w-0 shrink-0 items-center px-3 font-sans text-standard text-fg-muted transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:text-fg-muted"
+            className="box-border flex h-tab-row min-w-0 shrink-0 cursor-pointer items-center px-3 font-sans text-standard text-fg-muted transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:text-fg-muted"
             onClick={() => {
               if (!disabled) onSelect(tab.id)
             }}

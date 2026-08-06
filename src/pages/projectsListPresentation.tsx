@@ -247,12 +247,15 @@ export function ProjectCardRow({
   )
 }
 
+const PROJECT_CARD_STAGGER_MS = 55
+
 /** Scrollable list body: same gap and cards as the full projects page. */
 export function ProjectsListRows({
   projects,
   layout = 'full',
   visibleColumns = PROJECT_LIST_COLUMN_ORDER,
   rowProps,
+  reveal,
 }: {
   projects: ProjectRecord[]
   layout?: ProjectsListLayout
@@ -262,14 +265,15 @@ export function ProjectsListRows({
     isCurrent?: boolean
     ariaLabel: string
   }
+  /** When set, cards fade in top-to-bottom once `reveal` becomes true. */
+  reveal?: boolean
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-[16px]">
-      {projects.map((project) => {
+      {projects.map((project, index) => {
         const { onActivate, isCurrent, ariaLabel } = rowProps(project)
-        return (
+        const row = (
           <ProjectCardRow
-            key={project.id}
             project={project}
             layout={layout}
             visibleColumns={visibleColumns}
@@ -277,6 +281,23 @@ export function ProjectsListRows({
             isCurrent={isCurrent}
             ariaLabel={ariaLabel}
           />
+        )
+        if (reveal == null) {
+          return (
+            <div key={project.id}>{row}</div>
+          )
+        }
+        return (
+          <div
+            key={project.id}
+            className="transition-opacity duration-500 ease-out will-change-[opacity]"
+            style={{
+              opacity: reveal ? 1 : 0,
+              transitionDelay: reveal ? `${index * PROJECT_CARD_STAGGER_MS}ms` : '0ms',
+            }}
+          >
+            {row}
+          </div>
         )
       })}
     </div>

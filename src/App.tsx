@@ -11,8 +11,13 @@ import { LibraryPage } from '@/pages/LibraryPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { SignupPage } from '@/pages/auth/SignupPage'
+import { AccountPage } from '@/pages/AccountPage'
+import { ActivityPage } from '@/pages/ActivityPage'
 import { PublishedProjectPage } from '@/pages/PublishedProjectPage'
 import { ProjectsPage } from '@/pages/ProjectsPage'
+import { HelpPage } from '@/pages/HelpPage'
+import { SettingsPage } from '@/pages/SettingsPage'
+import { TeamPage } from '@/pages/TeamPage'
 
 export default function App() {
   return (
@@ -42,6 +47,46 @@ export default function App() {
                   element={
                     <ProtectedRoute>
                       <ProjectsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/account"
+                  element={
+                    <ProtectedRoute>
+                      <AccountPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/team"
+                  element={
+                    <ProtectedRoute>
+                      <TeamPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute>
+                      <SettingsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/activity"
+                  element={
+                    <ProtectedRoute>
+                      <ActivityPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/help"
+                  element={
+                    <ProtectedRoute>
+                      <HelpPage />
                     </ProtectedRoute>
                   }
                 />

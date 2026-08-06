@@ -12,12 +12,14 @@ import {
 
 type ProjectsTableProps = {
   projects: ProjectRecord[]
+  /** When set, list header and cards participate in the page enter reveal. */
+  reveal?: boolean
 }
 
 /**
  * Project directory as card rows: name (with type tag), team, dates, status, actions.
  */
-export function ProjectsTable({ projects }: ProjectsTableProps) {
+export function ProjectsTable({ projects, reveal }: ProjectsTableProps) {
   const navigate = useNavigate()
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
@@ -59,15 +61,25 @@ export function ProjectsTable({ projects }: ProjectsTableProps) {
       ref={containerRef}
       className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-auto bg-page pb-panel-padding"
     >
-      <ProjectsListHeader
-        visibleColumns={visibleColumns}
-        sortColumn={sortColumn}
-        sortDirection={sortDirection}
-        onSortColumn={handleSortColumn}
-      />
+      <div
+        className={
+          reveal == null
+            ? undefined
+            : 'transition-opacity duration-500 ease-out will-change-[opacity] ' +
+              (reveal ? 'opacity-100' : 'opacity-0')
+        }
+      >
+        <ProjectsListHeader
+          visibleColumns={visibleColumns}
+          sortColumn={sortColumn}
+          sortDirection={sortDirection}
+          onSortColumn={handleSortColumn}
+        />
+      </div>
       <ProjectsListRows
         projects={sortedProjects}
         visibleColumns={visibleColumns}
+        reveal={reveal}
         rowProps={(project) => ({
           onActivate: () => {
             navigate(`/library?project=${encodeURIComponent(resolveLibraryProjectId(project.id))}`)

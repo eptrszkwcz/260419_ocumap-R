@@ -15,7 +15,7 @@ type ProjectsDrawerTableProps = {
 }
 
 /**
- * Projects list in the library slide-out: same card styling as the full page, name + actions only.
+ * Projects list in the library drawer: same card styling as the full page, name + actions only.
  */
 export function ProjectsDrawerTable({ projects, onCloseDrawer }: ProjectsDrawerTableProps) {
   const navigate = useNavigate()

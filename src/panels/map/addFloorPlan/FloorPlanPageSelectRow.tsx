@@ -43,7 +43,7 @@ export function FloorPlanPageSelectRow({
         type="button"
         onClick={() => onToggleSelected(page.id)}
         className={
-          'group flex shrink-0 flex-col gap-1.5 rounded-panel text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 ' +
+          'group flex shrink-0 cursor-pointer flex-col gap-1.5 rounded-panel text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 ' +
           (page.selected ? '' : 'hover:bg-area-highlight')
         }
         aria-pressed={page.selected}
