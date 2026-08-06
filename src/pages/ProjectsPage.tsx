@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { ControlHeaderToolbar } from '@/components/ControlHeaderToolbar'
+import { OcuMapFullLogo } from '@/components/OcuMapFullLogo'
 import { Panel } from '@/components/Panel'
 import { UserAccountDisplay } from '@/components/UserAccountDisplay'
 import { useProjects } from '@/context/ProjectsContext'
@@ -48,22 +49,12 @@ export function ProjectsPage() {
 
   return (
     <div className="bg-page flex h-full min-h-0 min-w-0 flex-col p-page">
-      <header className="flex h-header shrink-0 items-center justify-between gap-4 pl-panel-padding">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="flex shrink-0 items-center">
-            <img
-              src="/brand/ocumap-o-logo.svg"
-              alt="OcuMap"
-              className="h-9 w-auto"
-              width={33}
-              height={40}
-            />
-          </div>
-          <h1 className="min-w-0 flex-1 truncate font-title text-title font-bold text-fg">Projects</h1>
-        </div>
+      <header className="flex h-header shrink-0 items-center justify-between gap-4 px-panel-padding">
+        <OcuMapFullLogo />
         <UserAccountDisplay />
       </header>
       <Panel className="!border-0 !bg-transparent mx-auto mt-[52px] flex min-h-0 min-w-0 w-full max-w-[1200px] flex-1 flex-col gap-4 p-0 shadow-none">
+        <h1 className="shrink-0 font-title text-title font-bold text-fg">My Projects</h1>
         <ProjectsSummaryStats projects={projects} />
         <div className="relative z-20 shrink-0">
           <ControlHeaderToolbar

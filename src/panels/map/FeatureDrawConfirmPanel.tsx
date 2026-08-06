@@ -85,7 +85,7 @@ export function FeatureDrawConfirmPanel({ featureTitle }: { featureTitle?: strin
           onClick={isEditingFeature ? redrawGeometry : undoDrawMove}
           disabled={!isEditingFeature && !canUndoDraw}
           className={
-            'text-fg-highlight hover:bg-area-highlight h-8 w-full rounded-panel border border-stroke bg-panel font-sans text-standard transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50'
+            'text-fg-highlight hover:bg-area-highlight h-8 w-full cursor-pointer rounded-panel border border-stroke bg-panel font-sans text-standard transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50'
           }
         >
           {isEditingFeature ? 'Redraw' : 'Undo'}
@@ -93,7 +93,7 @@ export function FeatureDrawConfirmPanel({ featureTitle }: { featureTitle?: strin
         <button
           type="button"
           onClick={onCancel}
-          className="text-fg-muted hover:text-fg h-8 w-full rounded-panel font-sans text-standard transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none"
+          className="text-fg-muted hover:text-fg h-8 w-full cursor-pointer rounded-panel font-sans text-standard transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none"
         >
           Cancel
         </button>

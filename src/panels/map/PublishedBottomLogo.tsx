@@ -1,3 +1,4 @@
+import { OcuMapFullLogo } from '@/components/OcuMapFullLogo'
 import { mapOverlayInsetBottomClassName } from '@/panels/map/mapOverlayLayout'
 
 export function PublishedBottomLogo() {
@@ -9,13 +10,7 @@ export function PublishedBottomLogo() {
       }
       aria-hidden
     >
-      <img
-        src="/brand/ocumap-full-logo-dark.png"
-        alt=""
-        className="h-8 w-auto max-w-full object-contain"
-        width={189}
-        height={44}
-      />
+      <OcuMapFullLogo alt="" />
     </div>
   )
 }

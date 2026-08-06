@@ -66,7 +66,7 @@ export function MarkerLogEntryCard({ entry, onUpdate, onDelete }: MarkerLogEntry
                 setEditBody(entry.body)
                 setIsEditing(true)
               }}
-              className="text-fg-muted hover:text-fg-highlight text-badge focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35"
+              className="text-fg-muted hover:text-fg-highlight cursor-pointer text-badge focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35"
             >
               Edit
             </button>
@@ -76,7 +76,7 @@ export function MarkerLogEntryCard({ entry, onUpdate, onDelete }: MarkerLogEntry
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
-              className="text-fg-muted hover:text-fg-highlight text-badge focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35"
+              className="text-fg-muted hover:text-fg-highlight cursor-pointer text-badge focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg-highlight/35"
             >
               Delete
             </button>

@@ -4,7 +4,7 @@ import { DelayedTooltip } from '@/components/DelayedTooltip'
 import {
   overlayBarInsetStyle,
   overlayBtnClass,
-  overlayBtnPrimaryLargeClass,
+  overlayBtnAddMarkerClass,
 } from '@/components/overlayControlButtons'
 import {
   AddMarkerIcon,
@@ -362,11 +362,11 @@ export function FeatureLibraryMediaViewer({
                     <GearIcon />
                   </button>
                 </DelayedTooltip>
-                <DelayedTooltip label="Add new marker to media">
+                <DelayedTooltip label="Add marker">
                   <button
                     type="button"
-                    className={overlayBtnPrimaryLargeClass}
-                    aria-label="Add new marker to media"
+                    className={overlayBtnAddMarkerClass}
+                    aria-label="Add marker"
                     onClick={handleAddMarker}
                     disabled={isPlacingMediaMarker || isAdjustingMediaMarker}
                   >

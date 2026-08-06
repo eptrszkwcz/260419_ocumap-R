@@ -80,16 +80,7 @@ export function ProjectsDrawerFromLibrary() {
       >
         <div className="flex min-h-0 min-w-0 flex-1 flex-col p-page">
           <header className="flex h-header shrink-0 items-center justify-between gap-4 pl-panel-padding">
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <div className="flex shrink-0 items-center">
-                <img
-                  src="/brand/ocumap-o-logo.svg"
-                  alt="OcuMap"
-                  className="h-9 w-auto"
-                  width={33}
-                  height={40}
-                />
-              </div>
+            <div className="flex min-w-0 flex-1 items-center">
               <button
                 type="button"
                 onClick={goToProjectsPage}
