@@ -2,6 +2,7 @@ import {
   ArrowRightOnRectangleIcon,
   ClockIcon,
   Cog6ToothIcon,
+  FolderIcon,
   QuestionMarkCircleIcon,
   UserCircleIcon,
   UserGroupIcon,
@@ -17,6 +18,7 @@ import { useAuth } from '@/context/AuthContext'
 const menuItemIconClass = 'size-4 shrink-0'
 
 const primaryMenuItems = [
+  { id: 'project', label: 'Projects', icon: FolderIcon, path: '/projects' },
   { id: 'account', label: 'Account', icon: UserCircleIcon, path: '/account' },
   { id: 'team', label: 'Team', icon: UserGroupIcon, path: '/team' },
 ] as const
