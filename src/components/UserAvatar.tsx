@@ -21,18 +21,20 @@ function UserOutlineIcon({ className = 'size-5' }: { className?: string }) {
 type UserAvatarProps = {
   photoUrl?: string
   /** Diameter in pixels. Defaults to 40. */
-  size?: 32 | 40
+  size?: 32 | 40 | 80
   className?: string
 }
 
 const sizeClassByDiameter = {
   32: 'size-8',
   40: 'size-10',
+  80: 'size-20',
 } as const
 
 const iconClassByDiameter = {
   32: 'size-4',
   40: 'size-5',
+  80: 'size-10',
 } as const
 
 const avatarBorderClass = 'border border-stroke'

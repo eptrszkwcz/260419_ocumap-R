@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 import { OcuMapFullLogo } from '@/components/OcuMapFullLogo'
 import { Panel } from '@/components/Panel'
@@ -15,10 +15,11 @@ function revealClass(visible: boolean): string {
 
 type UserSectionPageProps = {
   title: string
+  children?: ReactNode
 }
 
 /** Projects-style shell for account, team, settings, and activity pages. */
-export function UserSectionPage({ title }: UserSectionPageProps) {
+export function UserSectionPage({ title, children }: UserSectionPageProps) {
   const [revealPhase, setRevealPhase] = useState<RevealPhase>('hidden')
 
   useEffect(() => {
@@ -46,11 +47,11 @@ export function UserSectionPage({ title }: UserSectionPageProps) {
         <UserAccountDisplay />
       </header>
       <Panel className="!border-0 !bg-transparent mx-auto mt-[52px] flex min-h-0 min-w-0 w-full max-w-[1200px] flex-1 flex-col gap-4 p-0 shadow-none">
-        <div className={'flex shrink-0 flex-col ' + revealClass(contentVisible)}>
+        <div className={'flex min-h-0 flex-1 flex-col ' + revealClass(contentVisible)}>
           <div className="mb-[12px] h-fit shrink-0">
             <h1 className="font-title text-[30px] font-bold leading-none text-fg">{title}</h1>
           </div>
-          <p className="font-sans text-standard text-fg-muted">Coming Soon</p>
+          {children ?? <p className="font-sans text-standard text-fg-muted">Coming Soon</p>}
         </div>
       </Panel>
     </div>
