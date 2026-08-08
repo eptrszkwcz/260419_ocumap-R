@@ -74,16 +74,16 @@ export function AccountProfilePanel({
   const initialJobTitle = MOCK_ACCOUNT_PROFILE.jobTitle
 
   const [savedName, setSavedName] = useState(displayName)
-  const [savedJobTitle, setSavedJobTitle] = useState(initialJobTitle)
+  const [savedJobTitle, setSavedJobTitle] = useState<string>(initialJobTitle)
   const [savedPhotoUrl, setSavedPhotoUrl] = useState(photoUrl)
 
   const [name, setName] = useState(displayName)
-  const [jobTitle, setJobTitle] = useState(initialJobTitle)
+  const [jobTitle, setJobTitle] = useState<string>(initialJobTitle)
   const org = organization || MOCK_ACCOUNT_PROFILE.organization
   const username = MOCK_ACCOUNT_PROFILE.username
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(photoUrl)
   const [replacePhotoOpen, setReplacePhotoOpen] = useState(false)
-  const uploadedPhotoUrlRef = useRef<string | undefined>()
+  const uploadedPhotoUrlRef = useRef<string | undefined>(undefined)
 
   const isDirty =
     name !== savedName ||
