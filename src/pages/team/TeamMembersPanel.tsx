@@ -1,3 +1,4 @@
+import { PlusIcon } from '@heroicons/react/24/outline'
 import { useState } from 'react'
 
 import { MOCK_TEAM } from '@/data/mockTeamData'
@@ -61,7 +62,11 @@ export function TeamMembersPanel({ teamName }: TeamMembersPanelProps) {
           <h2 id="team-members" className={accountSectionTitleClass}>
             Members
           </h2>
-          <button type="button" className={`${accountPrimaryButtonClass} shrink-0`}>
+          <button
+            type="button"
+            className={`${accountPrimaryButtonClass} inline-flex shrink-0 items-center gap-1.5`}
+          >
+            <PlusIcon className="size-4 shrink-0" aria-hidden />
             Add team member
           </button>
         </div>
