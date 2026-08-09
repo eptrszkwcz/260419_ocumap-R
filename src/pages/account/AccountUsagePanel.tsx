@@ -40,7 +40,7 @@ type AccountUsagePanelProps = {
 
 export function AccountUsagePanel({ onChangeSubscriptionPlan }: AccountUsagePanelProps) {
   const { usedGb, breakdown } = MOCK_ACCOUNT_USAGE
-  const [totalGb, setTotalGb] = useState(MOCK_ACCOUNT_USAGE.totalGb)
+  const [totalGb, setTotalGb] = useState<number>(MOCK_ACCOUNT_USAGE.totalGb)
   const [isBuyStorageModalOpen, setIsBuyStorageModalOpen] = useState(false)
   const totalFiles = breakdown.reduce((sum, row) => sum + row.fileCount, 0)
   const percent = Math.min(100, Math.round((usedGb / totalGb) * 100))

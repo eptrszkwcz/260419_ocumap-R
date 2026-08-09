@@ -39,17 +39,19 @@ function ContactField({ label, value }: { label: string; value: string }) {
 export function AccountBillingPanel() {
   const { paymentMethod, invoices } = MOCK_BILLING
 
-  const [savedName, setSavedName] = useState(MOCK_BILLING.contact.name)
-  const [savedEmail, setSavedEmail] = useState(MOCK_BILLING.contact.email)
-  const [savedCompanyAddress, setSavedCompanyAddress] = useState(
+  const [savedName, setSavedName] = useState<string>(MOCK_BILLING.contact.name)
+  const [savedEmail, setSavedEmail] = useState<string>(MOCK_BILLING.contact.email)
+  const [savedCompanyAddress, setSavedCompanyAddress] = useState<string>(
     MOCK_BILLING.contact.companyAddress,
   )
-  const [savedTaxId, setSavedTaxId] = useState(MOCK_BILLING.contact.taxId)
+  const [savedTaxId, setSavedTaxId] = useState<string>(MOCK_BILLING.contact.taxId)
 
-  const [name, setName] = useState(MOCK_BILLING.contact.name)
-  const [email, setEmail] = useState(MOCK_BILLING.contact.email)
-  const [companyAddress, setCompanyAddress] = useState(MOCK_BILLING.contact.companyAddress)
-  const [taxId, setTaxId] = useState(MOCK_BILLING.contact.taxId)
+  const [name, setName] = useState<string>(MOCK_BILLING.contact.name)
+  const [email, setEmail] = useState<string>(MOCK_BILLING.contact.email)
+  const [companyAddress, setCompanyAddress] = useState<string>(
+    MOCK_BILLING.contact.companyAddress,
+  )
+  const [taxId, setTaxId] = useState<string>(MOCK_BILLING.contact.taxId)
   const [isEditingContact, setIsEditingContact] = useState(false)
 
   const handleStartEdit = () => {
