@@ -15,7 +15,7 @@ import { AccountPage } from '@/pages/AccountPage'
 import { ActivityPage } from '@/pages/ActivityPage'
 import { PublishedProjectPage } from '@/pages/PublishedProjectPage'
 import { ProjectsPage } from '@/pages/ProjectsPage'
-import { HelpPage } from '@/pages/HelpPage'
+import { SupportPage } from '@/pages/SupportPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { TeamPage } from '@/pages/TeamPage'
 
@@ -83,10 +83,10 @@ export default function App() {
                   }
                 />
                 <Route
-                  path="/help"
+                  path="/support"
                   element={
                     <ProtectedRoute>
-                      <HelpPage />
+                      <SupportPage />
                     </ProtectedRoute>
                   }
                 />

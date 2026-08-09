@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { PanelTabRow, type TabItem } from '@/components/PanelTabRow'
 import { useAuth } from '@/context/AuthContext'
 import { MOCK_ACCOUNT_PROFILE } from '@/data/mockAccountData'
+import { AccountBillingPanel } from '@/pages/account/AccountBillingPanel'
 import { AccountProfilePanel } from '@/pages/account/AccountProfilePanel'
 import { AccountSecurityPanel } from '@/pages/account/AccountSecurityPanel'
 import { AccountSubscriptionPanel } from '@/pages/account/AccountSubscriptionPanel'
@@ -14,6 +15,7 @@ const accountTabs: TabItem[] = [
   { id: 'profile', label: 'Profile' },
   { id: 'usage', label: 'Usage' },
   { id: 'subscription', label: 'Subscription' },
+  { id: 'billing', label: 'Billing' },
   { id: 'security', label: 'Security' },
 ]
 
@@ -49,8 +51,11 @@ function AccountPageContent() {
             organization={organization}
           />
         ) : null}
-        {tab === 'usage' ? <AccountUsagePanel /> : null}
+        {tab === 'usage' ? (
+          <AccountUsagePanel onChangeSubscriptionPlan={() => setTab('subscription')} />
+        ) : null}
         {tab === 'subscription' ? <AccountSubscriptionPanel /> : null}
+        {tab === 'billing' ? <AccountBillingPanel /> : null}
         {tab === 'security' ? <AccountSecurityPanel /> : null}
       </div>
     </div>

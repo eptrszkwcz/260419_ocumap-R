@@ -26,7 +26,7 @@ const primaryMenuItems = [
 const accountMenuItems = [
   { id: 'settings', label: 'Settings', icon: Cog6ToothIcon, path: '/settings' },
   { id: 'activity', label: 'Activity', icon: ClockIcon, path: '/activity' },
-  { id: 'help', label: 'Help', icon: QuestionMarkCircleIcon, path: '/help' },
+  { id: 'support', label: 'Support', icon: QuestionMarkCircleIcon, path: '/support' },
 ] as const
 
 /** Name + user menu, matching the map panel header (library page). */

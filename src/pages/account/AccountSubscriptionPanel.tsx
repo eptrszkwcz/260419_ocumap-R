@@ -1,4 +1,5 @@
 import { CheckIcon } from '@heroicons/react/24/outline'
+import { useState } from 'react'
 
 import { MOCK_CURRENT_PLAN_ID, type SubscriptionPlanId } from '@/data/mockAccountData'
 import {
@@ -7,6 +8,7 @@ import {
   accountSectionDescClass,
   accountSectionTitleClass,
 } from '@/pages/account/accountStyles'
+import { UpdateSubscriptionModal } from '@/pages/account/UpdateSubscriptionModal'
 
 type PlanColumn = {
   id: SubscriptionPlanId
@@ -172,6 +174,9 @@ function CellContent({ value }: { value: CellValue }) {
 }
 
 export function AccountSubscriptionPanel() {
+  const [currentPlanId, setCurrentPlanId] = useState<SubscriptionPlanId>(MOCK_CURRENT_PLAN_ID)
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
+
   return (
     <div className="flex w-full flex-col gap-6 pb-2">
       <section className={accountSectionClass} aria-labelledby="subscription-plans">
@@ -184,7 +189,11 @@ export function AccountSubscriptionPanel() {
               Compare OcuMap plans.
             </p>
           </div>
-          <button type="button" className={`${accountPrimaryButtonClass} shrink-0`}>
+          <button
+            type="button"
+            className={`${accountPrimaryButtonClass} shrink-0`}
+            onClick={() => setIsUpdateModalOpen(true)}
+          >
             Update Subscription
           </button>
         </div>
@@ -197,7 +206,7 @@ export function AccountSubscriptionPanel() {
                   <span className="sr-only">Feature</span>
                 </th>
                 {PLANS.map((plan) => {
-                  const current = plan.id === MOCK_CURRENT_PLAN_ID
+                  const current = plan.id === currentPlanId
                   return (
                     <th
                       key={plan.id}
@@ -225,7 +234,7 @@ export function AccountSubscriptionPanel() {
                     {row.label}
                   </th>
                   {PLANS.map((plan) => {
-                    const current = plan.id === MOCK_CURRENT_PLAN_ID
+                    const current = plan.id === currentPlanId
                     const isLastRow = rowIndex === FEATURE_ROWS.length - 1
                     return (
                       <td
@@ -252,6 +261,14 @@ export function AccountSubscriptionPanel() {
           </p>
         </div>
       </section>
+
+      {isUpdateModalOpen ? (
+        <UpdateSubscriptionModal
+          currentPlanId={currentPlanId}
+          onClose={() => setIsUpdateModalOpen(false)}
+          onSelectPlan={setCurrentPlanId}
+        />
+      ) : null}
     </div>
   )
 }
