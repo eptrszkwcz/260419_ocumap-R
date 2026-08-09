@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react'
+import { useState, type ComponentType } from 'react'
 
 import { MOCK_ACCOUNT_USAGE } from '@/data/mockAccountData'
 import {
@@ -7,6 +7,7 @@ import {
   accountSectionDescClass,
   accountSectionTitleClass,
 } from '@/pages/account/accountStyles'
+import { BuyMoreStorageModal } from '@/pages/account/BuyMoreStorageModal'
 import {
   Model3DTypeIcon,
   Panorama360TypeIcon,
@@ -33,8 +34,14 @@ function formatFileCount(value: number): string {
   return value.toLocaleString()
 }
 
-export function AccountUsagePanel() {
-  const { usedGb, totalGb, breakdown } = MOCK_ACCOUNT_USAGE
+type AccountUsagePanelProps = {
+  onChangeSubscriptionPlan: () => void
+}
+
+export function AccountUsagePanel({ onChangeSubscriptionPlan }: AccountUsagePanelProps) {
+  const { usedGb, breakdown } = MOCK_ACCOUNT_USAGE
+  const [totalGb, setTotalGb] = useState(MOCK_ACCOUNT_USAGE.totalGb)
+  const [isBuyStorageModalOpen, setIsBuyStorageModalOpen] = useState(false)
   const totalFiles = breakdown.reduce((sum, row) => sum + row.fileCount, 0)
   const percent = Math.min(100, Math.round((usedGb / totalGb) * 100))
 
@@ -48,7 +55,11 @@ export function AccountUsagePanel() {
             </h2>
             <p className={`mt-1 ${accountSectionDescClass}`}>Usage across all projects.</p>
           </div>
-          <button type="button" className={`${accountPrimaryButtonClass} shrink-0`}>
+          <button
+            type="button"
+            className={`${accountPrimaryButtonClass} shrink-0`}
+            onClick={() => setIsBuyStorageModalOpen(true)}
+          >
             Buy more storage
           </button>
         </div>
@@ -119,6 +130,14 @@ export function AccountUsagePanel() {
           </table>
         </div>
       </section>
+
+      {isBuyStorageModalOpen ? (
+        <BuyMoreStorageModal
+          onClose={() => setIsBuyStorageModalOpen(false)}
+          onPurchase={(addOn) => setTotalGb((current) => current + addOn.gb)}
+          onChangeSubscriptionPlan={onChangeSubscriptionPlan}
+        />
+      ) : null}
     </div>
   )
 }

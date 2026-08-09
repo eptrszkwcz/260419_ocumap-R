@@ -1,1 +1,1 @@
-export type AccountTabId = 'profile' | 'usage' | 'subscription' | 'security'
+export type AccountTabId = 'profile' | 'usage' | 'subscription' | 'billing' | 'security'

@@ -29,3 +29,23 @@ export const MOCK_SECURITY = {
     { id: 'session-2', device: 'iPhone 15', location: 'Austin, TX', lastActive: '2 hours ago' },
   ],
 } as const
+
+export const MOCK_BILLING = {
+  paymentMethod: {
+    brand: 'Visa',
+    last4: '4242',
+    expires: '08/28',
+    isDefault: true,
+  },
+  invoices: [
+    { id: 'inv-2026-08', date: 'Aug 1, 2026', amount: '$199.00', status: 'Paid' },
+    { id: 'inv-2026-07', date: 'Jul 1, 2026', amount: '$199.00', status: 'Paid' },
+    { id: 'inv-2026-06', date: 'Jun 1, 2026', amount: '$199.00', status: 'Paid' },
+  ],
+  contact: {
+    name: 'Jordy Smith',
+    email: 'billing@smithproperty.com',
+    companyAddress: 'Smith Property Group\n100 Congress Ave, Suite 400\nAustin, TX 78701',
+    taxId: '',
+  },
+} as const
