@@ -16,6 +16,7 @@ import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { useMediaMarkerFlow } from '@/context/MediaMarkerFlowContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
+import { usePrefersHover } from '@/hooks/usePrefersHover'
 import type { MapDrawnGeometry } from '@/panels/library/assetGeometryHelpers'
 import { DirectionAdjustBanner } from '@/panels/map/DirectionAdjustBanner'
 import { DirectionAdjustMarkerOverlay } from '@/panels/map/DirectionAdjustMarkerOverlay'
@@ -285,6 +286,9 @@ export function InfrastructureMapView({
     setOpenedFeatureId,
     openFeatureFromMap,
   } = useFeatureMapHover()
+  const prefersHover = usePrefersHover()
+  const prefersHoverRef = useRef(prefersHover)
+  prefersHoverRef.current = prefersHover
 
   const [hoverAnchor, setHoverAnchor] = useState<{ clientX: number; clientY: number } | null>(null)
 
@@ -784,9 +788,22 @@ export function InfrastructureMapView({
     const map = mapRef.current
     if (map == null || isPickingLocation || isAdjustingDirection || isDrawing || isEditingFeature) return
 
-    const onClick = (e: mapboxgl.MapLayerMouseEvent) => {
+    const hoverLayerIds = [CAPTURE_LAYER_ID, DRAWN_FILL_LAYER_ID, DRAWN_LINE_LAYER_ID]
+
+    const onFeatureClick = (e: mapboxgl.MapLayerMouseEvent) => {
       const id = captureMarkerIdFromFeature(e.features?.[0])
       if (id == null) return
+      const canvas = map.getCanvas()
+      const rect = canvas.getBoundingClientRect()
+      const clientX = rect.left + e.point.x
+      const clientY = rect.top + e.point.y
+
+      if (!prefersHoverRef.current) {
+        setMapHoveredFeatureId(id)
+        setHoverAnchor({ clientX, clientY })
+        return
+      }
+
       setOpenedFeatureId(id)
       zoomToOpenedFeature(
         map,
@@ -797,16 +814,35 @@ export function InfrastructureMapView({
       openFeatureFromMap(id)
     }
 
-    map.on('click', CAPTURE_LAYER_ID, onClick)
-    map.on('click', DRAWN_FILL_LAYER_ID, onClick)
-    map.on('click', DRAWN_LINE_LAYER_ID, onClick)
+    const onEmptyMapClick = (e: mapboxgl.MapMouseEvent) => {
+      if (prefersHoverRef.current) return
+      const hits = map.queryRenderedFeatures(e.point, { layers: hoverLayerIds })
+      if (hits.length > 0) return
+      setMapHoveredFeatureId(null)
+      setHoverAnchor(null)
+    }
+
+    map.on('click', CAPTURE_LAYER_ID, onFeatureClick)
+    map.on('click', DRAWN_FILL_LAYER_ID, onFeatureClick)
+    map.on('click', DRAWN_LINE_LAYER_ID, onFeatureClick)
+    map.on('click', onEmptyMapClick)
 
     return () => {
-      map.off('click', CAPTURE_LAYER_ID, onClick)
-      map.off('click', DRAWN_FILL_LAYER_ID, onClick)
-      map.off('click', DRAWN_LINE_LAYER_ID, onClick)
+      map.off('click', CAPTURE_LAYER_ID, onFeatureClick)
+      map.off('click', DRAWN_FILL_LAYER_ID, onFeatureClick)
+      map.off('click', DRAWN_LINE_LAYER_ID, onFeatureClick)
+      map.off('click', onEmptyMapClick)
     }
-  }, [isPickingLocation, isAdjustingDirection, isDrawing, isEditingFeature, openFeatureFromMap, setOpenedFeatureId, styleUrl])
+  }, [
+    isPickingLocation,
+    isAdjustingDirection,
+    isDrawing,
+    isEditingFeature,
+    openFeatureFromMap,
+    setOpenedFeatureId,
+    setMapHoveredFeatureId,
+    styleUrl,
+  ])
 
   useEffect(() => {
     const map = mapRef.current
@@ -825,6 +861,7 @@ export function InfrastructureMapView({
     }
 
     const onMouseEnter = (e: mapboxgl.MapLayerMouseEvent) => {
+      if (!prefersHoverRef.current) return
       const id = captureMarkerIdFromFeature(e.features?.[0])
       if (id == null) return
       setMapHoveredFeatureId(id)
@@ -834,6 +871,7 @@ export function InfrastructureMapView({
     }
 
     const onMouseMove = (e: mapboxgl.MapLayerMouseEvent) => {
+      if (!prefersHoverRef.current) return
       const id = captureMarkerIdFromFeature(e.features?.[0])
       if (id == null) return
       setMapHoveredFeatureId(id)
@@ -841,6 +879,7 @@ export function InfrastructureMapView({
     }
 
     const onMouseLeave = () => {
+      if (!prefersHoverRef.current) return
       setMapHoveredFeatureId(null)
       setHoverAnchor(null)
       canvas.style.cursor = prevCursor
@@ -858,8 +897,10 @@ export function InfrastructureMapView({
         map.off('mousemove', layerId, onMouseMove)
         map.off('mouseleave', layerId, onMouseLeave)
       }
-      setMapHoveredFeatureId(null)
-      setHoverAnchor(null)
+      if (prefersHoverRef.current) {
+        setMapHoveredFeatureId(null)
+        setHoverAnchor(null)
+      }
       canvas.style.cursor = prevCursor
     }
   }, [isPickingLocation, isAdjustingDirection, isDrawing, isEditingFeature, setMapHoveredFeatureId, styleUrl])
@@ -1095,6 +1136,24 @@ export function InfrastructureMapView({
           typeLabel={hoverPopupContent?.typeLabel}
           previewUrl={hoverPopupContent?.previewUrl}
           anchor={hoverAnchor}
+          onViewFeature={
+            prefersHover
+              ? undefined
+              : () => {
+                  if (mapHoveredFeatureId == null) return
+                  const map = mapRef.current
+                  if (map == null) return
+                  const id = mapHoveredFeatureId
+                  setOpenedFeatureId(id)
+                  zoomToOpenedFeature(
+                    map,
+                    captureMarkersRef.current,
+                    mapDrawnGeometriesRef.current,
+                    id,
+                  )
+                  openFeatureFromMap(id)
+                }
+          }
         />
       ) : null}
     </div>

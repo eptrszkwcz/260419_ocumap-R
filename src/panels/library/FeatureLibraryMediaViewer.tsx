@@ -44,6 +44,8 @@ type FeatureLibraryMediaViewerProps = {
   onClose?: () => void
   hideOverlayClose?: boolean
   hideOverlayNavigation?: boolean
+  /** Hide Add marker (published / read-only views). */
+  hideAddMarker?: boolean
   mediaControlsRef?: Ref<HTMLDivElement>
 }
 
@@ -58,6 +60,7 @@ export function FeatureLibraryMediaViewer({
   onClose,
   hideOverlayClose = false,
   hideOverlayNavigation = false,
+  hideAddMarker = false,
   mediaControlsRef,
 }: FeatureLibraryMediaViewerProps) {
   const { project, projectId } = useActiveProject()
@@ -362,17 +365,19 @@ export function FeatureLibraryMediaViewer({
                     <GearIcon />
                   </button>
                 </DelayedTooltip>
-                <DelayedTooltip label="Add marker">
-                  <button
-                    type="button"
-                    className={overlayBtnAddMarkerClass}
-                    aria-label="Add marker"
-                    onClick={handleAddMarker}
-                    disabled={isPlacingMediaMarker || isAdjustingMediaMarker}
-                  >
-                    <AddMarkerIcon />
-                  </button>
-                </DelayedTooltip>
+                {!hideAddMarker ? (
+                  <DelayedTooltip label="Add marker">
+                    <button
+                      type="button"
+                      className={overlayBtnAddMarkerClass}
+                      aria-label="Add marker"
+                      onClick={handleAddMarker}
+                      disabled={isPlacingMediaMarker || isAdjustingMediaMarker}
+                    >
+                      <AddMarkerIcon />
+                    </button>
+                  </DelayedTooltip>
+                ) : null}
               </>
             ) : null}
           </div>

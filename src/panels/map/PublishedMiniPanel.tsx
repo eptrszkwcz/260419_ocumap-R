@@ -1,10 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react'
 
-import {
-  PUBLISHED_MINI_PANEL_MIN_HEIGHT,
-  PUBLISHED_MINI_PANEL_MIN_WIDTH,
-  publishedMiniPanelClassName,
-} from '@/panels/map/mapOverlayLayout'
+import { publishedMiniPanelClassName } from '@/panels/map/mapOverlayLayout'
 
 const RESIZE_HANDLE_HIT_PX = 20
 const RESIZE_TRIANGLE_PX = 18
@@ -18,6 +14,8 @@ type PublishedMiniPanelProps = {
   height: number
   maxWidth: number
   maxHeight: number
+  minWidth: number
+  minHeight: number
   onResize: (size: { width: number; height: number }) => void
   onResizeEnd?: () => void
   children: ReactNode
@@ -28,6 +26,8 @@ export function PublishedMiniPanel({
   height,
   maxWidth,
   maxHeight,
+  minWidth,
+  minHeight,
   onResize,
   onResizeEnd,
   children,
@@ -41,8 +41,8 @@ export function PublishedMiniPanel({
     height: number
   } | null>(null)
 
-  const effectiveMaxWidth = Math.max(PUBLISHED_MINI_PANEL_MIN_WIDTH, maxWidth)
-  const effectiveMaxHeight = Math.max(PUBLISHED_MINI_PANEL_MIN_HEIGHT, maxHeight)
+  const effectiveMaxWidth = Math.max(minWidth, maxWidth)
+  const effectiveMaxHeight = Math.max(minHeight, maxHeight)
   const handleHighlighted = hovered || dragging
 
   return (
@@ -57,7 +57,7 @@ export function PublishedMiniPanel({
         role="separator"
         aria-label="Resize map preview"
         aria-valuenow={width}
-        aria-valuemin={PUBLISHED_MINI_PANEL_MIN_WIDTH}
+        aria-valuemin={minWidth}
         aria-valuemax={effectiveMaxWidth}
         tabIndex={0}
         onPointerEnter={() => setHovered(true)}
@@ -85,16 +85,8 @@ export function PublishedMiniPanel({
           const deltaX = e.clientX - start.pointerX
           const deltaY = e.clientY - start.pointerY
           onResize({
-            width: clamp(
-              PUBLISHED_MINI_PANEL_MIN_WIDTH,
-              start.width + deltaX,
-              effectiveMaxWidth,
-            ),
-            height: clamp(
-              PUBLISHED_MINI_PANEL_MIN_HEIGHT,
-              start.height - deltaY,
-              effectiveMaxHeight,
-            ),
+            width: clamp(minWidth, start.width + deltaX, effectiveMaxWidth),
+            height: clamp(minHeight, start.height - deltaY, effectiveMaxHeight),
           })
         }}
         onPointerUp={(e) => {

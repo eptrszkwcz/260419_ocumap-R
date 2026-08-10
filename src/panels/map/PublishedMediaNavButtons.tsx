@@ -7,6 +7,7 @@ import { getFeatureTypeLabel, type SpatialAsset } from '@/data/sampleAssets'
 import {
   publishedMediaFeaturesMenuPanelWidth,
   publishedMediaNavWidthClassName,
+  type PublishedChromeMode,
 } from '@/panels/map/mapOverlayLayout'
 
 const mediaBadgeClass =
@@ -19,10 +20,18 @@ const hamburgerButtonClassName =
   navButtonClassName.replace(' w-full', '') +
   ' w-[160px] shrink-0 px-3 disabled:cursor-not-allowed disabled:opacity-40 gap-1.5'
 
+const hamburgerButtonNarrowClassName =
+  navButtonClassName.replace(' w-full', '') +
+  ' w-auto shrink-0 px-3 disabled:cursor-not-allowed disabled:opacity-40 gap-1.5'
+
 type PublishedMediaNavButtonsProps = {
   asset: SpatialAsset | null
   featureAssets: SpatialAsset[]
   featuresMenuMaxHeightPx: number
+  featuresMenuWidthPx?: number
+  chromeMode?: PublishedChromeMode
+  /** When true, stretch to parent stack width (compact/narrow). */
+  embedded?: boolean
   onAssetChange: (asset: SpatialAsset) => void
 }
 
@@ -30,10 +39,15 @@ export function PublishedMediaNavButtons({
   asset,
   featureAssets,
   featuresMenuMaxHeightPx,
+  featuresMenuWidthPx,
+  chromeMode = 'desktop',
+  embedded = false,
   onAssetChange,
 }: PublishedMediaNavButtonsProps) {
   const canNavigate = featureAssets.length > 1
   const canOpenFeatureList = featureAssets.length > 0
+  const isNarrow = chromeMode === 'narrow'
+  const iconOnly = isNarrow
 
   const featureMenuItems = useMemo(
     () =>
@@ -64,9 +78,18 @@ export function PublishedMediaNavButtons({
     onAssetChange(featureAssets[next])
   }, [currentIndex, featureAssets, onAssetChange])
 
+  const widthClassName = embedded
+    ? 'w-full max-w-none'
+    : publishedMediaNavWidthClassName
+
+  const panelWidth =
+    featuresMenuWidthPx != null
+      ? `${featuresMenuWidthPx}px`
+      : publishedMediaFeaturesMenuPanelWidth
+
   return (
     <div
-      className={'grid grid-cols-[1fr_auto_1fr] gap-2 ' + publishedMediaNavWidthClassName}
+      className={'grid grid-cols-[1fr_auto_1fr] gap-2 ' + widthClassName}
       role="navigation"
       aria-label="Media feature navigation"
     >
@@ -77,14 +100,14 @@ export function PublishedMediaNavButtons({
         disabled={!canNavigate}
         onClick={goPrev}
       >
-        Previous
+        {iconOnly ? null : 'Previous'}
         <ChevronLeftIcon />
       </button>
       <DropdownMenu
         menuAriaLabel="Published project features"
         align="center"
         placement="bottom"
-        panelWidth={publishedMediaFeaturesMenuPanelWidth}
+        panelWidth={panelWidth}
         panelMaxHeight={`${featuresMenuMaxHeightPx}px`}
         tableColumnHeaders={{ feature: 'Feature', type: 'Type' }}
         closeOnMouseLeave={false}
@@ -93,7 +116,7 @@ export function PublishedMediaNavButtons({
           <button
             type="button"
             onClick={onToggle}
-            className={hamburgerButtonClassName}
+            className={isNarrow ? hamburgerButtonNarrowClassName : hamburgerButtonClassName}
             aria-expanded={open}
             aria-haspopup="menu"
             aria-controls={menuId}
@@ -101,7 +124,7 @@ export function PublishedMediaNavButtons({
             disabled={!canOpenFeatureList}
           >
             <HamburgerIcon />
-            Features
+            {iconOnly ? null : 'Features'}
           </button>
         )}
       />
@@ -113,7 +136,7 @@ export function PublishedMediaNavButtons({
         onClick={goNext}
       >
         <ChevronRightIcon />
-        Next
+        {iconOnly ? null : 'Next'}
       </button>
     </div>
   )

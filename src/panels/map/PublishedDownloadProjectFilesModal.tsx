@@ -41,8 +41,8 @@ export function PublishedDownloadProjectFilesModal({
       maxWidthClass="max-w-4xl"
       onClose={onClose}
       header={
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-stroke bg-white px-6 py-4">
-          <h1 className="font-title text-title font-bold text-fg">Download Project Files</h1>
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-stroke bg-white px-4 py-3 sm:px-6 sm:py-4">
+          <h1 className="min-w-0 font-title text-title font-bold text-fg">Download Project Files</h1>
           <button
             type="button"
             onClick={() => downloadAllAssets(assets)}
@@ -58,7 +58,7 @@ export function PublishedDownloadProjectFilesModal({
         </div>
       }
       footer={
-        <footer className="flex shrink-0 border-t border-stroke bg-white px-6 py-4">
+        <footer className="flex shrink-0 border-t border-stroke bg-white px-4 py-3 sm:px-6 sm:py-4">
           <div className={featureMetadataFooterActionsClassName}>
             <button
               type="button"
@@ -71,7 +71,7 @@ export function PublishedDownloadProjectFilesModal({
         </footer>
       }
     >
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {assets.length === 0 ? (
           <p className="font-sans text-standard text-fg-muted">No project files available.</p>
         ) : (

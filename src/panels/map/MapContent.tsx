@@ -12,6 +12,7 @@ import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext
 import { useMediaMarkerFlow } from '@/context/MediaMarkerFlowContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
 import { useViewDirectionAdjust } from '@/context/ViewDirectionAdjustContext'
+import { usePrefersHover } from '@/hooks/usePrefersHover'
 import type { FloorPlanDrawnGeometry } from '@/panels/library/assetGeometryHelpers'
 import { FeatureDrawConfirmPanel } from '@/panels/map/FeatureDrawConfirmPanel'
 import { FeatureMapHoverPopup } from '@/panels/map/FeatureMapHoverPopup'
@@ -72,8 +73,8 @@ function fitViewToImage(
   const scale = clamp(rawScale, MIN_SCALE, MAX_SCALE)
   return {
     scale,
-    panX: (containerW - imageW * scale) / 2,
-    panY: (containerH - imageH * scale) / 2,
+    panX: Math.round((containerW - imageW * scale) / 2),
+    panY: Math.round((containerH - imageH * scale) / 2),
   }
 }
 
@@ -148,7 +149,7 @@ type FloorPlanCaptureMarkerProps = {
   locationPickActive: boolean
   onEnter: (id: string, clientX: number, clientY: number) => void
   onLeave: () => void
-  onSelect: (id: string) => void
+  onSelect: (id: string, clientX: number, clientY: number) => void
 }
 
 function FloorPlanCaptureMarker({
@@ -229,7 +230,7 @@ function FloorPlanCaptureMarker({
         onClick={(e) => {
           e.stopPropagation()
           if (locationPickActive || isDirectionAdjustTarget) return
-          onSelect(marker.id)
+          onSelect(marker.id, e.clientX, e.clientY)
         }}
       />
     </div>
@@ -264,7 +265,7 @@ function FloorPlanDrawnGeometryLayer({
   hoverEnabled: boolean
   onEnter: (id: string, clientX: number, clientY: number) => void
   onLeave: () => void
-  onSelect: (id: string) => void
+  onSelect: (id: string, clientX: number, clientY: number) => void
 }) {
   const { w, h } = naturalSize
   const enter = (id: string, e: React.MouseEvent) => onEnter(id, e.clientX, e.clientY)
@@ -294,7 +295,7 @@ function FloorPlanDrawnGeometryLayer({
               onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
               onClick: (e: React.MouseEvent) => {
                 e.stopPropagation()
-                onSelect(g.id)
+                onSelect(g.id, e.clientX, e.clientY)
               },
             }
           : { pointerEvents: 'none' as const }
@@ -326,7 +327,7 @@ function FloorPlanDrawnGeometryLayer({
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation()
-                  onSelect(g.id)
+                  onSelect(g.id, e.clientX, e.clientY)
                 }}
               />
             ) : null}
@@ -569,6 +570,7 @@ function MapFloorPlanViewer({
     setOpenedFeatureId,
     openFeatureFromMap,
   } = useFeatureMapHover()
+  const prefersHover = usePrefersHover()
 
   const [hoverAnchor, setHoverAnchor] = useState<{ clientX: number; clientY: number } | null>(null)
 
@@ -579,16 +581,18 @@ function MapFloorPlanViewer({
 
   const handleMapFeatureEnter = useCallback(
     (id: string, clientX: number, clientY: number) => {
+      if (!prefersHover) return
       setMapHoveredFeatureId(id)
       setHoverAnchor({ clientX, clientY })
     },
-    [setMapHoveredFeatureId],
+    [prefersHover, setMapHoveredFeatureId],
   )
 
   const handleMapFeatureLeave = useCallback(() => {
+    if (!prefersHover) return
     setMapHoveredFeatureId(null)
     setHoverAnchor(null)
-  }, [setMapHoveredFeatureId])
+  }, [prefersHover, setMapHoveredFeatureId])
 
   useEffect(() => {
     if (mapHoveredFeatureId == null) setHoverAnchor(null)
@@ -648,7 +652,21 @@ function MapFloorPlanViewer({
     (isEditingFeature && drawPhase === 'collecting')
 
   const applyView = (next: ViewState) => {
-    setView(next)
+    const rounded: ViewState = {
+      scale: Math.round(next.scale * 1e6) / 1e6,
+      panX: Math.round(next.panX),
+      panY: Math.round(next.panY),
+    }
+    setView((prev) => {
+      if (
+        prev.scale === rounded.scale &&
+        prev.panX === rounded.panX &&
+        prev.panY === rounded.panY
+      ) {
+        return prev
+      }
+      return rounded
+    })
   }
 
   const containerSize = () => {
@@ -731,6 +749,9 @@ function MapFloorPlanViewer({
     [openedFeatureId, floorMarkers, floorDrawnGeometries, floorPlanId, naturalSize, isAdjustingMediaMarker, draftMarker, parentAssetId],
   )
 
+  const applyViewForContextRef = useRef(applyViewForContext)
+  applyViewForContextRef.current = applyViewForContext
+
   useEffect(() => {
     setNaturalSize(null)
     setView({ scale: 1, panX: 0, panY: 0 })
@@ -741,22 +762,15 @@ function MapFloorPlanViewer({
     const el = containerRef.current
     if (el == null) return
 
-    const apply = () => applyViewForContext()
-
-    if (!apply()) {
-      const ro = new ResizeObserver(() => {
-        apply()
-      })
-      ro.observe(el)
-      return () => ro.disconnect()
+    const apply = () => {
+      applyViewForContextRef.current()
     }
 
-    const ro = new ResizeObserver(() => {
-      apply()
-    })
+    apply()
+    const ro = new ResizeObserver(apply)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [naturalSize, floorPlanSrc, applyViewForContext])
+  }, [naturalSize, floorPlanSrc])
 
   useEffect(() => {
     if (naturalSize == null) return
@@ -886,7 +900,20 @@ function MapFloorPlanViewer({
     applyViewForContext(featureId)
   }
 
-  const onFeatureSelect = (id: string) => {
+  const onFeatureSelect = (id: string, clientX: number, clientY: number) => {
+    if (!prefersHover) {
+      setMapHoveredFeatureId(id)
+      setHoverAnchor({ clientX, clientY })
+      return
+    }
+    setOpenedFeatureId(id)
+    openFeatureFromMap(id)
+    focusOpenedFeature(id)
+  }
+
+  const openFeatureFromTouchPreview = () => {
+    if (mapHoveredFeatureId == null) return
+    const id = mapHoveredFeatureId
     setOpenedFeatureId(id)
     openFeatureFromMap(id)
     focusOpenedFeature(id)
@@ -919,6 +946,10 @@ function MapFloorPlanViewer({
     }
 
     if (!isCollectingGeometry || naturalSize == null) {
+      if (!prefersHover) {
+        setMapHoveredFeatureId(null)
+        setHoverAnchor(null)
+      }
       return
     }
     if (e.detail > 1) return
@@ -1232,6 +1263,7 @@ function MapFloorPlanViewer({
           typeLabel={hoverPopupContent?.typeLabel}
           previewUrl={hoverPopupContent?.previewUrl}
           anchor={hoverAnchor}
+          onViewFeature={prefersHover ? undefined : openFeatureFromTouchPreview}
         />
       ) : null}
     </div>
