@@ -191,6 +191,28 @@ export function FiltersDropdown({
           ))}
         </div>
 
+        <div className="border-stroke border-t">
+          <FilterSectionHeader
+            title="Annotations"
+            showReset={filters.hasMarker || filters.hasComment}
+            onReset={() => onFiltersChange({ ...filters, hasMarker: false, hasComment: false })}
+          />
+          <div className="pb-2">
+            <Checkbox
+              id="filter-has-marker"
+              label="Marker"
+              checked={filters.hasMarker}
+              onChange={() => onFiltersChange({ ...filters, hasMarker: !filters.hasMarker })}
+            />
+            <Checkbox
+              id="filter-has-comment"
+              label="Comment"
+              checked={filters.hasComment}
+              onChange={() => onFiltersChange({ ...filters, hasComment: !filters.hasComment })}
+            />
+          </div>
+        </div>
+
         {locationOptions.length > 0 ? (
           <>
             <FilterSectionHeader

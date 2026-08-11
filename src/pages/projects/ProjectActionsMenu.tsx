@@ -87,6 +87,7 @@ export function ProjectActionsMenu({
     <DropdownMenu
       menuAriaLabel={`Actions for ${project.name}`}
       align="right"
+      portaled
       stopTriggerPropagation={stopTriggerPropagation}
       panelWidth="15rem"
       items={items}

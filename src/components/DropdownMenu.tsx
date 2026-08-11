@@ -42,6 +42,7 @@ type DropdownMenuProps = {
   panelMaxHeight?: string
   tableColumnHeaders?: { feature: string; type: string }
   closeOnMouseLeave?: boolean
+  portaled?: boolean
   stopTriggerPropagation?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
@@ -57,6 +58,7 @@ export function DropdownMenu({
   panelMaxHeight,
   tableColumnHeaders,
   closeOnMouseLeave = true,
+  portaled = false,
   stopTriggerPropagation = false,
   open: openControlled,
   onOpenChange,
@@ -94,6 +96,7 @@ export function DropdownMenu({
       panelMaxHeight={panelMaxHeight}
       panelHeader={panelHeader}
       closeOnMouseLeave={closeOnMouseLeave}
+      portaled={portaled}
       stopTriggerPropagation={stopTriggerPropagation}
       open={open}
       onOpenChange={setOpen}

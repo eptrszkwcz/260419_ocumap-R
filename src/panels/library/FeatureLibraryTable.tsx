@@ -1,12 +1,19 @@
 import { useRef } from 'react'
 
-import { SortableColumnHeader, type SortDirection } from '@/components/SortableColumnHeader'
+import { CrosshairTargetMarker } from '@/components/CrosshairTargetMarker'
+import { ChatIcon } from '@/components/overlayControlIcons'
+import {
+  IconSortableColumnHeader,
+  SortableColumnHeader,
+  type SortDirection,
+} from '@/components/SortableColumnHeader'
 import type { SpatialAsset } from '@/data/sampleAssets'
 import type { ProjectType } from '@/data/sampleProjects'
 
 import {
   ACTIONS_COLUMN_WIDTH_PX,
   columnDefinitions,
+  COMMENTS_INDICATOR_COLUMN_WIDTH_PX,
   FEATURE_COLUMN_MIN_WIDTH_PX,
   MARKERS_INDICATOR_COLUMN_WIDTH_PX,
 } from '@/panels/library/featureLibrary/columnDefinitions'
@@ -44,6 +51,7 @@ function FeatureLibraryTableColgroup({ visibleColumns }: { visibleColumns: Optio
       {visibleColumns.map((id) => (
         <col key={id} style={{ width: `${columnDefinitions[id].minWidthPx}px` }} />
       ))}
+      <col style={{ width: `${COMMENTS_INDICATOR_COLUMN_WIDTH_PX}px` }} />
       <col style={{ width: `${MARKERS_INDICATOR_COLUMN_WIDTH_PX}px` }} />
       <col style={{ width: `${ACTIONS_COLUMN_WIDTH_PX}px` }} />
     </colgroup>
@@ -51,7 +59,7 @@ function FeatureLibraryTableColgroup({ visibleColumns }: { visibleColumns: Optio
 }
 
 /**
- * Full-width list: Feature (pinned), optional columns, actions. Rows 40px.
+ * Full-width list: Feature (pinned), optional columns, comments/markers, actions. Rows 40px.
  */
 export function FeatureLibraryTable({
   assets,
@@ -112,10 +120,30 @@ export function FeatureLibraryTable({
               <th
                 className="bg-panel pl-0 pr-0 text-center font-bold"
                 scope="col"
+                style={{ width: COMMENTS_INDICATOR_COLUMN_WIDTH_PX }}
+                aria-label="Comments"
+              >
+                <IconSortableColumnHeader
+                  label="Comments"
+                  activeDirection={sortColumn === 'comments' ? sortDirection : null}
+                  onSort={() => onSortColumn('comments')}
+                >
+                  <ChatIcon />
+                </IconSortableColumnHeader>
+              </th>
+              <th
+                className="bg-panel pl-0 pr-0 text-center font-bold"
+                scope="col"
                 style={{ width: MARKERS_INDICATOR_COLUMN_WIDTH_PX }}
                 aria-label="Markers"
               >
-                <span className="sr-only">Markers</span>
+                <IconSortableColumnHeader
+                  label="Markers"
+                  activeDirection={sortColumn === 'markers' ? sortDirection : null}
+                  onSort={() => onSortColumn('markers')}
+                >
+                  <CrosshairTargetMarker size={16} color="currentColor" />
+                </IconSortableColumnHeader>
               </th>
               <th
                 className="bg-panel pr-panel-padding pl-0 text-right font-bold"

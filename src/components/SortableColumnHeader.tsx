@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 export type SortDirection = 'asc' | 'desc'
 
 const sortArrowBadgeClassName =
@@ -79,6 +81,56 @@ export function SortableColumnHeader({
     >
       <span className="min-w-0 truncate">{label}</span>
       {activeDirection != null ? <SortArrowBadge direction={activeDirection} /> : null}
+    </button>
+  )
+}
+
+type IconSortableColumnHeaderProps = {
+  label: string
+  activeDirection?: SortDirection | null
+  onSort: () => void
+  children: ReactNode
+  className?: string
+}
+
+/**
+ * Narrow icon-only sort control (no arrow badge). Active sort uses highlight color.
+ */
+export function IconSortableColumnHeader({
+  label,
+  activeDirection = null,
+  onSort,
+  children,
+  className = '',
+}: IconSortableColumnHeaderProps) {
+  const isActive = activeDirection != null
+
+  return (
+    <button
+      type="button"
+      onClick={onSort}
+      className={
+        'inline-flex size-full cursor-pointer items-center justify-center rounded-panel transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none ' +
+        (isActive
+          ? 'text-fg-highlight'
+          : 'text-fg-muted hover:text-fg-highlight') +
+        ' ' +
+        className
+      }
+      aria-label={
+        isActive
+          ? `Sort by ${label}, ${activeDirection === 'asc' ? 'ascending' : 'descending'}`
+          : `Sort by ${label}`
+      }
+      aria-sort={
+        activeDirection === 'asc'
+          ? 'ascending'
+          : activeDirection === 'desc'
+            ? 'descending'
+            : undefined
+      }
+    >
+      {children}
     </button>
   )
 }

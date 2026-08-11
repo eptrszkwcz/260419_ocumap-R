@@ -29,6 +29,8 @@ export type FeatureLibraryFilters = {
   dateCaptured: DateFilterState | null
   sizeMinMb: string
   sizeMaxMb: string
+  hasMarker: boolean
+  hasComment: boolean
 }
 
 export const ALL_OPTIONAL_COLUMN_IDS: OptionalColumnId[] = [
@@ -48,6 +50,8 @@ export function createEmptyFilters(): FeatureLibraryFilters {
     dateCaptured: null,
     sizeMinMb: '',
     sizeMaxMb: '',
+    hasMarker: false,
+    hasComment: false,
   }
 }
 

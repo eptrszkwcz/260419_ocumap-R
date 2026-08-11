@@ -82,8 +82,10 @@ export type SpatialAsset = {
   floorPlanGeometry?: FloorPlanGeometry
   /** Infrastructure projects: drawn geometry on the geographic map. */
   mapGeometry?: MapGeometry
-  /** User notes for drawn or media features. */
+  /** User notes for drawn or media features. Prefer `logEntries` for drawn features. */
   notes?: string
+  /** Comment / activity log for drawn geometry features (same model as media markers). */
+  logEntries?: MarkerLogEntry[]
   /** Building projects: position on a floor plan drawing. */
   floorPlanPosition?: FloorPlanPosition
   /** @deprecated Legacy demo field; use `floorPlanPosition` for building projects. */

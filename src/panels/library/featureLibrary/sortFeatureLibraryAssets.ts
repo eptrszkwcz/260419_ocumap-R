@@ -3,9 +3,13 @@ import type { ProjectType } from '@/data/sampleProjects'
 import type { SortDirection } from '@/components/SortableColumnHeader'
 import { parseToIsoDate } from '@/lib/formatDisplayDateFromIsoDate'
 import { columnDefinitions } from '@/panels/library/featureLibrary/columnDefinitions'
+import {
+  assetHasComments,
+  assetHasMediaMarkers,
+} from '@/panels/library/featureLibrary/featureLibraryIndicators'
 import type { OptionalColumnId } from '@/panels/library/featureLibrary/types'
 
-export type FeatureLibrarySortColumn = 'feature' | OptionalColumnId
+export type FeatureLibrarySortColumn = 'feature' | OptionalColumnId | 'markers' | 'comments'
 
 function compareValues(a: string | number, b: string | number): number {
   if (typeof a === 'number' && typeof b === 'number') {
@@ -30,6 +34,12 @@ function sortValueForColumn(
   }
   if (column === 'dateCaptured') {
     return parseToIsoDate(asset.dateCaptured ?? '')
+  }
+  if (column === 'markers') {
+    return assetHasMediaMarkers(asset) ? 1 : 0
+  }
+  if (column === 'comments') {
+    return assetHasComments(asset) ? 1 : 0
   }
   return columnDefinitions[column].getCellValue(asset, projectType)
 }

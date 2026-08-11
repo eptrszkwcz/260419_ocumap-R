@@ -1,29 +1,25 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 
-import { FeatureMarkerColorField } from '@/components/FeatureMarkerColorField'
+import { useAuth } from '@/context/AuthContext'
 import { useFeatureDraw } from '@/context/FeatureDrawContext'
 import { useFloorPlanLocationPick } from '@/context/FloorPlanLocationPickContext'
 import { useMapLocationPick } from '@/context/MapLocationPickContext'
 import { useMarkerStylePreview } from '@/context/MarkerStylePreviewContext'
-import { getGeometryTypeLabel, type FeatureGeometryType, type SpatialAsset } from '@/data/sampleAssets'
+import {
+  type FeatureGeometryType,
+  type MarkerLogEntry,
+  type SpatialAsset,
+} from '@/data/sampleAssets'
 import { PRIMARY_BUTTON_CLASS } from '@/lib/primaryButtonClass'
 import { DrawnFeatureGeometryFields } from '@/panels/library/featureMetadata/DrawnFeatureGeometryFields'
 import {
   featureMetadataFooterActionsClassName,
   featureMetadataFooterCancelButtonClass,
-  featureMetadataFormGridClassName,
-  featureMetadataInputClassName,
-  featureMetadataSecondaryButtonClass,
-  featureMetadataSelectClassName,
 } from '@/panels/library/featureMetadata/styles'
+import { FeatureLogPanel } from '@/panels/library/FeatureLogPanel'
 import { buildDrawnAssetFromSession } from '@/panels/map/FeatureDrawConfirmPanel'
 import { normalizeMarkerColor } from '@/panels/map/markerColors'
-
-type DrawnFeatureDraft = {
-  title: string
-  markerColor: string
-  notes: string
-}
+import { createUserLogEntry } from '@/panels/map/markerLogUtils'
 
 type DrawnFeatureMetadataPanelProps = {
   asset: SpatialAsset
@@ -32,7 +28,37 @@ type DrawnFeatureMetadataPanelProps = {
   geometryType?: FeatureGeometryType | null
   geometryConfirmed?: boolean
   onSave: (saved: SpatialAsset) => void
+  /** Immediate patch for comments (and similar) without ending geometry edit. */
+  onPatch?: (updated: SpatialAsset) => void
   onCancel: () => void
+}
+
+function migrateNotesToLogEntries(
+  asset: SpatialAsset,
+  author: { displayName: string; email?: string },
+): { logEntries: MarkerLogEntry[]; notes: string | undefined; didMigrate: boolean } {
+  const existing = asset.logEntries ?? []
+  const notes = asset.notes?.trim() ?? ''
+  if (existing.length > 0 || notes === '') {
+    return { logEntries: existing, notes: asset.notes, didMigrate: false }
+  }
+  return {
+    logEntries: [
+      {
+        id: `log-migrated-${asset.id}`,
+        body: notes,
+        authorDisplayName: author.displayName,
+        authorEmail: author.email,
+        createdAt: (() => {
+          const d = new Date(asset.dateUploaded)
+          return Number.isNaN(d.getTime()) ? new Date(0).toISOString() : d.toISOString()
+        })(),
+        kind: 'user',
+      },
+    ],
+    notes: undefined,
+    didMigrate: true,
+  }
 }
 
 export function DrawnFeatureMetadataPanel({
@@ -42,9 +68,11 @@ export function DrawnFeatureMetadataPanel({
   geometryType: geometryTypeProp = null,
   geometryConfirmed: geometryConfirmedProp = false,
   onSave,
+  onPatch,
   onCancel,
 }: DrawnFeatureMetadataPanelProps) {
   const isSaved = mode === 'saved'
+  const { user } = useAuth()
   const { cancelLocationPick } = useMapLocationPick()
   const { cancelFloorPlanLocationPick } = useFloorPlanLocationPick()
   const {
@@ -52,13 +80,11 @@ export function DrawnFeatureMetadataPanel({
     floorPlanVertices,
     mapVertices,
     draftMarkerColor,
-    setDraftMarkerColor,
     geometryType: draftGeometryType,
     geometryConfirmed: draftGeometryConfirmed,
     isEditingFeature,
     editingFeatureId,
     drawPhase,
-    startEditFeature,
     cancelEditFeature,
   } = useFeatureDraw()
 
@@ -76,39 +102,25 @@ export function DrawnFeatureMetadataPanel({
 
   const { setMarkerStylePreview, clearMarkerStylePreview } = useMarkerStylePreview()
 
-  const [draft, setDraft] = useState<DrawnFeatureDraft>(() => ({
-    title: asset.title,
-    markerColor: normalizeMarkerColor(asset.markerColor ?? draftMarkerColor),
-    notes: asset.notes ?? '',
-  }))
+  const markerColor = normalizeMarkerColor(asset.markerColor ?? draftMarkerColor)
 
   useEffect(() => {
-    setDraft({
-      title: asset.title,
-      markerColor: normalizeMarkerColor(asset.markerColor ?? draftMarkerColor),
-      notes: asset.notes ?? '',
-    })
-  }, [asset.id, asset.title, asset.markerColor, asset.notes, draftMarkerColor])
-
-  useEffect(() => {
-    setMarkerStylePreview({ featureId: asset.id, color: draft.markerColor })
-    if (!isSaved || isEditingThis) setDraftMarkerColor(draft.markerColor)
+    setMarkerStylePreview({ featureId: asset.id, color: markerColor })
     return () => clearMarkerStylePreview()
-  }, [
-    asset.id,
-    draft.markerColor,
-    isSaved,
-    isEditingThis,
-    setDraftMarkerColor,
-    setMarkerStylePreview,
-    clearMarkerStylePreview,
-  ])
+  }, [asset.id, markerColor, setMarkerStylePreview, clearMarkerStylePreview])
 
-  const handleEditFeature = useCallback(() => {
-    cancelLocationPick()
-    cancelFloorPlanLocationPick()
-    startEditFeature(asset)
-  }, [asset, cancelFloorPlanLocationPick, cancelLocationPick, startEditFeature])
+  useEffect(() => {
+    if (!isSaved || onPatch == null || user == null) return
+    const migrated = migrateNotesToLogEntries(asset, user)
+    if (!migrated.didMigrate) return
+    onPatch({ ...asset, logEntries: migrated.logEntries, notes: undefined })
+  }, [asset, isSaved, onPatch, user])
+
+  const logEntries = useMemo(() => {
+    if (!isSaved) return []
+    const author = user ?? { displayName: 'User' }
+    return migrateNotesToLogEntries(asset, author).logEntries
+  }, [asset, isSaved, user])
 
   const handleCancel = useCallback(() => {
     cancelLocationPick()
@@ -118,46 +130,26 @@ export function DrawnFeatureMetadataPanel({
       onCancel()
       return
     }
-    setDraft({
-      title: asset.title,
-      markerColor: normalizeMarkerColor(asset.markerColor ?? draftMarkerColor),
-      notes: asset.notes ?? '',
-    })
   }, [
-    asset,
     cancelEditFeature,
     cancelFloorPlanLocationPick,
     cancelLocationPick,
-    draftMarkerColor,
     isEditingThis,
     isSaved,
     onCancel,
   ])
 
-  const isFieldDirty = useMemo(() => {
-    const savedMarkerColor = normalizeMarkerColor(asset.markerColor)
-    const draftMarkerColor = normalizeMarkerColor(draft.markerColor)
-    const savedNotes = asset.notes?.trim() ?? ''
-    const draftNotes = draft.notes.trim()
-    return (
-      draft.title !== asset.title ||
-      draftMarkerColor !== savedMarkerColor ||
-      draftNotes !== savedNotes
-    )
-  }, [asset.markerColor, asset.notes, asset.title, draft.markerColor, draft.notes, draft.title])
-
-  const isDirty = !isSaved || isEditingThis || isFieldDirty
+  const isDirty = !isSaved || isEditingThis
 
   const handleSave = useCallback(() => {
     if (!geometryConfirmed || geometryType == null) return
-    const title = draft.title.trim() || 'Untitled feature'
-    const markerColor = normalizeMarkerColor(draft.markerColor)
-    const notes = draft.notes.trim() || undefined
+    const title = asset.title.trim() || 'Untitled feature'
+    const color = normalizeMarkerColor(asset.markerColor ?? draftMarkerColor)
 
     if (isSaved) {
       if (isEditingThis) {
         const saved = buildDrawnAssetFromSession(
-          { ...asset, title, notes, markerColor },
+          { ...asset, title, markerColor: color },
           geometryType,
           floorPlanId,
           floorPlanVertices,
@@ -166,12 +158,12 @@ export function DrawnFeatureMetadataPanel({
         onSave(saved)
         return
       }
-      onSave({ ...asset, title, markerColor, notes })
+      onSave({ ...asset, title, markerColor: color })
       return
     }
 
     const saved = buildDrawnAssetFromSession(
-      { ...asset, title, notes, markerColor },
+      { ...asset, title, markerColor: color },
       geometryType,
       floorPlanId,
       floorPlanVertices,
@@ -180,7 +172,7 @@ export function DrawnFeatureMetadataPanel({
     onSave(saved)
   }, [
     asset,
-    draft,
+    draftMarkerColor,
     floorPlanId,
     floorPlanVertices,
     geometryConfirmed,
@@ -191,91 +183,95 @@ export function DrawnFeatureMetadataPanel({
     onSave,
   ])
 
+  const persistLogEntries = useCallback(
+    (updater: (prev: MarkerLogEntry[]) => MarkerLogEntry[]) => {
+      if (!isSaved) return
+      const author = user ?? { displayName: 'User' }
+      const migrated = migrateNotesToLogEntries(asset, author)
+      const nextEntries = updater(migrated.logEntries)
+      const patch = onPatch ?? onSave
+      patch({ ...asset, logEntries: nextEntries, notes: undefined })
+    },
+    [asset, isSaved, onPatch, onSave, user],
+  )
+
+  const handleAddLogEntry = useCallback(
+    (body: string) => {
+      if (user == null) return
+      const entry = createUserLogEntry(body, user)
+      persistLogEntries((prev) => [...prev, entry])
+    },
+    [persistLogEntries, user],
+  )
+
+  const handleUpdateLogEntry = useCallback(
+    (entryId: string, body: string) => {
+      const trimmed = body.trim()
+      if (trimmed === '') return
+      const now = new Date().toISOString()
+      persistLogEntries((prev) =>
+        prev.map((entry) =>
+          entry.id === entryId ? { ...entry, body: trimmed, updatedAt: now } : entry,
+        ),
+      )
+    },
+    [persistLogEntries],
+  )
+
+  const handleDeleteLogEntry = useCallback(
+    (entryId: string) => {
+      persistLogEntries((prev) => prev.filter((entry) => entry.id !== entryId))
+    },
+    [persistLogEntries],
+  )
+
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col" role="region" aria-label="Drawn feature details">
-      <div className="min-h-0 min-w-0 flex-1 overflow-auto p-panel-padding">
-        <div className={featureMetadataFormGridClassName}>
-          <label className="block min-w-0 sm:col-span-2">
-            <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-              Name
-            </span>
-            <input
-              type="text"
-              className={featureMetadataInputClassName}
-              value={draft.title}
-              onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-              aria-label="Feature name"
-            />
-          </label>
-
-          <label className="block min-w-0">
-            <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-              File type
-            </span>
-            <select
-              className={featureMetadataSelectClassName + ' opacity-70'}
-              value={geometryType ?? 'point'}
-              disabled
-              aria-label="Geometry type"
-            >
-              <option value="point">{getGeometryTypeLabel('point')}</option>
-              <option value="line">{getGeometryTypeLabel('line')}</option>
-              <option value="polygon">{getGeometryTypeLabel('polygon')}</option>
-            </select>
-          </label>
-
-          <FeatureMarkerColorField
-            value={draft.markerColor}
-            onChange={(markerColor) => setDraft((d) => ({ ...d, markerColor }))}
+      {isSaved ? (
+        <>
+          {isEditingThis ? (
+            <>
+              <div className="shrink-0 px-panel-padding pt-panel-padding pb-4">
+                <DrawnFeatureGeometryFields
+                  asset={asset}
+                  isBuildingProject={isBuildingProject}
+                  liveFloorPlanVertices={floorPlanVertices}
+                  liveMapVertices={mapVertices}
+                  liveFloorPlanId={floorPlanId}
+                />
+                {!geometryConfirmed ? (
+                  <p className="text-fg-muted mt-4 font-sans text-standard" role="status">
+                    Edit the shape on the map, then review and confirm.
+                  </p>
+                ) : drawPhase === 'confirmed' ? (
+                  <p className="text-fg-muted mt-4 font-sans text-standard" role="status">
+                    Shape confirmed. Save to apply changes.
+                  </p>
+                ) : null}
+              </div>
+              <div className="border-stroke shrink-0 border-b" aria-hidden />
+            </>
+          ) : null}
+          <FeatureLogPanel
+            entries={logEntries}
+            onAdd={handleAddLogEntry}
+            onUpdate={handleUpdateLogEntry}
+            onDelete={handleDeleteLogEntry}
           />
-
-          <label className="block min-w-0 sm:col-span-2">
-            <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-              Notes
-            </span>
-            <textarea
-              className={featureMetadataInputClassName + ' min-h-24 resize-y'}
-              value={draft.notes}
-              onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
-              aria-label="Notes"
-            />
-          </label>
-
-          {isSaved ? (
-            <DrawnFeatureGeometryFields
-              asset={asset}
-              isBuildingProject={isBuildingProject}
-              liveFloorPlanVertices={isEditingThis ? floorPlanVertices : undefined}
-              liveMapVertices={isEditingThis ? mapVertices : undefined}
-              liveFloorPlanId={isEditingThis ? floorPlanId : undefined}
-            />
-          ) : null}
-
-          {isSaved && !isEditingThis ? (
-            <div className="sm:col-span-2">
-              <button
-                type="button"
-                onClick={handleEditFeature}
-                className={featureMetadataSecondaryButtonClass}
-              >
-                Edit Feature
-              </button>
-            </div>
-          ) : null}
+        </>
+      ) : (
+        <div className="min-h-0 min-w-0 flex-1 overflow-auto p-panel-padding">
+          {!geometryConfirmed ? (
+            <p className="text-fg-muted font-sans text-standard" role="status">
+              Confirm the shape on the map before saving.
+            </p>
+          ) : (
+            <p className="text-fg-muted font-sans text-standard" role="status">
+              Shape confirmed. Save to add this feature to the library.
+            </p>
+          )}
         </div>
-
-        {!geometryConfirmed ? (
-          <p className="text-fg-muted mt-4 font-sans text-standard" role="status">
-            {isEditingThis
-              ? 'Edit the shape on the map, then review and confirm.'
-              : 'Confirm the shape on the map before saving.'}
-          </p>
-        ) : isEditingThis && drawPhase === 'confirmed' ? (
-          <p className="text-fg-muted mt-4 font-sans text-standard" role="status">
-            Shape confirmed. Save to apply changes.
-          </p>
-        ) : null}
-      </div>
+      )}
 
       {isDirty ? (
         <div className="border-t border-stroke bg-panel px-panel-padding py-3">
