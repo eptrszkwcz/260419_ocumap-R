@@ -8,6 +8,10 @@ import type { ProjectType } from '@/data/sampleProjects'
 import { parseToIsoDate } from '@/lib/formatDisplayDateFromIsoDate'
 
 import { assetLocationFilterKey } from '@/panels/library/featureLibrary/assetLocationLabel'
+import {
+  assetHasComments,
+  assetHasMediaMarkers,
+} from '@/panels/library/featureLibrary/featureLibraryIndicators'
 import type { DateFilterState, FeatureLibraryFilters } from '@/panels/library/featureLibrary/types'
 
 function isoToDate(iso: string): Date | null {
@@ -109,6 +113,14 @@ export function applyFeatureLibraryFilters(
       return false
     }
 
+    if (filters.hasMarker && !assetHasMediaMarkers(asset)) {
+      return false
+    }
+
+    if (filters.hasComment && !assetHasComments(asset)) {
+      return false
+    }
+
     return true
   })
 }
@@ -148,7 +160,9 @@ export function isFilterActive(filters: FeatureLibraryFilters): boolean {
     filters.dateUploaded != null ||
     filters.dateCaptured != null ||
     filters.sizeMinMb.trim() !== '' ||
-    filters.sizeMaxMb.trim() !== ''
+    filters.sizeMaxMb.trim() !== '' ||
+    filters.hasMarker ||
+    filters.hasComment
   )
 }
 

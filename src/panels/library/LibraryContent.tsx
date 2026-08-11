@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 
 import { useActiveProject } from '@/context/ActiveProjectContext'
 import { useProjects } from '@/context/ProjectsContext'
@@ -198,16 +198,19 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
   const { cancelLocationPick, clearLocationPickPreview } = useMapLocationPick()
   const { cancelFloorPlanLocationPick, clearFloorPlanLocationPickPreview } = useFloorPlanLocationPick()
   const { cancelDirectionAdjust, isAdjustingDirection } = useViewDirectionAdjust()
-  const { clearMarkerStylePreview } = useMarkerStylePreview()
+  const { setMarkerStylePreview, clearMarkerStylePreview } = useMarkerStylePreview()
   const { setOpenedFeatureId, setMapFeatureClickHandler, setViewDirectionBaseDeg, setViewDirectionLiveOffsetDeg } =
     useFeatureMapHover()
   const {
     isDrawing,
     isEditingFeature,
+    editingFeatureId,
     draftFeatureId,
     geometryType,
     geometryConfirmed,
     draftMarkerColor,
+    setDraftMarkerColor,
+    startEditFeature,
     cancelDraw,
     cancelEditFeature,
   } = useFeatureDraw()
@@ -482,6 +485,53 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
     setViewerPanel('metadata')
   }
 
+  /** Patch opened drawn feature without ending an in-progress geometry edit. */
+  const patchDrawnFeatureInLibrary = useCallback((updated: SpatialAsset) => {
+    setAssets((list) => list.map((a) => (a.id === updated.id ? updated : a)))
+    setOpenedAsset(updated)
+  }, [])
+
+  const handleRenameGeometryFeature = useCallback(
+    (title: string) => {
+      if (openedAsset == null) return
+      if (isDrawDraftSession) {
+        setOpenedAsset({ ...openedAsset, title })
+        return
+      }
+      if (!isDrawnFeature(openedAsset)) return
+      patchDrawnFeatureInLibrary({ ...openedAsset, title })
+    },
+    [isDrawDraftSession, openedAsset, patchDrawnFeatureInLibrary],
+  )
+
+  const handleGeometryFeatureColorChange = useCallback(
+    (color: string) => {
+      if (openedAsset == null) return
+      setDraftMarkerColor(color)
+      setMarkerStylePreview({ featureId: openedAsset.id, color })
+      if (isDrawDraftSession) {
+        setOpenedAsset({ ...openedAsset, markerColor: color })
+        return
+      }
+      if (!isDrawnFeature(openedAsset)) return
+      patchDrawnFeatureInLibrary({ ...openedAsset, markerColor: color })
+    },
+    [
+      isDrawDraftSession,
+      openedAsset,
+      patchDrawnFeatureInLibrary,
+      setDraftMarkerColor,
+      setMarkerStylePreview,
+    ],
+  )
+
+  const handleEditGeometryLocation = useCallback(() => {
+    if (openedAsset == null || !isDrawnFeature(openedAsset)) return
+    cancelLocationPick()
+    cancelFloorPlanLocationPick()
+    startEditFeature(openedAsset)
+  }, [cancelFloorPlanLocationPick, cancelLocationPick, openedAsset, startEditFeature])
+
   const saveDrawnFeature = (saved: SpatialAsset) => {
     clearMarkerStylePreview()
     drawSessionOpenedRef.current = null
@@ -534,6 +584,20 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
         viewerAsset={viewerAsset}
         viewerPanel={viewerPanel}
         isDrawDraft={isDrawDraftSession}
+        markerColor={
+          viewerAsset != null && (isDrawDraftSession || isDrawnFeature(viewerAsset))
+            ? viewerAsset.markerColor ?? draftMarkerColor
+            : undefined
+        }
+        onRenameGeometryFeature={handleRenameGeometryFeature}
+        onGeometryFeatureColorChange={handleGeometryFeatureColorChange}
+        showEditLocation={
+          viewerAsset != null &&
+          isDrawnFeature(viewerAsset) &&
+          !isDrawDraftSession &&
+          !(isEditingFeature && editingFeatureId === viewerAsset.id)
+        }
+        onEditLocation={handleEditGeometryLocation}
         onOpenMetadata={() => {
           setMetadataAutoStartLocationPick(false)
           setViewerPanel('metadata')
@@ -610,6 +674,7 @@ function FeatureLibraryView({ assets, setAssets, filters, onFiltersChange }: Fea
                   asset={viewerAsset}
                   isBuildingProject={isBuildingProject}
                   onSave={updateDrawnFeatureInLibrary}
+                  onPatch={patchDrawnFeatureInLibrary}
                   onCancel={closeGeometryViewer}
                 />
               ) : viewerPanel === 'metadata' ? (

@@ -1,6 +1,7 @@
 import {
   ACTIONS_COLUMN_WIDTH_PX,
   columnDefinitions,
+  COMMENTS_INDICATOR_COLUMN_WIDTH_PX,
   FEATURE_COLUMN_MIN_WIDTH_PX,
   MARKERS_INDICATOR_COLUMN_WIDTH_PX,
 } from '@/panels/library/featureLibrary/columnDefinitions'
@@ -27,6 +28,7 @@ export function resolveVisibleColumns({
   let remaining =
     containerWidthPx -
     FEATURE_COLUMN_MIN_WIDTH_PX -
+    COMMENTS_INDICATOR_COLUMN_WIDTH_PX -
     MARKERS_INDICATOR_COLUMN_WIDTH_PX -
     ACTIONS_COLUMN_WIDTH_PX -
     TABLE_HORIZONTAL_PADDING_PX

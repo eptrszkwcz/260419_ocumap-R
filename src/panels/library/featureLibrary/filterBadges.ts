@@ -62,6 +62,14 @@ export function filtersToBadges(filters: FeatureLibraryFilters): ActiveFilter[] 
     badges.push({ id: 'filter-size', label: `Size: ${parts.join(', ')}` })
   }
 
+  if (filters.hasMarker) {
+    badges.push({ id: 'filter-hasMarker', label: 'Marker' })
+  }
+
+  if (filters.hasComment) {
+    badges.push({ id: 'filter-hasComment', label: 'Comment' })
+  }
+
   return badges
 }
 
@@ -80,6 +88,10 @@ export function removeFilterByBadgeId(
       return { ...filters, dateCaptured: null }
     case 'filter-size':
       return { ...filters, sizeMinMb: '', sizeMaxMb: '' }
+    case 'filter-hasMarker':
+      return { ...filters, hasMarker: false }
+    case 'filter-hasComment':
+      return { ...filters, hasComment: false }
     default:
       return filters
   }

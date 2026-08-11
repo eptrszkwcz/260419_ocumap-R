@@ -5,10 +5,7 @@ import {
   floorPlanVerticesFromAsset,
   mapVerticesFromAsset,
 } from '@/panels/library/assetGeometryHelpers'
-import {
-  featureMetadataFormGridClassName,
-  featureMetadataInputClassName,
-} from '@/panels/library/featureMetadata/styles'
+import { featureMetadataInputClassName } from '@/panels/library/featureMetadata/styles'
 import { floorPlanDisplayLabel, type FloorPlanId } from '@/panels/map/mapFloorPlans'
 
 function coordInputValue(n: number | undefined): string {
@@ -48,17 +45,13 @@ export function DrawnFeatureGeometryFields({
     const floorPlanLabel = floorPlanId != null ? floorPlanDisplayLabel(floorPlanId) : '—'
 
     if (floorVertices.length === 0) {
-      return (
-        <div className={featureMetadataFormGridClassName + ' sm:col-span-2'}>
-          <StaticRow label="Location" value={floorPlanLabel} />
-        </div>
-      )
+      return <StaticRow label="Location" value={floorPlanLabel} />
     }
 
     if (!multiVertex) {
       const v = floorVertices[0]
       return (
-        <div className="grid min-w-0 grid-cols-[2fr_1fr_1fr] items-end gap-x-[16px] sm:col-span-2">
+        <div className="grid min-w-0 grid-cols-[2fr_1fr_1fr] items-end gap-x-[16px]">
           <div className="block min-w-0">
             <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
               Location
@@ -73,9 +66,7 @@ export function DrawnFeatureGeometryFields({
             </div>
           </div>
           <label className="block min-w-0">
-            <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-              X
-            </span>
+            <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">X</span>
             <input
               type="text"
               className={featureMetadataInputClassName + ' opacity-70'}
@@ -85,9 +76,7 @@ export function DrawnFeatureGeometryFields({
             />
           </label>
           <label className="block min-w-0">
-            <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-              Y
-            </span>
+            <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">Y</span>
             <input
               type="text"
               className={featureMetadataInputClassName + ' opacity-70'}
@@ -101,7 +90,7 @@ export function DrawnFeatureGeometryFields({
     }
 
     return (
-      <div className="flex min-w-0 flex-col gap-4 sm:col-span-2">
+      <div className="flex min-w-0 flex-col gap-4">
         <div className="block min-w-0">
           <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
             Location
@@ -157,24 +146,48 @@ export function DrawnFeatureGeometryFields({
     return null
   }
 
+  if (!multiVertex) {
+    const v = mapVertices[0]
+    return (
+      <div className="grid min-w-0 grid-cols-[1fr_1fr] items-end gap-x-[16px]">
+        <label className="block min-w-0">
+          <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
+            Latitude
+          </span>
+          <input
+            type="text"
+            className={featureMetadataInputClassName + ' opacity-70'}
+            value={coordInputValue(v.lat)}
+            readOnly
+            aria-label="Latitude"
+          />
+        </label>
+        <label className="block min-w-0">
+          <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
+            Longitude
+          </span>
+          <input
+            type="text"
+            className={featureMetadataInputClassName + ' opacity-70'}
+            value={coordInputValue(v.lng)}
+            readOnly
+            aria-label="Longitude"
+          />
+        </label>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex min-w-0 flex-col gap-4 sm:col-span-2">
+    <div className="flex min-w-0 flex-col gap-4">
       {mapVertices.map((v, i) => (
-        <div
-          key={i}
-          className={
-            'grid min-w-0 gap-2 ' +
-            (multiVertex ? 'sm:grid-cols-[1fr_1fr_1fr]' : 'sm:grid-cols-[1fr_1fr]')
-          }
-        >
-          {multiVertex ? (
-            <div className="block min-w-0">
-              <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-                Vertex {i + 1}
-              </span>
-              <div className="h-8" aria-hidden />
-            </div>
-          ) : null}
+        <div key={i} className="grid min-w-0 grid-cols-[1fr_1fr_1fr] items-end gap-x-[16px]">
+          <div className="block min-w-0">
+            <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
+              Vertex {i + 1}
+            </span>
+            <div className="h-8" aria-hidden />
+          </div>
           <label className="block min-w-0">
             <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
               Latitude
@@ -184,7 +197,7 @@ export function DrawnFeatureGeometryFields({
               className={featureMetadataInputClassName + ' opacity-70'}
               value={coordInputValue(v.lat)}
               readOnly
-              aria-label={multiVertex ? `Vertex ${i + 1} latitude` : 'Latitude'}
+              aria-label={`Vertex ${i + 1} latitude`}
             />
           </label>
           <label className="block min-w-0">
@@ -196,7 +209,7 @@ export function DrawnFeatureGeometryFields({
               className={featureMetadataInputClassName + ' opacity-70'}
               value={coordInputValue(v.lng)}
               readOnly
-              aria-label={multiVertex ? `Vertex ${i + 1} longitude` : 'Longitude'}
+              aria-label={`Vertex ${i + 1} longitude`}
             />
           </label>
         </div>
@@ -208,9 +221,7 @@ export function DrawnFeatureGeometryFields({
 function StaticRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="block min-w-0">
-      <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">
-        {label}
-      </span>
+      <span className="text-fg-muted mb-1 block text-badge font-bold uppercase tracking-wide">{label}</span>
       <div className="text-fg flex h-8 min-w-0 items-center rounded-panel border border-stroke/40 bg-panel px-2.5 text-standard leading-none">
         <span className="truncate">{value}</span>
       </div>

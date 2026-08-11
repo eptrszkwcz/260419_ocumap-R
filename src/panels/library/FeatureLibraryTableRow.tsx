@@ -4,11 +4,16 @@ import {
   CrosshairTargetMarker,
   crosshairTargetMarkerColor,
 } from '@/components/CrosshairTargetMarker'
+import { ChatIcon } from '@/components/overlayControlIcons'
 import { useFeatureMapHover } from '@/context/FeatureMapHoverContext'
 import type { MediaAnnotationMarker, SpatialAsset } from '@/data/sampleAssets'
 import type { ProjectType } from '@/data/sampleProjects'
 
 import { columnDefinitions } from '@/panels/library/featureLibrary/columnDefinitions'
+import {
+  assetHasComments,
+  markerHasComments,
+} from '@/panels/library/featureLibrary/featureLibraryIndicators'
 import { useDeferredRowClick } from '@/panels/library/featureLibrary/useDeferredRowClick'
 import type { OptionalColumnId } from '@/panels/library/featureLibrary/types'
 import { FeatureLibraryRowMenu } from '@/panels/library/FeatureLibraryRowMenu'
@@ -57,7 +62,7 @@ export type FeatureLibraryTableRowProps = {
   onFeatureProperties?: () => void
 }
 
-/** One 40px data row: feature name, optional columns, actions. */
+/** One 40px data row: feature name, optional columns, comments/markers, actions. */
 export function FeatureLibraryTableRow({
   asset,
   projectType,
@@ -81,6 +86,7 @@ export function FeatureLibraryTableRow({
   const [expanded, setExpanded] = useState(false)
   const mediaMarkers = asset.mediaMarkers ?? []
   const hasMediaMarkers = mediaMarkers.length > 0
+  const hasComments = assetHasComments(asset)
 
   const { handleClick: deferClick, handleDoubleClick } = useDeferredRowClick(
     () => onSelect?.(pendingShiftRef.current),
@@ -174,6 +180,19 @@ export function FeatureLibraryTableRow({
           className="pl-0 pr-0 text-center align-middle"
           onClick={(e) => e.stopPropagation()}
         >
+          {hasComments ? (
+            <span
+              className="text-fg-muted inline-flex size-8 items-center justify-center"
+              aria-label="Has comments"
+            >
+              <ChatIcon />
+            </span>
+          ) : null}
+        </td>
+        <td
+          className="pl-0 pr-0 text-center align-middle"
+          onClick={(e) => e.stopPropagation()}
+        >
           {hasMediaMarkers ? (
             <span
               className="inline-flex size-8 items-center justify-center"
@@ -240,6 +259,16 @@ export function FeatureLibraryTableRow({
                   {markerSubRowCellValue(id, marker)}
                 </td>
               ))}
+              <td className="pl-0 pr-0 text-center align-middle">
+                {markerHasComments(marker) ? (
+                  <span
+                    className="text-fg-muted inline-flex size-8 items-center justify-center"
+                    aria-label="Has comments"
+                  >
+                    <ChatIcon />
+                  </span>
+                ) : null}
+              </td>
               <td className="pl-0 pr-0 align-middle" aria-hidden />
               <td className="pl-0 pr-panel-padding align-middle" aria-hidden />
             </tr>
