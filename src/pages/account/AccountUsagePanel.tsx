@@ -1,6 +1,8 @@
 import { useState, type ComponentType } from 'react'
 
-import { MOCK_ACCOUNT_USAGE } from '@/data/mockAccountData'
+import { FreePlanUpgradeBanner } from '@/components/FreePlanUpgradeBanner'
+import { useAuth } from '@/context/AuthContext'
+import { getMockAccountUsage } from '@/data/mockAccountData'
 import {
   accountPrimaryButtonClass,
   accountSectionClass,
@@ -39,14 +41,20 @@ type AccountUsagePanelProps = {
 }
 
 export function AccountUsagePanel({ onChangeSubscriptionPlan }: AccountUsagePanelProps) {
-  const { usedGb, breakdown } = MOCK_ACCOUNT_USAGE
-  const [totalGb, setTotalGb] = useState<number>(MOCK_ACCOUNT_USAGE.totalGb)
+  const { user } = useAuth()
+  const usage = getMockAccountUsage(user?.planId)
+  const { usedGb, breakdown } = usage
+  const [totalGb, setTotalGb] = useState<number>(usage.totalGb)
   const [isBuyStorageModalOpen, setIsBuyStorageModalOpen] = useState(false)
   const totalFiles = breakdown.reduce((sum, row) => sum + row.fileCount, 0)
   const percent = Math.min(100, Math.round((usedGb / totalGb) * 100))
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 pb-2">
+      <FreePlanUpgradeBanner
+        bannerId="account-usage"
+        message="Your Free plan includes 5 GB of storage. Upgrade for more space and additional seats."
+      />
       <section className={accountSectionClass} aria-labelledby="usage-storage">
         <div className="flex items-start justify-between gap-4">
           <div>

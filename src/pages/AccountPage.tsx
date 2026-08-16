@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import { PanelTabRow, type TabItem } from '@/components/PanelTabRow'
 import { useAuth } from '@/context/AuthContext'
-import { MOCK_ACCOUNT_PROFILE } from '@/data/mockAccountData'
+import { getMockAccountProfile } from '@/data/mockAccountData'
 import { AccountBillingPanel } from '@/pages/account/AccountBillingPanel'
 import { AccountProfilePanel } from '@/pages/account/AccountProfilePanel'
 import { AccountSecurityPanel } from '@/pages/account/AccountSecurityPanel'
@@ -19,14 +20,35 @@ const accountTabs: TabItem[] = [
   { id: 'security', label: 'Security' },
 ]
 
+const ACCOUNT_TAB_IDS: AccountTabId[] = [
+  'profile',
+  'usage',
+  'subscription',
+  'billing',
+  'security',
+]
+
+function parseAccountTab(value: string | null): AccountTabId | null {
+  if (value != null && ACCOUNT_TAB_IDS.includes(value as AccountTabId)) {
+    return value as AccountTabId
+  }
+  return null
+}
+
 function AccountPageContent() {
   const { user } = useAuth()
-  const [tab, setTab] = useState<AccountTabId>('profile')
+  const [searchParams] = useSearchParams()
+  const tabFromUrl = parseAccountTab(searchParams.get('tab'))
+  const [tab, setTab] = useState<AccountTabId>(tabFromUrl ?? 'profile')
+
+  useEffect(() => {
+    if (tabFromUrl != null) setTab(tabFromUrl)
+  }, [tabFromUrl])
 
   const displayName = user?.displayName ?? 'Guest'
   const email = user?.email ?? ''
   const photoUrl = user?.photoUrl
-  const organization = user?.teamName ?? MOCK_ACCOUNT_PROFILE.organization
+  const organization = user?.teamName ?? getMockAccountProfile(user?.planId).organization
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6">

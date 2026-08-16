@@ -3,7 +3,8 @@ import { LockClosedIcon } from '@heroicons/react/24/outline'
 
 import { PencilIcon } from '@/components/overlayControlIcons'
 import { UserAvatar } from '@/components/UserAvatar'
-import { MOCK_ACCOUNT_PROFILE } from '@/data/mockAccountData'
+import { useAuth } from '@/context/AuthContext'
+import { getMockAccountProfile } from '@/data/mockAccountData'
 import { authFormLabelClass } from '@/pages/auth/AuthFormLayout'
 import { ReplaceProfilePhotoModal } from '@/pages/account/ReplaceProfilePhotoModal'
 import {
@@ -71,7 +72,9 @@ export function AccountProfilePanel({
   photoUrl,
   organization,
 }: AccountProfilePanelProps) {
-  const initialJobTitle = MOCK_ACCOUNT_PROFILE.jobTitle
+  const { user } = useAuth()
+  const profile = getMockAccountProfile(user?.planId)
+  const initialJobTitle = profile.jobTitle
 
   const [savedName, setSavedName] = useState(displayName)
   const [savedJobTitle, setSavedJobTitle] = useState<string>(initialJobTitle)
@@ -79,8 +82,8 @@ export function AccountProfilePanel({
 
   const [name, setName] = useState(displayName)
   const [jobTitle, setJobTitle] = useState<string>(initialJobTitle)
-  const org = organization || MOCK_ACCOUNT_PROFILE.organization
-  const username = MOCK_ACCOUNT_PROFILE.username
+  const org = organization || profile.organization
+  const username = profile.username
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(photoUrl)
   const [replacePhotoOpen, setReplacePhotoOpen] = useState(false)
   const uploadedPhotoUrlRef = useRef<string | undefined>(undefined)

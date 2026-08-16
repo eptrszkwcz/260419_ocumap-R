@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { ControlHeaderToolbar } from '@/components/ControlHeaderToolbar'
-import { OcuMapFullLogo } from '@/components/OcuMapFullLogo'
+import { FreePlanUpgradeBanner } from '@/components/FreePlanUpgradeBanner'
+import { OcuMapHomeLogo } from '@/components/OcuMapHomeLogo'
 import { Panel } from '@/components/Panel'
 import { UserAccountDisplay } from '@/components/UserAccountDisplay'
 import { useProjects } from '@/context/ProjectsContext'
@@ -81,7 +82,7 @@ export function ProjectsPage() {
           revealClass(headerVisible)
         }
       >
-        <OcuMapFullLogo />
+        <OcuMapHomeLogo />
         <UserAccountDisplay />
       </header>
       <Panel className="!border-0 !bg-transparent mx-auto mt-[52px] flex min-h-0 min-w-0 w-full max-w-[1200px] flex-1 flex-col gap-4 p-0 shadow-none">
@@ -89,6 +90,11 @@ export function ProjectsPage() {
           <div className="mb-[12px] h-fit shrink-0">
             <h1 className="font-title text-[30px] font-bold leading-none text-fg">My Projects</h1>
           </div>
+          <FreePlanUpgradeBanner
+            bannerId="projects"
+            className="mb-4"
+            message="You're on the Free plan. Upgrade to unlock more storage, seats, and publishing."
+          />
           <div className="flex flex-col gap-4">
             <ProjectsSummaryStats projects={projects} />
             <div className="relative z-20 shrink-0">

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 
-import { OcuMapFullLogo } from '@/components/OcuMapFullLogo'
+import { OcuMapHomeLogo } from '@/components/OcuMapHomeLogo'
 import { Panel } from '@/components/Panel'
 import { UserAccountDisplay } from '@/components/UserAccountDisplay'
 
@@ -43,7 +43,7 @@ export function UserSectionPage({ title, children }: UserSectionPageProps) {
           revealClass(headerVisible)
         }
       >
-        <OcuMapFullLogo />
+        <OcuMapHomeLogo />
         <UserAccountDisplay />
       </header>
       <Panel className="!border-0 !bg-transparent mx-auto mt-[52px] flex min-h-0 min-w-0 w-full max-w-[1200px] flex-1 flex-col gap-4 p-0 shadow-none">

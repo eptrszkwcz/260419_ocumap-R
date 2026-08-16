@@ -1,13 +1,15 @@
 import { CheckIcon } from '@heroicons/react/24/outline'
 import { useState } from 'react'
 
-import { MOCK_CURRENT_PLAN_ID, type SubscriptionPlanId } from '@/data/mockAccountData'
+import { useAuth } from '@/context/AuthContext'
+import { getMockCurrentPlanId, type SubscriptionPlanId } from '@/data/mockAccountData'
 import {
   accountPrimaryButtonClass,
   accountSectionClass,
   accountSectionDescClass,
   accountSectionTitleClass,
 } from '@/pages/account/accountStyles'
+import { SubscriptionPlanUpdatedModal } from '@/pages/account/SubscriptionPlanUpdatedModal'
 import { UpdateSubscriptionModal } from '@/pages/account/UpdateSubscriptionModal'
 
 type PlanColumn = {
@@ -16,7 +18,7 @@ type PlanColumn = {
 }
 
 const PLANS: PlanColumn[] = [
-  { id: 'free-trial', label: 'Free Trial' },
+  { id: 'free-trial', label: 'Free' },
   { id: 'professional', label: 'Professional' },
   { id: 'ocumap-360', label: 'OcuMap 360' },
   { id: 'enterprise', label: 'Enterprise' },
@@ -33,16 +35,16 @@ const FEATURE_ROWS: FeatureRow[] = [
   {
     label: 'Price',
     values: {
-      'free-trial': 'Free for 30 days',
-      professional: '$99/mo ($990/yr)',
-      'ocumap-360': '$249/mo ($2,490/yr)',
+      'free-trial': '$0',
+      professional: '$99/mo',
+      'ocumap-360': '$249/mo',
       enterprise: 'Custom',
     },
   },
   {
     label: 'Storage',
     values: {
-      'free-trial': '10 GB',
+      'free-trial': '5 GB',
       professional: '100 GB',
       'ocumap-360': '500 GB',
       enterprise: 'Custom',
@@ -52,8 +54,11 @@ const FEATURE_ROWS: FeatureRow[] = [
     label: 'Team members',
     values: {
       'free-trial': '1',
-      professional: { primary: '1', subline: '+ 3 seats at $29/seat/mo.' },
-      'ocumap-360': '10',
+      professional: {
+        primary: '1 included',
+        subline: '+ up to 3 seats at $29/user/month',
+      },
+      'ocumap-360': '10 included',
       enterprise: 'Custom',
     },
   },
@@ -69,7 +74,7 @@ const FEATURE_ROWS: FeatureRow[] = [
   {
     label: 'Published Viewers',
     values: {
-      'free-trial': 'Unlimited*',
+      'free-trial': '1 active',
       professional: 'Unlimited*',
       'ocumap-360': 'Unlimited*',
       enterprise: 'Unlimited* + white label',
@@ -105,7 +110,7 @@ const FEATURE_ROWS: FeatureRow[] = [
   {
     label: 'Password-protected sharing',
     values: {
-      'free-trial': 'check',
+      'free-trial': 'dash',
       professional: 'check',
       'ocumap-360': 'check',
       enterprise: 'check',
@@ -174,8 +179,17 @@ function CellContent({ value }: { value: CellValue }) {
 }
 
 export function AccountSubscriptionPanel() {
-  const [currentPlanId, setCurrentPlanId] = useState<SubscriptionPlanId>(MOCK_CURRENT_PLAN_ID)
+  const { user } = useAuth()
+  const [currentPlanId, setCurrentPlanId] = useState<SubscriptionPlanId>(
+    getMockCurrentPlanId(user?.planId),
+  )
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
+  const [showPlanUpdatedModal, setShowPlanUpdatedModal] = useState(false)
+
+  const handleSelectPlan = (planId: SubscriptionPlanId) => {
+    setCurrentPlanId(planId)
+    setShowPlanUpdatedModal(true)
+  }
 
   return (
     <div className="flex w-full flex-col gap-6 pb-2">
@@ -213,19 +227,14 @@ export function AccountSubscriptionPanel() {
                       scope="col"
                       className={`px-3 py-3 text-center font-bold ${planCellClass(current, true, false)}`}
                     >
-                      <span className="block">{plan.label}</span>
-                      {current ? (
-                        <span className="mt-1 block text-badge font-bold text-fg-highlight">
-                          Current plan
-                        </span>
-                      ) : null}
+                      <span className="text-[20px] font-bold">{plan.label}</span>
                     </th>
                   )
                 })}
               </tr>
             </thead>
             <tbody>
-              {FEATURE_ROWS.map((row, rowIndex) => (
+              {FEATURE_ROWS.map((row) => (
                 <tr key={row.label} className="border-b border-stroke/70 last:border-b-0">
                   <th
                     scope="row"
@@ -235,11 +244,10 @@ export function AccountSubscriptionPanel() {
                   </th>
                   {PLANS.map((plan) => {
                     const current = plan.id === currentPlanId
-                    const isLastRow = rowIndex === FEATURE_ROWS.length - 1
                     return (
                       <td
                         key={plan.id}
-                        className={`px-3 py-2.5 text-center ${planCellClass(current, false, isLastRow)}`}
+                        className={`px-3 py-2.5 text-center ${planCellClass(current, false, false)}`}
                       >
                         <CellContent value={row.values[plan.id]} />
                       </td>
@@ -248,6 +256,28 @@ export function AccountSubscriptionPanel() {
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr>
+                <th className="bg-panel px-3 py-2 text-left font-normal text-fg" scope="row">
+                  <span className="sr-only">Current plan</span>
+                </th>
+                {PLANS.map((plan) => {
+                  const current = plan.id === currentPlanId
+                  return (
+                    <td
+                      key={plan.id}
+                      className={`px-3 py-2 text-center ${planCellClass(current, false, true)}`}
+                    >
+                      {current ? (
+                        <span className="font-sans text-badge font-bold text-fg-highlight">
+                          Current plan
+                        </span>
+                      ) : null}
+                    </td>
+                  )
+                })}
+              </tr>
+            </tfoot>
           </table>
         </div>
 
@@ -266,8 +296,12 @@ export function AccountSubscriptionPanel() {
         <UpdateSubscriptionModal
           currentPlanId={currentPlanId}
           onClose={() => setIsUpdateModalOpen(false)}
-          onSelectPlan={setCurrentPlanId}
+          onSelectPlan={handleSelectPlan}
         />
+      ) : null}
+
+      {showPlanUpdatedModal ? (
+        <SubscriptionPlanUpdatedModal onClose={() => setShowPlanUpdatedModal(false)} />
       ) : null}
     </div>
   )

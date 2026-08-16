@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom'
 
 import type { SubscriptionPlanId } from '@/data/mockAccountData'
 import {
+  accountLinkButtonClass,
   accountPrimaryButtonClass,
-  accountSecondaryButtonClass,
 } from '@/pages/account/accountStyles'
 import {
   featureMetadataFooterActionsClassName,
@@ -20,7 +20,6 @@ type PlanOption = {
 }
 
 const PLAN_OPTIONS: PlanOption[] = [
-  { id: 'free-trial', label: 'Free Trial', price: 'Free for 30 days', storage: '10 GB storage' },
   {
     id: 'professional',
     label: 'Professional',
@@ -44,7 +43,7 @@ type UpdateSubscriptionModalProps = {
 
 function planCardClass(isSelected: boolean, isCurrent: boolean): string {
   let className =
-    'flex w-full cursor-pointer flex-col gap-1 rounded-panel border px-4 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
+    'relative h-[300px] w-[200px] cursor-pointer rounded-panel border px-4 py-4 text-center transition-colors focus-visible:ring-2 focus-visible:ring-fg-highlight/35 focus-visible:outline-none'
   if (isSelected) {
     className += ' border-fg-highlight bg-area-highlight/40'
   } else if (isCurrent) {
@@ -89,7 +88,7 @@ export function UpdateSubscriptionModal({
         role="presentation"
       >
         <div
-          className="flex w-full max-w-lg flex-col overflow-hidden rounded-panel border border-stroke bg-page shadow-lg"
+          className="flex w-fit max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-panel border border-stroke bg-page shadow-lg"
           role="dialog"
           aria-modal="true"
           aria-labelledby="update-subscription-title"
@@ -105,7 +104,7 @@ export function UpdateSubscriptionModal({
               </p>
             </header>
 
-            <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Subscription plans">
+            <div className="flex gap-3" role="radiogroup" aria-label="Subscription plans">
               {PLAN_OPTIONS.map((plan) => {
                 const isSelected = selectedPlanId === plan.id
                 const isCurrent = currentPlanId === plan.id
@@ -118,11 +117,15 @@ export function UpdateSubscriptionModal({
                     className={planCardClass(isSelected, isCurrent)}
                     onClick={() => setSelectedPlanId(plan.id)}
                   >
-                    <span className="font-sans text-standard font-bold text-fg">{plan.label}</span>
-                    <span className="font-sans text-badge text-fg-muted">{plan.price}</span>
-                    <span className="font-sans text-badge text-fg-muted">{plan.storage}</span>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+                      <span className="mb-[24px] font-sans text-[20px] font-bold text-fg">
+                        {plan.label}
+                      </span>
+                      <span className="font-sans text-badge text-fg-muted">{plan.price}</span>
+                      <span className="font-sans text-badge text-fg-muted">{plan.storage}</span>
+                    </div>
                     {isCurrent ? (
-                      <span className="mt-0.5 font-sans text-badge font-bold text-fg-highlight">
+                      <span className="absolute right-0 bottom-[16px] left-0 font-sans text-badge font-bold text-fg-highlight">
                         Current plan
                       </span>
                     ) : null}
@@ -131,13 +134,11 @@ export function UpdateSubscriptionModal({
               })}
             </div>
 
-            <button
-              type="button"
-              onClick={handleSpeakToSales}
-              className={`${accountSecondaryButtonClass} w-full justify-center py-2.5`}
-            >
-              Speak to an OcuMap sales representative today
-            </button>
+            <p className="text-center font-sans text-standard">
+              <button type="button" onClick={handleSpeakToSales} className={accountLinkButtonClass}>
+                Speak to an OcuMap sales representative today
+              </button>
+            </p>
           </div>
 
           <footer className="flex shrink-0 border-t border-stroke bg-panel px-panel-padding py-3">

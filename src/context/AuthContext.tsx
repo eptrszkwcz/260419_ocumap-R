@@ -7,7 +7,13 @@ import {
   type ReactNode,
 } from 'react'
 
-import { MOCK_DEFAULT_USER } from '@/data/mockUserProfile'
+import type { SubscriptionPlanId } from '@/data/mockAccountData'
+import {
+  isTajLogin,
+  MOCK_DEFAULT_USER,
+  MOCK_TAJ_USER,
+  type MockUserProfile,
+} from '@/data/mockUserProfile'
 
 const STORAGE_KEY = 'ocumap-auth-user'
 
@@ -25,6 +31,17 @@ export type AuthUser = {
   email?: string
   photoUrl?: string
   teamName?: string
+  planId?: SubscriptionPlanId
+}
+
+function authUserFromProfile(profile: MockUserProfile): AuthUser {
+  return {
+    displayName: profile.displayName,
+    email: profile.email,
+    photoUrl: profile.photoUrl,
+    teamName: profile.teamName,
+    planId: profile.planId,
+  }
 }
 
 type AuthContextValue = {
@@ -62,13 +79,9 @@ function writeStoredUser(user: AuthUser | null) {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => readStoredUser())
 
-  const login = useCallback((_displayName: string, _password: string) => {
-    const nextUser: AuthUser = {
-      displayName: MOCK_DEFAULT_USER.displayName,
-      email: MOCK_DEFAULT_USER.email,
-      photoUrl: MOCK_DEFAULT_USER.photoUrl,
-      teamName: MOCK_DEFAULT_USER.teamName,
-    }
+  const login = useCallback((displayName: string, password: string) => {
+    const profile = isTajLogin(displayName, password) ? MOCK_TAJ_USER : MOCK_DEFAULT_USER
+    const nextUser = authUserFromProfile(profile)
     setUser(nextUser)
     writeStoredUser(nextUser)
   }, [])

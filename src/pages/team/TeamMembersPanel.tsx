@@ -1,7 +1,9 @@
 import { PlusIcon } from '@heroicons/react/24/outline'
 import { useState } from 'react'
 
-import { MOCK_TEAM } from '@/data/mockTeamData'
+import { FreePlanUpgradeBanner } from '@/components/FreePlanUpgradeBanner'
+import { useAuth } from '@/context/AuthContext'
+import { getMockTeam } from '@/data/mockTeamData'
 import {
   accountPrimaryButtonClass,
   accountSectionClass,
@@ -16,9 +18,11 @@ type TeamMembersPanelProps = {
 }
 
 export function TeamMembersPanel({ teamName }: TeamMembersPanelProps) {
-  const { planLabel, adminName, createdLabel } = MOCK_TEAM
+  const { user } = useAuth()
+  const team = getMockTeam(user?.planId)
+  const { planLabel, adminName, createdLabel } = team
   const [members, setMembers] = useState<TeamMember[]>(() =>
-    MOCK_TEAM.members.map((member) => ({ ...member })),
+    team.members.map((member) => ({ ...member })),
   )
   const memberCount = members.length
 
@@ -40,6 +44,10 @@ export function TeamMembersPanel({ teamName }: TeamMembersPanelProps) {
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 pb-2">
+      <FreePlanUpgradeBanner
+        bannerId="team-members"
+        message="Your Free plan includes 1 seat. Upgrade to invite collaborators."
+      />
       <section className={accountSectionClass} aria-labelledby="team-overview">
         <div>
           <h2 id="team-overview" className={accountSectionTitleClass}>
@@ -85,22 +93,33 @@ export function TeamMembersPanel({ teamName }: TeamMembersPanelProps) {
               </tr>
             </thead>
             <tbody>
-              {members.map((member) => (
-                <tr key={member.id} className="border-b border-stroke/60 last:border-b-0">
-                  <td className="px-4 py-2.5 font-bold text-fg">{member.name}</td>
-                  <td className="px-4 py-2.5 text-fg-muted">{member.email}</td>
-                  <td className="px-4 py-2.5 text-fg-muted">{member.role}</td>
-                  <td className="px-4 py-2.5 text-fg-muted">{member.access}</td>
-                  <td className="px-4 py-2.5 text-fg-muted">{member.lastActive}</td>
-                  <td className="px-4 py-2.5 text-right">
-                    <TeamMemberActionsMenu
-                      member={member}
-                      onChangeRole={handleChangeRole}
-                      onRemove={handleRemoveMember}
-                    />
+              {members.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center font-sans text-standard text-fg-muted"
+                  >
+                    No team members
                   </td>
                 </tr>
-              ))}
+              ) : (
+                members.map((member) => (
+                  <tr key={member.id} className="border-b border-stroke/60 last:border-b-0">
+                    <td className="px-4 py-2.5 font-bold text-fg">{member.name}</td>
+                    <td className="px-4 py-2.5 text-fg-muted">{member.email}</td>
+                    <td className="px-4 py-2.5 text-fg-muted">{member.role}</td>
+                    <td className="px-4 py-2.5 text-fg-muted">{member.access}</td>
+                    <td className="px-4 py-2.5 text-fg-muted">{member.lastActive}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <TeamMemberActionsMenu
+                        member={member}
+                        onChangeRole={handleChangeRole}
+                        onRemove={handleRemoveMember}
+                      />
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
