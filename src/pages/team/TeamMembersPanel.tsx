@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { FreePlanUpgradeBanner } from '@/components/FreePlanUpgradeBanner'
 import { useAuth } from '@/context/AuthContext'
 import { getMockTeam } from '@/data/mockTeamData'
+import { isFreePlan } from '@/data/mockUserProfile'
 import {
   accountPrimaryButtonClass,
   accountSectionClass,
@@ -25,6 +26,7 @@ export function TeamMembersPanel({ teamName }: TeamMembersPanelProps) {
     team.members.map((member) => ({ ...member })),
   )
   const memberCount = members.length
+  const seatsRemainingLabel = isFreePlan(user) ? '0/1 seats remaining' : '0/5 seats remaining'
 
   const handleChangeRole = (
     memberId: string,
@@ -70,13 +72,16 @@ export function TeamMembersPanel({ teamName }: TeamMembersPanelProps) {
           <h2 id="team-members" className={accountSectionTitleClass}>
             Members
           </h2>
-          <button
-            type="button"
-            className={`${accountPrimaryButtonClass} inline-flex shrink-0 items-center gap-1.5`}
-          >
-            <PlusIcon className="size-4 shrink-0" aria-hidden />
-            Add team member
-          </button>
+          <div className="flex shrink-0 items-center gap-3">
+            <p className="font-sans text-standard text-fg-muted">{seatsRemainingLabel}</p>
+            <button
+              type="button"
+              className={`${accountPrimaryButtonClass} inline-flex shrink-0 items-center gap-1.5`}
+            >
+              <PlusIcon className="size-4 shrink-0" aria-hidden />
+              Add team member
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto rounded-panel border border-stroke bg-panel">
           <table className="w-full min-w-[48rem] border-collapse bg-panel font-sans text-standard">
