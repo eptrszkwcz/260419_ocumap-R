@@ -30,15 +30,16 @@ function computePortaledPanelStyle(
   placement: 'bottom' | 'top',
   panelWidth: string | undefined,
   panelMaxHeight: string | undefined,
+  panelOffsetPx: number,
 ): CSSProperties {
   const style: CSSProperties = {}
   if (panelWidth != null) style.width = panelWidth
   if (panelMaxHeight != null) style.maxHeight = panelMaxHeight
 
   if (placement === 'top') {
-    style.bottom = window.innerHeight - triggerRect.top + PANEL_OFFSET_PX
+    style.bottom = window.innerHeight - triggerRect.top + panelOffsetPx
   } else {
-    style.top = triggerRect.bottom + PANEL_OFFSET_PX
+    style.top = triggerRect.bottom + panelOffsetPx
   }
 
   if (resolvedAlign === 'right') {
@@ -117,6 +118,10 @@ type DropdownPanelProps = {
   placement?: 'bottom' | 'top'
   panelWidth?: string
   panelMaxHeight?: string
+  /** Gap between trigger and panel in pixels. Defaults to 8. */
+  panelOffsetPx?: number
+  /** When true, root container spans full available width (for full-width panels). */
+  fullWidth?: boolean
   /** Fixed region above scrollable `children` when `panelMaxHeight` is set. */
   panelHeader?: ReactNode
   /** When true, close panel when pointer leaves it (single-select menus). */
@@ -137,6 +142,8 @@ export function DropdownPanel({
   placement = 'bottom',
   panelWidth,
   panelMaxHeight,
+  panelOffsetPx = PANEL_OFFSET_PX,
+  fullWidth = false,
   panelHeader,
   closeOnMouseLeave = false,
   portaled = false,
@@ -190,6 +197,7 @@ export function DropdownPanel({
           placement,
           panelWidth,
           panelMaxHeight,
+          panelOffsetPx,
         ),
       )
     }
@@ -201,7 +209,7 @@ export function DropdownPanel({
       window.removeEventListener('scroll', updatePosition, true)
       window.removeEventListener('resize', updatePosition)
     }
-  }, [open, portaled, resolvedAlign, placement, panelWidth, panelMaxHeight])
+  }, [open, portaled, resolvedAlign, placement, panelWidth, panelMaxHeight, panelOffsetPx])
 
   useEffect(() => {
     if (!open) return
@@ -238,7 +246,9 @@ export function DropdownPanel({
       : resolvedAlign === 'center'
         ? 'left-1/2 -translate-x-1/2'
         : 'right-0'
-  const placementClass = placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'
+  const placementClass = placement === 'top' ? 'bottom-full' : 'top-full'
+  const placementMarginStyle: CSSProperties =
+    placement === 'top' ? { marginBottom: panelOffsetPx } : { marginTop: panelOffsetPx }
   const splitScrollLayout = panelMaxHeight != null && panelHeader != null
   const scrollClass =
     panelMaxHeight != null && !splitScrollLayout ? ' overflow-y-auto overflow-x-hidden' : ''
@@ -260,6 +270,7 @@ export function DropdownPanel({
     : {
         ...(panelWidth != null ? { width: panelWidth } : {}),
         ...(panelMaxHeight != null ? { maxHeight: panelMaxHeight } : {}),
+        ...placementMarginStyle,
       }
 
   const panelNode = open ? (
@@ -286,7 +297,10 @@ export function DropdownPanel({
   ) : null
 
   return (
-    <div ref={rootRef} className="relative inline-flex min-w-0">
+    <div
+      ref={rootRef}
+      className={'relative min-w-0 ' + (fullWidth ? 'flex w-full' : 'inline-flex')}
+    >
       {renderTrigger({ open, panelId: open ? panelId : undefined, onToggle })}
       {portaled && panelNode != null ? createPortal(panelNode, document.body) : panelNode}
     </div>

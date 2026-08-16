@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import {
+  accountLinkButtonClass,
   accountPrimaryButtonClass,
   accountSecondaryButtonClass,
 } from '@/pages/account/accountStyles'
@@ -134,13 +135,11 @@ export function BuyMoreStorageModal({
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={handleSpeakToSales}
-              className={`${accountSecondaryButtonClass} w-full justify-center py-2.5`}
-            >
-              Speak to an OcuMap sales representative today
-            </button>
+            <p className="text-center font-sans text-standard">
+              <button type="button" onClick={handleSpeakToSales} className={accountLinkButtonClass}>
+                Speak to an OcuMap sales representative today
+              </button>
+            </p>
           </div>
 
           <footer className="flex shrink-0 border-t border-stroke bg-panel px-panel-padding py-3">

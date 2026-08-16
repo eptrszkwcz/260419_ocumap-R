@@ -1,11 +1,14 @@
-import type {
-  CollaboratorPendingInvite,
-  TeamCollaborator,
-  TeamMember,
-  TeamPermissionRow,
-} from '@/pages/team/types'
+import type { TeamMember, TeamPermissionRow } from '@/pages/team/types'
 
-export const MOCK_TEAM = {
+export type MockTeam = {
+  name: string
+  planLabel: string
+  adminName: string
+  createdLabel: string
+  members: TeamMember[]
+}
+
+export const MOCK_TEAM: MockTeam = {
   name: 'Smith Property Group',
   planLabel: 'Professional plan',
   adminName: 'Jordy Smith',
@@ -51,116 +54,20 @@ export const MOCK_TEAM = {
       access: 'Full access',
       lastActive: 'Aug 2',
     },
-  ] satisfies TeamMember[],
-} as const
+  ],
+}
 
-export const MOCK_COLLABORATORS: TeamCollaborator[] = [
-  {
-    id: 'c1',
-    name: 'Patricia Nguyen',
-    email: 'patricia.nguyen@westfield-consulting.com',
-    access: 'Viewer',
-    projectNames: ['1603 Jefferson St.'],
-  },
-  {
-    id: 'c2',
-    name: 'Robert Walsh',
-    email: 'rwalsh@cityplanning.gov',
-    access: 'Viewer',
-    projectNames: ['Harborview Medical Tower'],
-  },
-  {
-    id: 'c3',
-    name: 'Diana Brooks',
-    email: 'd.brooks@structuralpartners.io',
-    access: 'Editor',
-    projectNames: ['1603 Jefferson St.'],
-  },
-  {
-    id: 'c4',
-    name: 'James Okonkwo',
-    email: 'jokonkwo@buildreview.com',
-    access: 'Viewer',
-    projectNames: ['Riverside School Modernization'],
-  },
-  {
-    id: 'c5',
-    name: 'Linda Martinez',
-    email: 'linda.m@insurance-adj.com',
-    access: 'Viewer',
-    projectNames: ['City Hall North Wing'],
-  },
-  {
-    id: 'c6',
-    name: 'Thomas Reid',
-    email: 'treid@txdot-contractors.net',
-    access: 'Editor',
-    projectNames: ['Katy Freeway Expansion'],
-  },
-  {
-    id: 'c7',
-    name: 'Karen Hoffman',
-    email: 'khoffman@records-mgmt.com',
-    access: 'Viewer',
-    projectNames: ['Westside Document Archive'],
-  },
-  {
-    id: 'c8',
-    name: 'Daniel Cho',
-    email: 'dcho@acme-inspections.com',
-    access: 'Viewer',
-    projectNames: ['1603 Jefferson St.'],
-  },
-  {
-    id: 'c9',
-    name: 'Emily Foster',
-    email: 'emily.foster@client-rep.com',
-    access: 'Viewer',
-    projectNames: ['Harborview Medical Tower', 'Riverside School Modernization'],
-  },
-  {
-    id: 'c10',
-    name: 'Gregory Tan',
-    email: 'gtan@surveyworks.co',
-    access: 'Viewer',
-    projectNames: ['Katy Freeway Expansion'],
-  },
-  {
-    id: 'c11',
-    name: 'Michelle Park',
-    email: 'mpark@env-compliance.org',
-    access: 'Viewer',
-    projectNames: [
-      '1603 Jefferson St.',
-      'Harborview Medical Tower',
-      'City Hall North Wing',
-    ],
-  },
-  {
-    id: 'c12',
-    name: 'William Hayes',
-    email: 'whayes@legal-counsel.com',
-    access: 'Viewer',
-    projectNames: ['Westside Document Archive'],
-  },
-]
+export const MOCK_TAJ_TEAM: MockTeam = {
+  name: 'Burrows',
+  planLabel: 'Free plan',
+  adminName: 'Taj Burrows',
+  createdLabel: 'August 2026',
+  members: [],
+}
 
-export const MOCK_COLLABORATOR_PENDING_INVITES: CollaboratorPendingInvite[] = [
-  {
-    id: 'i1',
-    email: 'john@abc.com',
-    access: 'Viewer',
-    projectNames: ['1603 Jefferson St.'],
-    invitedLabel: 'Aug 7',
-  },
-  {
-    id: 'i2',
-    email: 'maria@abc.com',
-    access: 'Editor',
-    projectNames: ['Harborview Medical Tower'],
-    invitedLabel: 'Aug 6',
-  },
-]
+export function getMockTeam(planId?: string): MockTeam {
+  return planId === 'free-trial' ? MOCK_TAJ_TEAM : MOCK_TEAM
+}
 
 export const TEAM_ROLE_COLUMNS = [
   { id: 'admin', label: 'Admin' },

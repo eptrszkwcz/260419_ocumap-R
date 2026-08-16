@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { MOCK_SECURITY } from '@/data/mockAccountData'
+import { DeleteAccountModal } from '@/pages/account/DeleteAccountModal'
 import {
   accountPanelClass,
   accountPrimaryButtonClass,
@@ -12,6 +13,7 @@ import {
 
 export function AccountSecurityPanel() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState<boolean>(MOCK_SECURITY.twoFactorEnabled)
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false)
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 pb-2">
@@ -120,12 +122,17 @@ export function AccountSecurityPanel() {
             <button
               type="button"
               className="h-button cursor-pointer rounded-panel border border-red-600 bg-panel px-4 font-sans text-standard font-bold text-red-700 transition-colors hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-red-600/35 focus-visible:outline-none"
+              onClick={() => setShowDeleteAccountModal(true)}
             >
               Delete account
             </button>
           </div>
         </div>
       </section>
+
+      {showDeleteAccountModal ? (
+        <DeleteAccountModal onClose={() => setShowDeleteAccountModal(false)} />
+      ) : null}
     </div>
   )
 }
